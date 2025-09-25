@@ -1,0 +1,17 @@
+package com.huang.web.app.service.impl;
+
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.huang.model.entity.ArticleComment;
+import com.huang.web.app.mapper.ArticleCommentMapper;
+import com.huang.web.app.service.ArticleCommentService;
+import org.springframework.stereotype.Service;
+
+/**
+ * ArticleComment服务实现类
+ * @author system
+ * @since 2025-01-24
+ */
+@Service
+public class ArticleCommentServiceImpl extends ServiceImpl<ArticleCommentMapper, ArticleComment> implements ArticleCommentService {
+
+}
