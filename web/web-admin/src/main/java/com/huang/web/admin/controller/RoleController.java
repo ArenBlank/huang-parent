@@ -198,6 +198,59 @@ public class RoleController {
     }
 
     /**
+     * 角色状态管理 - 表单参数版本
+     */
+    @Operation(summary = "角色状态管理（表单参数）", description = "使用表单参数启用或禁用角色，便于在API文档中测试")
+    @PutMapping("/status-form")
+    public Result<Void> updateRoleStatusForm(
+            @Parameter(description = "角色ID", required = true)
+            @RequestParam @NotNull @Min(1) Long roleId,
+            @Parameter(description = "状态：0-禁用，1-正常", required = true)
+            @RequestParam @NotNull Integer status,
+            @Parameter(description = "备注")
+            @RequestParam(required = false) String remark) {
+        try {
+            // 验证状态值
+            if (status != 0 && status != 1) {
+                return Result.fail(ResultCodeEnum.DATA_ERROR.getCode(), "状态值只能是0（禁用）或1（正常）");
+            }
+            
+            Role role = roleService.getById(roleId);
+            if (role == null) {
+                return Result.fail(ResultCodeEnum.DATA_ERROR.getCode(), "角色不存在");
+            }
+            
+            // 检查是否有用户正在使用该角色（如果要禁用的话）
+            if (status == 0) {
+                long userCount = getRoleUserCount(roleId);
+                if (userCount > 0) {
+                    return Result.fail(ResultCodeEnum.DATA_ERROR.getCode(), 
+                            String.format("该角色下还有 %d 个用户，无法禁用", userCount));
+                }
+            }
+            
+            // 更新角色状态
+            LambdaUpdateWrapper<Role> updateWrapper = new LambdaUpdateWrapper<>();
+            updateWrapper.eq(Role::getId, roleId)
+                         .set(Role::getStatus, status)
+                         .set(Role::getUpdateTime, LocalDateTime.now());
+            
+            boolean success = roleService.update(updateWrapper);
+            if (success) {
+                String action = status == 1 ? "启用" : "禁用";
+                log.info("{}角色成功，roleId: {}, 备注: {}", action, roleId, remark);
+                return Result.ok();
+            } else {
+                return Result.fail(ResultCodeEnum.SERVICE_ERROR.getCode(), "更新角色状态失败");
+            }
+            
+        } catch (Exception e) {
+            log.error("更新角色状态失败", e);
+            return Result.fail(ResultCodeEnum.SERVICE_ERROR.getCode(), "更新角色状态失败：" + e.getMessage());
+        }
+    }
+
+    /**
      * 获取所有可用角色（用于下拉选择）
      */
     @Operation(summary = "获取可用角色列表", description = "获取所有启用状态的角色，用于下拉选择")

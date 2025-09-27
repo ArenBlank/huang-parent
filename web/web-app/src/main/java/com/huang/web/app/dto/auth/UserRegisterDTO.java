@@ -40,7 +40,7 @@ public class UserRegisterDTO {
     @Pattern(regexp = "^1[3-9]\\d{9}$", message = "手机号格式不正确")
     private String phone;
 
-    @Schema(description = "短信验证码", requiredMode = Schema.RequiredMode.REQUIRED, example = "123456")
+    @Schema(description = "短信验证码（开发阶段可传固定值123456）", requiredMode = Schema.RequiredMode.REQUIRED, example = "123456")
     @NotBlank(message = "短信验证码不能为空")
     @Pattern(regexp = "^\\d{6}$", message = "验证码必须为6位数字")
     private String smsCode;

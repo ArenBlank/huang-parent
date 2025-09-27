@@ -203,7 +203,7 @@ public class UserController {
             LambdaUpdateWrapper<User> updateWrapper = new LambdaUpdateWrapper<>();
             updateWrapper.eq(User::getId, statusUpdateDTO.getUserId())
                          .set(User::getStatus, statusUpdateDTO.getStatus())
-                         .set(User::getUpdateTime, LocalDateTime.now());
+                         .set(User::getUpdateTime, new Date());
             
             boolean success = userService.update(updateWrapper);
             if (success) {
@@ -216,6 +216,50 @@ public class UserController {
             
         } catch (Exception e) {
             log.error("更新用户状态失败", e);
+            return Result.fail(ResultCodeEnum.SERVICE_ERROR.getCode(), "更新用户状态失败：" + e.getMessage());
+        }
+    }
+
+    /**
+     * 用户状态管理（表单参数版本）
+     */
+    @Operation(summary = "用户状态管理（表单版）", description = "启用或禁用用户（使用表单参数，方便接口文档测试）")
+    @PutMapping("/status-form")
+    public Result<Void> updateUserStatusForm(
+            @Parameter(description = "用户ID", required = true)
+            @RequestParam @NotNull @Min(1) Long userId,
+            @Parameter(description = "状态：0-禁用，1-启用", required = true)
+            @RequestParam @NotNull Integer status,
+            @Parameter(description = "备注")
+            @RequestParam(required = false) String remark) {
+        try {
+            // 验证状态值
+            if (status != 0 && status != 1) {
+                return Result.fail(ResultCodeEnum.DATA_ERROR.getCode(), "状态值只能为0（禁用）或1（启用）");
+            }
+            
+            User user = userService.getById(userId);
+            if (user == null) {
+                return Result.fail(ResultCodeEnum.DATA_ERROR.getCode(), "用户不存在");
+            }
+            
+            // 更新用户状态
+            LambdaUpdateWrapper<User> updateWrapper = new LambdaUpdateWrapper<>();
+            updateWrapper.eq(User::getId, userId)
+                         .set(User::getStatus, status)
+                         .set(User::getUpdateTime, new Date());
+            
+            boolean success = userService.update(updateWrapper);
+            if (success) {
+                String action = status == 1 ? "启用" : "禁用";
+                log.info("{}\u7528户成功（表单版），userId: {}, 备注: {}", action, userId, remark);
+                return Result.ok();
+            } else {
+                return Result.fail(ResultCodeEnum.SERVICE_ERROR.getCode(), "更新用户状态失败");
+            }
+            
+        } catch (Exception e) {
+            log.error("更新用户状态失败（表单版）", e);
             return Result.fail(ResultCodeEnum.SERVICE_ERROR.getCode(), "更新用户状态失败：" + e.getMessage());
         }
     }
@@ -248,7 +292,7 @@ public class UserController {
                 UserRole userRole = new UserRole();
                 userRole.setUserId(assignDTO.getUserId());
                 userRole.setRoleId(roleId);
-                userRole.setCreateTime(LocalDateTime.now());
+                userRole.setCreateTime(new Date());
                 return userRole;
             }).collect(Collectors.toList());
             
@@ -263,6 +307,76 @@ public class UserController {
             
         } catch (Exception e) {
             log.error("用户角色分配失败", e);
+            return Result.fail(ResultCodeEnum.SERVICE_ERROR.getCode(), "用户角色分配失败：" + e.getMessage());
+        }
+    }
+
+    /**
+     * 用户角色分配（表单参数版本）
+     */
+    @Operation(summary = "用户角色分配（表单版）", description = "为用户分配角色（使用表单参数，方便接口文档测试）")
+    @PostMapping("/assign-roles-form")
+    public Result<Void> assignUserRolesForm(
+            @Parameter(description = "用户ID", required = true)
+            @RequestParam @NotNull @Min(1) Long userId,
+            @Parameter(description = "角色ID列表（用逗号分隔）", required = true)
+            @RequestParam @NotNull String roleIds,
+            @Parameter(description = "备注")
+            @RequestParam(required = false) String remark) {
+        try {
+            // 验证用户是否存在
+            User user = userService.getById(userId);
+            if (user == null) {
+                return Result.fail(ResultCodeEnum.DATA_ERROR.getCode(), "用户不存在");
+            }
+            
+            // 解析角色ID列表
+            List<Long> roleIdList;
+            try {
+                roleIdList = Arrays.stream(roleIds.split(","))
+                        .map(String::trim)
+                        .filter(s -> !s.isEmpty())
+                        .map(Long::valueOf)
+                        .collect(Collectors.toList());
+            } catch (NumberFormatException e) {
+                return Result.fail(ResultCodeEnum.DATA_ERROR.getCode(), "角色ID格式不正确，请使用逗号分隔的数字");
+            }
+            
+            if (roleIdList.isEmpty()) {
+                return Result.fail(ResultCodeEnum.DATA_ERROR.getCode(), "角色ID列表不能为空");
+            }
+            
+            // 验证角色是否存在
+            List<Role> roles = roleService.listByIds(roleIdList);
+            if (roles.size() != roleIdList.size()) {
+                return Result.fail(ResultCodeEnum.DATA_ERROR.getCode(), "部分角色不存在");
+            }
+            
+            // 删除用户现有角色
+            LambdaQueryWrapper<UserRole> deleteWrapper = new LambdaQueryWrapper<>();
+            deleteWrapper.eq(UserRole::getUserId, userId);
+            userRoleService.remove(deleteWrapper);
+            
+            // 添加新角色
+            List<UserRole> userRoles = roleIdList.stream().map(roleId -> {
+                UserRole userRole = new UserRole();
+                userRole.setUserId(userId);
+                userRole.setRoleId(roleId);
+                userRole.setCreateTime(new Date());
+                return userRole;
+            }).collect(Collectors.toList());
+            
+            boolean success = userRoleService.saveBatch(userRoles);
+            if (success) {
+                log.info("用户角色分配成功（表单版），userId: {}, roleIds: {}, 备注: {}", 
+                        userId, roleIds, remark);
+                return Result.ok();
+            } else {
+                return Result.fail(ResultCodeEnum.SERVICE_ERROR.getCode(), "用户角色分配失败");
+            }
+            
+        } catch (Exception e) {
+            log.error("用户角色分配失败（表单版）", e);
             return Result.fail(ResultCodeEnum.SERVICE_ERROR.getCode(), "用户角色分配失败：" + e.getMessage());
         }
     }
@@ -389,7 +503,7 @@ public class UserController {
         }
         
         // 创建用户角色映射
-        Map<Long, LocalDateTime> userRoleMap = userRoles.stream()
+        Map<Long, Date> userRoleMap = userRoles.stream()
                 .collect(Collectors.toMap(UserRole::getRoleId, UserRole::getCreateTime));
         
         // 查询角色详情
@@ -402,7 +516,10 @@ public class UserController {
             roleDetail.setRoleName(role.getRoleName());
             roleDetail.setRoleCode(role.getRoleCode());
             roleDetail.setRoleDescription(role.getDescription());
-            roleDetail.setAssignTime(userRoleMap.get(role.getId()));
+            Date assignDate = userRoleMap.get(role.getId());
+            roleDetail.setAssignTime(assignDate != null ? assignDate.toInstant()
+                    .atZone(java.time.ZoneId.systemDefault())
+                    .toLocalDateTime() : null);
             return roleDetail;
         }).collect(Collectors.toList());
     }

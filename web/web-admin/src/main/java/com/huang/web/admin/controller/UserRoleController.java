@@ -168,8 +168,8 @@ public class UserRoleController {
             List<Role> roles = roleService.listByIds(roleIds);
             
             // 构建结果
-            Map<Long, LocalDateTime> assignTimeMap = userRoles.stream()
-                    .collect(Collectors.toMap(UserRole::getRoleId, UserRole::getCreateTime));
+            Map<Long, Date> assignTimeMap = userRoles.stream()
+                    .collect(Collectors.toMap(UserRole::getRoleId, userRole -> userRole.getCreateTime()));
             
             List<Map<String, Object>> result = roles.stream().map(role -> {
                 Map<String, Object> roleInfo = new HashMap<>();
@@ -220,7 +220,7 @@ public class UserRoleController {
             List<User> users = userService.listByIds(userIds);
             
             // 构建结果
-            Map<Long, LocalDateTime> assignTimeMap = userRoles.stream()
+            Map<Long, Date> assignTimeMap = userRoles.stream()
                     .collect(Collectors.toMap(UserRole::getUserId, UserRole::getCreateTime));
             
             List<Map<String, Object>> result = users.stream().map(user -> {
@@ -276,7 +276,7 @@ public class UserRoleController {
                         UserRole userRole = new UserRole();
                         userRole.setUserId(userId);
                         userRole.setRoleId(roleId);
-                        userRole.setCreateTime(LocalDateTime.now());
+                        userRole.setCreateTime(new Date());
                         return userRole;
                     }).collect(Collectors.toList());
                     
@@ -298,7 +298,7 @@ public class UserRoleController {
                                 UserRole userRole = new UserRole();
                                 userRole.setUserId(userId);
                                 userRole.setRoleId(roleId);
-                                userRole.setCreateTime(LocalDateTime.now());
+                                userRole.setCreateTime(new Date());
                                 return userRole;
                             }).collect(Collectors.toList());
                     
@@ -323,6 +323,131 @@ public class UserRoleController {
             
         } catch (Exception e) {
             log.error("批量角色分配失败", e);
+            return Result.fail(ResultCodeEnum.SERVICE_ERROR.getCode(), "批量角色分配失败：" + e.getMessage());
+        }
+    }
+
+    /**
+     * 批量角色分配（表单参数版本）
+     */
+    @Operation(summary = "批量角色分配（表单版）", description = "为多个用户批量分配角色（使用表单参数，方便接口文档测试）")
+    @PostMapping("/batch-assign-form")
+    public Result<Void> batchAssignRolesForm(
+            @Parameter(description = "用户ID列表（用逗号分隔）", required = true)
+            @RequestParam @NotNull String userIds,
+            @Parameter(description = "角色ID列表（用逗号分隔）", required = true)
+            @RequestParam @NotNull String roleIds,
+            @Parameter(description = "操作类型：replace-替换，add-增加，remove-移除", required = true)
+            @RequestParam @NotNull String operation,
+            @Parameter(description = "备注")
+            @RequestParam(required = false) String remark) {
+        try {
+            // 验证操作类型
+            if (!Arrays.asList("replace", "add", "remove").contains(operation)) {
+                return Result.fail(ResultCodeEnum.DATA_ERROR.getCode(), "操作类型只能为: replace, add, remove");
+            }
+            
+            // 解析用户ID列表
+            List<Long> userIdList;
+            try {
+                userIdList = Arrays.stream(userIds.split(","))
+                        .map(String::trim)
+                        .filter(s -> !s.isEmpty())
+                        .map(Long::valueOf)
+                        .collect(Collectors.toList());
+            } catch (NumberFormatException e) {
+                return Result.fail(ResultCodeEnum.DATA_ERROR.getCode(), "用户ID格式不正确，请使用逗号分隔的数字");
+            }
+            
+            if (userIdList.isEmpty()) {
+                return Result.fail(ResultCodeEnum.DATA_ERROR.getCode(), "用户ID列表不能为空");
+            }
+            
+            // 解析角色ID列表
+            List<Long> roleIdList;
+            try {
+                roleIdList = Arrays.stream(roleIds.split(","))
+                        .map(String::trim)
+                        .filter(s -> !s.isEmpty())
+                        .map(Long::valueOf)
+                        .collect(Collectors.toList());
+            } catch (NumberFormatException e) {
+                return Result.fail(ResultCodeEnum.DATA_ERROR.getCode(), "角色ID格式不正确，请使用逗号分隔的数字");
+            }
+            
+            if (roleIdList.isEmpty()) {
+                return Result.fail(ResultCodeEnum.DATA_ERROR.getCode(), "角色ID列表不能为空");
+            }
+            
+            // 验证用户是否存在
+            List<User> users = userService.listByIds(userIdList);
+            if (users.size() != userIdList.size()) {
+                return Result.fail(ResultCodeEnum.DATA_ERROR.getCode(), "部分用户不存在");
+            }
+            
+            // 验证角色是否存在
+            List<Role> roles = roleService.listByIds(roleIdList);
+            if (roles.size() != roleIdList.size()) {
+                return Result.fail(ResultCodeEnum.DATA_ERROR.getCode(), "部分角色不存在");
+            }
+            
+            for (Long userId : userIdList) {
+                if ("replace".equals(operation)) {
+                    // 替换角色：删除现有角色，添加新角色
+                    LambdaQueryWrapper<UserRole> deleteWrapper = new LambdaQueryWrapper<>();
+                    deleteWrapper.eq(UserRole::getUserId, userId);
+                    userRoleService.remove(deleteWrapper);
+                    
+                    List<UserRole> newUserRoles = roleIdList.stream().map(roleId -> {
+                        UserRole userRole = new UserRole();
+                        userRole.setUserId(userId);
+                        userRole.setRoleId(roleId);
+                        userRole.setCreateTime(new Date());
+                        return userRole;
+                    }).collect(Collectors.toList());
+                    
+                    userRoleService.saveBatch(newUserRoles);
+                    
+                } else if ("add".equals(operation)) {
+                    // 新增角色：只添加用户还没有的角色
+                    LambdaQueryWrapper<UserRole> existWrapper = new LambdaQueryWrapper<>();
+                    existWrapper.eq(UserRole::getUserId, userId)
+                               .in(UserRole::getRoleId, roleIdList);
+                    List<UserRole> existingRoles = userRoleService.list(existWrapper);
+                    Set<Long> existingRoleIds = existingRoles.stream()
+                            .map(UserRole::getRoleId)
+                            .collect(Collectors.toSet());
+                    
+                    List<UserRole> newUserRoles = roleIdList.stream()
+                            .filter(roleId -> !existingRoleIds.contains(roleId))
+                            .map(roleId -> {
+                                UserRole userRole = new UserRole();
+                                userRole.setUserId(userId);
+                                userRole.setRoleId(roleId);
+                                userRole.setCreateTime(new Date());
+                                return userRole;
+                            }).collect(Collectors.toList());
+                    
+                    if (!newUserRoles.isEmpty()) {
+                        userRoleService.saveBatch(newUserRoles);
+                    }
+                    
+                } else if ("remove".equals(operation)) {
+                    // 移除角色：删除指定的角色
+                    LambdaQueryWrapper<UserRole> removeWrapper = new LambdaQueryWrapper<>();
+                    removeWrapper.eq(UserRole::getUserId, userId)
+                               .in(UserRole::getRoleId, roleIdList);
+                    userRoleService.remove(removeWrapper);
+                }
+            }
+            
+            log.info("批量角色分配成功（表单版），操作类型: {}, 用户数: {}, 角色数: {}, 备注: {}", 
+                    operation, userIdList.size(), roleIdList.size(), remark);
+            
+            return Result.ok();
+            
+        } catch (Exception e) {
+            log.error("批量角色分配失败（表单版）", e);
             return Result.fail(ResultCodeEnum.SERVICE_ERROR.getCode(), "批量角色分配失败：" + e.getMessage());
         }
     }

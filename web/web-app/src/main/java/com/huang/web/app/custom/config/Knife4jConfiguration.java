@@ -28,10 +28,17 @@ public class Knife4jConfiguration {
         return GroupedOpenApi.builder()
                 .group("01-用户认证")
                 .pathsToMatch(
-                        "/app/login/**",
-                        "/app/register/**",
-                        "/app/logout/**",
-                        "/app/info",
+                        "/app/auth/**"
+                )
+                .build();
+    }
+
+    // ================== 个人信息管理模块 ==================
+    @Bean
+    public GroupedOpenApi profileAPI() {
+        return GroupedOpenApi.builder()
+                .group("02-个人信息管理")
+                .pathsToMatch(
                         "/app/profile/**"
                 )
                 .build();
@@ -41,7 +48,7 @@ public class Knife4jConfiguration {
     @Bean
     public GroupedOpenApi healthAPI() {
         return GroupedOpenApi.builder()
-                .group("02-健康档案")
+                .group("03-健康档案")
                 .pathsToMatch(
                         "/app/health-record/**",
                         "/app/body-measurement/**"
@@ -53,7 +60,7 @@ public class Knife4jConfiguration {
     @Bean
     public GroupedOpenApi exerciseAPI() {
         return GroupedOpenApi.builder()
-                .group("03-运动健身")
+                .group("04-运动健身")
                 .pathsToMatch(
                         "/app/exercise-record/**",
                         "/app/exercise-plan/**"
@@ -65,7 +72,7 @@ public class Knife4jConfiguration {
     @Bean
     public GroupedOpenApi nutritionAPI() {
         return GroupedOpenApi.builder()
-                .group("04-饮食营养")
+                .group("05-饮食营养")
                 .pathsToMatch(
                         "/app/food-database/**",
                         "/app/diet-record/**"
@@ -77,7 +84,7 @@ public class Knife4jConfiguration {
     @Bean
     public GroupedOpenApi courseAPI() {
         return GroupedOpenApi.builder()
-                .group("05-课程学习")
+                .group("06-课程学习")
                 .pathsToMatch(
                         "/app/course-category/**",
                         "/app/course/**",
@@ -92,7 +99,7 @@ public class Knife4jConfiguration {
     @Bean
     public GroupedOpenApi coachServiceAPI() {
         return GroupedOpenApi.builder()
-                .group("06-教练服务")
+                .group("07-教练服务")
                 .pathsToMatch(
                         "/app/coach/**",
                         "/app/coach-consultation/**",
@@ -106,7 +113,7 @@ public class Knife4jConfiguration {
     @Bean
     public GroupedOpenApi socialAPI() {
         return GroupedOpenApi.builder()
-                .group("07-社交互动")
+                .group("08-社交互动")
                 .pathsToMatch(
                         "/app/post/**",
                         "/app/comment/**",
@@ -121,7 +128,7 @@ public class Knife4jConfiguration {
     @Bean
     public GroupedOpenApi articleAPI() {
         return GroupedOpenApi.builder()
-                .group("08-健康科普")
+                .group("09-健康科普")
                 .pathsToMatch(
                         "/app/article-category/**",
                         "/app/health-article/**",
@@ -138,7 +145,7 @@ public class Knife4jConfiguration {
     @Bean
     public GroupedOpenApi orderAPI() {
         return GroupedOpenApi.builder()
-                .group("09-订单支付")
+                .group("10-订单支付")
                 .pathsToMatch(
                         "/app/order/**",
                         "/app/payment/**",
@@ -152,7 +159,7 @@ public class Knife4jConfiguration {
     @Bean
     public GroupedOpenApi personalCenterAPI() {
         return GroupedOpenApi.builder()
-                .group("10-个人中心")
+                .group("11-个人中心")
                 .pathsToMatch(
                         "/app/user/**",
                         "/app/settings/**",

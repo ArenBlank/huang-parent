@@ -28,7 +28,7 @@ public class UserLoginDTO {
     @Pattern(regexp = "^(password|sms)$", message = "登录类型只能为password或sms")
     private String loginType;
 
-    @Schema(description = "短信验证码（短信登录时必填）", example = "123456")
+    @Schema(description = "短信验证码（短信登录时必填，开发阶段可传固定值123456）", example = "123456")
     @Pattern(regexp = "^\\d{6}$", message = "验证码必须为6位数字")
     private String smsCode;
 
