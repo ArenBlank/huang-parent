@@ -1,7 +1,9 @@
 package com.huang.web.app.service;
 
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.huang.model.entity.Role;
+import com.huang.web.app.dto.role.RoleQueryDTO;
 
 /**
  * 角色服务接口
@@ -23,4 +25,11 @@ public interface RoleService extends IService<Role> {
      * @return 是否存在
      */
     boolean existsByRoleCode(String roleCode);
+
+    /**
+     * 分页查询角色列表
+     * @param queryDTO 查询条件
+     * @return 分页结果
+     */
+    Page<Role> getPageList(RoleQueryDTO queryDTO);
 }

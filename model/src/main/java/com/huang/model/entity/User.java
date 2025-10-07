@@ -6,6 +6,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 /**
  * 用户表
@@ -54,4 +55,36 @@ public class User extends BaseEntity {
     @Schema(description = "状态：0-禁用，1-正常")
     @TableField(value = "status")
     private Integer status;
+
+    @Schema(description = "最后登录时间")
+    @TableField(value = "last_login_time")
+    private LocalDateTime lastLoginTime;
+
+    @Schema(description = "积分")
+    @TableField(value = "points")
+    private Integer points;
+
+    @Schema(description = "VIP等级")
+    @TableField(value = "vip_level")
+    private Integer vipLevel;
+
+    @Schema(description = "个人简介")
+    @TableField(value = "bio")
+    private String bio;
+
+    @Schema(description = "地址")
+    @TableField(value = "address")
+    private String address;
+
+    @Schema(description = "职业")
+    @TableField(value = "occupation")
+    private String occupation;
+
+    @Schema(description = "身高(cm)")
+    @TableField(value = "height")
+    private Double height;
+
+    @Schema(description = "体重(kg)")
+    @TableField(value = "weight")
+    private Double weight;
 }

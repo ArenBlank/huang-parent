@@ -1,16 +1,22 @@
 -- ================================================================
--- 健身平台完整数据库SQL脚本（第二版 - 升级版）
+-- 健身平台完整数据库SQL脚本（项目唯一版本）
 -- 包含：基础功能模块 + 教练业务优化模块 + 健康科普文章模块 + 完整测试数据
 -- 版本：Spring Boot 3.0.5 + MyBatis-Plus 3.5.3.1
--- 日期：2025-01-24（更新：2025-09-27）
--- 说明：本脚本包含所有表结构创建、逻辑删除字段、完整测试数据，完全兼容 MyBatis-Plus @TableLogic 功能
--- 更新内容（v2.1）：
--- 1. 完全修复了所有 BaseEntity 字段不匹配问题
+-- 日期：2025-01-24（最新更新：2025-10-06）
+-- 
+-- 🚨 重要说明：
+-- 1. 这是项目中唯一的SQL文件，包含完整的表结构和测试数据
+-- 2. 执行前请备份现有数据库！
+-- 3. 本脚本会删除并重建所有表，请谨慎使用
+-- 4. 包含接口测试所需的完整用户和角色数据
+-- 
+-- 🎯 功能特性：
+-- 1. 完全修复了所有 BaseEntity 字段不匹配问题（包括 last_login_time 字段）
 -- 2. 为所有继承 BaseEntity 的表添加了 update_time 字段
--- 3. 修复了缺失 create_time 字段的表
--- 4. 完全兼容 MyBatis-Plus @TableLogic 和 @FieldFill 功能
--- 5. 保证所有表结构与实体类定义一致
--- 6. 完善了测试数据，确保每张表都有充足数据
+-- 3. 完全兼容 MyBatis-Plus @TableLogic 和 @FieldFill 功能
+-- 4. 保证所有表结构与实体类定义完全一致
+-- 5. 包含完整测试数据，支持Admin和App端接口测试
+-- 6. 提供测试账号：admin/testuser/coach001（密码：123456）
 -- ================================================================
 
 -- 创建数据库
@@ -37,6 +43,14 @@ CREATE TABLE `user` (
   `gender` tinyint DEFAULT NULL COMMENT '性别：0-未知，1-男，2-女',
   `birth_date` date DEFAULT NULL COMMENT '出生日期',
   `status` tinyint DEFAULT '1' COMMENT '状态：0-禁用，1-正常',
+  `last_login_time` datetime DEFAULT NULL COMMENT '最后登录时间',
+  `points` int DEFAULT '0' COMMENT '积分',
+  `vip_level` tinyint DEFAULT '0' COMMENT 'VIP等级',
+  `bio` text COMMENT '个人简介',
+  `address` varchar(200) DEFAULT NULL COMMENT '地址',
+  `occupation` varchar(100) DEFAULT NULL COMMENT '职业',
+  `height` decimal(5,2) DEFAULT NULL COMMENT '身高(cm)',
+  `weight` decimal(5,2) DEFAULT NULL COMMENT '体重(kg)',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `is_deleted` tinyint DEFAULT 0 COMMENT '是否删除: 0否 1是',
@@ -63,7 +77,7 @@ CREATE TABLE `role` (
   KEY `idx_is_deleted` (`is_deleted`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='角色表';
 
--- 3. 用户角色关联表
+-- 3. 用户角色关联表（支持逻辑删除的唯一约束）
 DROP TABLE IF EXISTS `user_role`;
 CREATE TABLE `user_role` (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT 'ID',
@@ -73,7 +87,9 @@ CREATE TABLE `user_role` (
   `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `is_deleted` tinyint DEFAULT 0 COMMENT '是否删除: 0否 1是',
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_user_role` (`user_id`,`role_id`),
+  -- 支持逻辑删除的唯一约束：只有is_deleted=0时才检查唯一性
+  UNIQUE KEY `uk_user_role_active` (`user_id`,`role_id`,`is_deleted`),
+  KEY `idx_user_id` (`user_id`),
   KEY `idx_role_id` (`role_id`),
   KEY `idx_is_deleted` (`is_deleted`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='用户角色关联表';
@@ -1429,9 +1445,76 @@ COMMIT;
 -- 完成提示
 -- ================================================================
 
-SELECT '✅ 健身平台完整数据库创建成功！（第二版）' as message,
-       '包含基础功能模块、教练业务优化模块、健康科普文章模块' as modules,
-       '共42个数据表，多个存储过程、触发器和视图' as summary,
-       '已完整集成 MyBatis-Plus @TableLogic 逻辑删除功能' as logical_delete,
-       '增强版：更多测试数据，修复所有字段问题' as enhancement,
+-- ================================================================
+-- 🎉 数据库创建完成提示
+-- ================================================================
+
+SELECT '✅ 健身平台数据库创建成功！' as message,
+       '包含完整表结构 + 丰富测试数据 + Admin/App接口测试支持' as features,
+       '已修复 last_login_time 等所有字段问题' as fix_status,
        NOW() as complete_time;
+
+-- ================================================================
+-- 🔑 测试账号信息（密码都是 123456）
+-- ================================================================
+/*
+📝 测试账号列表：
+
+🔴 Admin管理端测试账号：
+  - 用户名: admin
+  - 密码: 123456  
+  - 角色: 系统管理员
+  - 用途: 测试Admin端用户管理、角色管理等接口
+
+🔵 App用户端测试账号：
+  - 用户名: user001 (昵称: 小明)
+  - 密码: 123456
+  - 角色: 普通用户  
+  - 用途: 测试App端登录、个人信息等接口
+
+🟫 教练端测试账号：
+  - 用户名: coach001 (昵称: 李教练)
+  - 密码: 123456
+  - 角色: 健身教练
+  - 用途: 测试教练相关功能
+
+🎆 其他测试账号：
+  - user002/user003/user004... (密码都是 123456)
+  - coach002/coach003/coach004... (密码都是 123456)
+*/
+
+-- ================================================================
+-- 🚀 快速启动指南
+-- ================================================================
+/*
+1️⃣ 数据库初始化：
+   mysql -u root -p
+   source D:/path/to/1_fitness_platform_complete.sql
+
+2️⃣ 启动应用程序：
+   # Admin管理端：
+   cd web-admin && mvn spring-boot:run
+   访问: http://localhost:8080/doc.html
+   
+   # App用户端：  
+   cd web-app && mvn spring-boot:run
+   访问: http://localhost:8081/doc.html
+
+3️⃣ 接口测试流程：
+   ✅ Admin端: GET /admin/user/list - 查看用户列表
+   ✅ Admin端: GET /admin/role/list - 查看角色列表  
+   ✅ App端: POST /app/auth/simple-login - 用user001登录获取token
+   ✅ App端: GET /app/profile/info - 查看个人信息(需要token)
+
+4️⃣ 常见问题解决：
+   ❓ 如果出现 "Unknown column 'last_login_time'" 错误：
+       说明数据库表结构过旧，请重新执行本 SQL 脚本
+   
+   ❓ 如果登录失败：
+       检查账号密码是否正确（密码都是 123456）
+       检查数据库连接配置是否正确
+*/
+
+-- ================================================================
+-- 🎆 脚本执行完成！
+-- ================================================================

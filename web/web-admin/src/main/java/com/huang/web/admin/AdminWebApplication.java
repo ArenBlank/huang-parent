@@ -8,7 +8,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 
 @SpringBootApplication
 @EnableScheduling
-@ComponentScan(basePackages = {"com.huang"})
+@ComponentScan(basePackages = {"com.huang.web.admin", "com.huang.common", "com.huang.model"})
 @MapperScan("com.huang.web.admin.mapper")
 public class AdminWebApplication {
     public static void main(String[] args) {

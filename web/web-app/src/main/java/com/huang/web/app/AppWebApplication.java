@@ -8,7 +8,7 @@ import org.springframework.scheduling.annotation.EnableAsync;
 
 @SpringBootApplication
 @EnableAsync
-@ComponentScan(basePackages = {"com.huang"})
+@ComponentScan(basePackages = {"com.huang.web.app", "com.huang.common", "com.huang.model"})
 @MapperScan("com.huang.web.app.mapper")
 public class AppWebApplication {
     public static void main(String[] args) {

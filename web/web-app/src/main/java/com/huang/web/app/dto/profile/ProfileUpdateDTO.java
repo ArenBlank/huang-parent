@@ -44,13 +44,13 @@ public class ProfileUpdateDTO {
     @Size(max = 50, message = "职业长度不能超过50个字符")
     private String occupation;
 
-    @Schema(description = "身高（厘米）", example = "175")
-    @Min(value = 100, message = "身高必须大于100厘米")
-    @Max(value = 250, message = "身高必须小于250厘米")
-    private Integer height;
+    @Schema(description = "身高（厘米）", example = "175.5")
+    @DecimalMin(value = "100.0", message = "身高必须大于100厘米")
+    @DecimalMax(value = "250.0", message = "身高必须小于250厘米")
+    private Double height;
 
-    @Schema(description = "体重（公斤）", example = "70")
-    @Min(value = 30, message = "体重必须大于30公斤")
-    @Max(value = 200, message = "体重必须小于200公斤")
-    private Integer weight;
+    @Schema(description = "体重（公斤）", example = "70.2")
+    @DecimalMin(value = "30.0", message = "体重必须大于30公斤")
+    @DecimalMax(value = "200.0", message = "体重必须小于200公斤")
+    private Double weight;
 }
