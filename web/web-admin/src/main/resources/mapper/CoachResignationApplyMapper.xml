@@ -1,0 +1,97 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.huang.web.admin.mapper.CoachResignationApplyMapper">
+
+    <!-- 分页查询教练离职申请列表 -->
+    <select id="selectResignationPage" resultType="com.huang.web.admin.vo.coach.CoachResignationDetailVO">
+        SELECT 
+            cra.id,
+            cra.coach_id,
+            u.real_name as coach_name,
+            u.phone as coach_phone,
+            u.email as coach_email,
+            cra.resignation_date,
+            cra.reason,
+            cra.handover_plan,
+            cra.status,
+            CASE cra.status 
+                WHEN 'pending' THEN '待审核'
+                WHEN 'approved' THEN '已批准'
+                WHEN 'rejected' THEN '已拒绝'
+                WHEN 'cancelled' THEN '已取消'
+                ELSE '未知'
+            END as status_desc,
+            cra.apply_time,
+            cra.review_time,
+            cra.reviewer_id,
+            reviewer.real_name as reviewer_name,
+            cra.review_remark,
+            cra.actual_leave_date,
+            cra.create_time,
+            cra.update_time,
+            CASE WHEN cra.status = 'pending' THEN 1 ELSE 0 END as can_review,
+            CASE WHEN cra.status = 'pending' THEN 1 ELSE 0 END as can_cancel
+        FROM coach_resignation_apply cra
+        LEFT JOIN user u ON cra.coach_id = u.id
+        LEFT JOIN user reviewer ON cra.reviewer_id = reviewer.id
+        WHERE cra.is_deleted = 0
+        <if test="query.coachId != null">
+            AND cra.coach_id = #{query.coachId}
+        </if>
+        <if test="query.coachName != null and query.coachName != ''">
+            AND u.real_name LIKE CONCAT('%', #{query.coachName}, '%')
+        </if>
+        <if test="query.status != null and query.status != ''">
+            AND cra.status = #{query.status}
+        </if>
+        <if test="query.applyStartDate != null">
+            AND DATE(cra.apply_time) &gt;= #{query.applyStartDate}
+        </if>
+        <if test="query.applyEndDate != null">
+            AND DATE(cra.apply_time) &lt;= #{query.applyEndDate}
+        </if>
+        <if test="query.resignationStartDate != null">
+            AND cra.resignation_date &gt;= #{query.resignationStartDate}
+        </if>
+        <if test="query.resignationEndDate != null">
+            AND cra.resignation_date &lt;= #{query.resignationEndDate}
+        </if>
+        ORDER BY cra.apply_time DESC
+    </select>
+
+    <!-- 根据ID查询教练离职申请详情 -->
+    <select id="selectResignationDetail" resultType="com.huang.web.admin.vo.coach.CoachResignationDetailVO">
+        SELECT 
+            cra.id,
+            cra.coach_id,
+            u.real_name as coach_name,
+            u.phone as coach_phone,
+            u.email as coach_email,
+            cra.resignation_date,
+            cra.reason,
+            cra.handover_plan,
+            cra.status,
+            CASE cra.status 
+                WHEN 'pending' THEN '待审核'
+                WHEN 'approved' THEN '已批准'
+                WHEN 'rejected' THEN '已拒绝'
+                WHEN 'cancelled' THEN '已取消'
+                ELSE '未知'
+            END as status_desc,
+            cra.apply_time,
+            cra.review_time,
+            cra.reviewer_id,
+            reviewer.real_name as reviewer_name,
+            cra.review_remark,
+            cra.actual_leave_date,
+            cra.create_time,
+            cra.update_time,
+            CASE WHEN cra.status = 'pending' THEN 1 ELSE 0 END as can_review,
+            CASE WHEN cra.status = 'pending' THEN 1 ELSE 0 END as can_cancel
+        FROM coach_resignation_apply cra
+        LEFT JOIN user u ON cra.coach_id = u.id
+        LEFT JOIN user reviewer ON cra.reviewer_id = reviewer.id
+        WHERE cra.id = #{id} AND cra.is_deleted = 0
+    </select>
+
+</mapper>

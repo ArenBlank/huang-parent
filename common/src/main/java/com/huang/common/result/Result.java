@@ -60,4 +60,32 @@ public class Result<T> {
         result.setMessage(message);
         return result;
     }
+    
+    // success 方法重载，与 ok 方法功能相同
+    public static <T> Result<T> success(T data) {
+        return ok(data);
+    }
+    
+    public static <T> Result<T> success() {
+        return ok();
+    }
+    
+    public static <T> Result<T> success(String message) {
+        Result<T> result = ok();
+        result.setMessage(message);
+        return result;
+    }
+    
+    // failed 方法重载，与 fail 方法功能相同
+    public static <T> Result<T> failed() {
+        return fail();
+    }
+    
+    public static <T> Result<T> failed(String message) {
+        return fail(message);
+    }
+    
+    public static <T> Result<T> failed(Integer code, String message) {
+        return fail(code, message);
+    }
 }

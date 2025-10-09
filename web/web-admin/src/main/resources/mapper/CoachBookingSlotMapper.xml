@@ -1,0 +1,163 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.huang.web.admin.mapper.CoachBookingSlotMapper">
+
+    <!-- 分页查询预约时段（带教练和用户信息） -->
+    <select id="selectBookingSlotPage" resultType="java.util.Map">
+        SELECT 
+            cbs.id,
+            cbs.coach_id,
+            cbs.service_id,
+            cbs.booking_date,
+            cbs.start_time,
+            cbs.end_time,
+            cbs.status,
+            cbs.user_id,
+            cbs.order_id,
+            cbs.booking_price,
+            cbs.booking_time,
+            cbs.completion_time,
+            cbs.cancellation_time,
+            cbs.cancellation_reason,
+            cbs.remark,
+            cbs.create_time,
+            cbs.update_time,
+            c.real_name AS coach_name,
+            c.certification_no,
+            c.specialties,
+            u.username,
+            u.nickname AS user_nickname,
+            u.phone AS user_phone,
+            cs.service_name,
+            cs.service_type,
+            cs.duration AS service_duration
+        FROM coach_booking_slot cbs
+        LEFT JOIN coach c ON cbs.coach_id = c.id
+        LEFT JOIN user u ON cbs.user_id = u.id
+        LEFT JOIN coach_service cs ON cbs.service_id = cs.id
+        WHERE cbs.is_deleted = 0
+        <if test="query.coachId != null">
+            AND cbs.coach_id = #{query.coachId}
+        </if>
+        <if test="query.userId != null">
+            AND cbs.user_id = #{query.userId}
+        </if>
+        <if test="query.serviceId != null">
+            AND cbs.service_id = #{query.serviceId}
+        </if>
+        <if test="query.status != null and query.status != ''">
+            AND cbs.status = #{query.status}
+        </if>
+        <if test="query.coachName != null and query.coachName != ''">
+            AND c.real_name LIKE CONCAT('%', #{query.coachName}, '%')
+        </if>
+        <if test="query.userNickname != null and query.userNickname != ''">
+            AND u.nickname LIKE CONCAT('%', #{query.userNickname}, '%')
+        </if>
+        <if test="query.startDate != null and query.endDate != null">
+            AND cbs.booking_date BETWEEN #{query.startDate} AND #{query.endDate}
+        </if>
+        <if test="query.bookingDate != null">
+            AND cbs.booking_date = #{query.bookingDate}
+        </if>
+        ORDER BY cbs.booking_date DESC, cbs.start_time ASC
+    </select>
+
+    <!-- 获取教练的预约统计信息 -->
+    <select id="selectCoachBookingStats" resultType="java.util.Map">
+        SELECT 
+            COUNT(*) AS total_slots,
+            COUNT(CASE WHEN status = 'available' THEN 1 END) AS available_slots,
+            COUNT(CASE WHEN status = 'booked' THEN 1 END) AS booked_slots,
+            COUNT(CASE WHEN status = 'blocked' THEN 1 END) AS blocked_slots,
+            COUNT(CASE WHEN status = 'completed' THEN 1 END) AS completed_slots,
+            SUM(CASE WHEN status IN ('booked', 'completed') THEN booking_price ELSE 0 END) AS total_revenue,
+            ROUND(AVG(booking_price), 2) AS avg_price,
+            COUNT(DISTINCT user_id) AS unique_clients
+        FROM coach_booking_slot
+        WHERE coach_id = #{coachId} AND is_deleted = 0
+    </select>
+
+    <!-- 查询教练在指定日期范围的预约时段 -->
+    <select id="selectCoachAvailableSlots" resultType="java.util.Map">
+        SELECT 
+            cbs.id,
+            cbs.booking_date,
+            cbs.start_time,
+            cbs.end_time,
+            cbs.status,
+            cbs.booking_price,
+            cs.service_name,
+            cs.service_type,
+            cs.duration,
+            CASE 
+                WHEN cbs.user_id IS NOT NULL THEN u.nickname
+                ELSE NULL
+            END AS user_nickname
+        FROM coach_booking_slot cbs
+        LEFT JOIN coach_service cs ON cbs.service_id = cs.id
+        LEFT JOIN user u ON cbs.user_id = u.id
+        WHERE cbs.coach_id = #{coachId}
+        AND cbs.booking_date BETWEEN #{startDate} AND #{endDate}
+        AND cbs.is_deleted = 0
+        ORDER BY cbs.booking_date ASC, cbs.start_time ASC
+    </select>
+
+    <!-- 查询用户的预约历史 -->
+    <select id="selectUserBookingHistory" resultType="java.util.Map">
+        SELECT 
+            cbs.id,
+            cbs.booking_date,
+            cbs.start_time,
+            cbs.end_time,
+            cbs.status,
+            cbs.booking_price,
+            cbs.booking_time,
+            cbs.completion_time,
+            cbs.cancellation_time,
+            cbs.cancellation_reason,
+            c.real_name AS coach_name,
+            c.specialties,
+            cs.service_name,
+            cs.service_type
+        FROM coach_booking_slot cbs
+        LEFT JOIN coach c ON cbs.coach_id = c.id
+        LEFT JOIN coach_service cs ON cbs.service_id = cs.id
+        WHERE cbs.user_id = #{userId} AND cbs.is_deleted = 0
+        ORDER BY cbs.booking_date DESC, cbs.start_time DESC
+    </select>
+
+    <!-- 查询时段冲突 -->
+    <select id="selectConflictSlots" resultType="com.huang.model.entity.CoachBookingSlot">
+        SELECT *
+        FROM coach_booking_slot
+        WHERE coach_id = #{coachId}
+        AND booking_date = #{bookingDate}
+        AND is_deleted = 0
+        AND status != 'cancelled'
+        AND (
+            (start_time <![CDATA[<]]> #{endTime} AND end_time > #{startTime})
+        )
+        <if test="excludeId != null">
+            AND id != #{excludeId}
+        </if>
+    </select>
+
+    <!-- 获取预约数据统计 -->
+    <select id="selectBookingStatistics" resultType="java.util.Map">
+        SELECT 
+            COUNT(*) AS total_bookings,
+            COUNT(CASE WHEN status = 'booked' THEN 1 END) AS active_bookings,
+            COUNT(CASE WHEN status = 'completed' THEN 1 END) AS completed_bookings,
+            COUNT(CASE WHEN status = 'available' THEN 1 END) AS available_slots,
+            SUM(CASE WHEN status IN ('booked', 'completed') THEN booking_price ELSE 0 END) AS total_revenue,
+            COUNT(DISTINCT coach_id) AS active_coaches,
+            COUNT(DISTINCT user_id) AS unique_clients
+        FROM coach_booking_slot
+        WHERE is_deleted = 0
+        <if test="startDate != null and endDate != null">
+            AND booking_date BETWEEN #{startDate} AND #{endDate}
+        </if>
+    </select>
+
+</mapper>

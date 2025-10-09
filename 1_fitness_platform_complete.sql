@@ -162,7 +162,58 @@ CREATE TABLE `body_measurement` (
   KEY `idx_is_deleted` (`is_deleted`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='体测记录表';
 
--- 7. 课程分类表
+-- 7. 门店管理表
+DROP TABLE IF EXISTS `gym_store`;
+CREATE TABLE `gym_store` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '门店ID',
+  `store_name` varchar(100) NOT NULL COMMENT '门店名称',
+  `store_code` varchar(50) NOT NULL COMMENT '门店编码',
+  `address` varchar(500) NOT NULL COMMENT '门店地址',
+  `phone` varchar(20) DEFAULT NULL COMMENT '联系电话',
+  `business_hours` varchar(100) DEFAULT NULL COMMENT '营业时间',
+  `manager_name` varchar(50) DEFAULT NULL COMMENT '店长姓名',
+  `manager_phone` varchar(20) DEFAULT NULL COMMENT '店长电话',
+  `area_size` int DEFAULT NULL COMMENT '营业面积(平米)',
+  `equipment_count` int DEFAULT NULL COMMENT '设备数量',
+  `max_capacity` int DEFAULT NULL COMMENT '最大容纳人数',
+  `parking_spaces` int DEFAULT NULL COMMENT '停车位数量',
+  `facilities` json DEFAULT NULL COMMENT '设施信息JSON',
+  `description` text COMMENT '门店描述',
+  `images` json DEFAULT NULL COMMENT '门店图片JSON',
+  `latitude` decimal(10,7) DEFAULT NULL COMMENT '纬度',
+  `longitude` decimal(10,7) DEFAULT NULL COMMENT '经度',
+  `status` tinyint DEFAULT '1' COMMENT '状态：0-停业，1-营业，2-装修中',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `is_deleted` tinyint DEFAULT 0 COMMENT '是否删除: 0否 1是',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_store_code` (`store_code`),
+  KEY `idx_status` (`status`),
+  KEY `idx_is_deleted` (`is_deleted`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='门店管理表';
+
+-- 8. 教练门店关联表
+DROP TABLE IF EXISTS `coach_store_relation`;
+CREATE TABLE `coach_store_relation` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT 'ID',
+  `coach_id` bigint NOT NULL COMMENT '教练ID',
+  `store_id` bigint NOT NULL COMMENT '门店ID',
+  `is_primary` tinyint DEFAULT '0' COMMENT '是否主要工作门店：0-否，1-是',
+  `start_date` date DEFAULT NULL COMMENT '开始工作日期',
+  `end_date` date DEFAULT NULL COMMENT '结束工作日期',
+  `status` tinyint DEFAULT '1' COMMENT '状态：0-停用，1-启用',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `is_deleted` tinyint DEFAULT 0 COMMENT '是否删除: 0否 1是',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_coach_store_active` (`coach_id`,`store_id`,`is_deleted`),
+  KEY `idx_coach_id` (`coach_id`),
+  KEY `idx_store_id` (`store_id`),
+  KEY `idx_is_primary` (`is_primary`),
+  KEY `idx_is_deleted` (`is_deleted`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='教练门店关联表';
+
+-- 9. 课程分类表
 DROP TABLE IF EXISTS `course_category`;
 CREATE TABLE `course_category` (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '分类ID',
@@ -178,13 +229,14 @@ CREATE TABLE `course_category` (
   KEY `idx_is_deleted` (`is_deleted`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='课程分类表';
 
--- 8. 课程表
+-- 10. 课程表
 DROP TABLE IF EXISTS `course`;
 CREATE TABLE `course` (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '课程ID',
   `course_name` varchar(100) NOT NULL COMMENT '课程名称',
   `category_id` bigint NOT NULL COMMENT '分类ID',
   `coach_id` bigint NOT NULL COMMENT '教练ID',
+  `store_id` bigint DEFAULT NULL COMMENT '默认门店ID（可为空，表示多门店课程）',
   `cover_image` varchar(255) DEFAULT NULL COMMENT '封面图片',
   `description` text COMMENT '课程描述',
   `difficulty` tinyint DEFAULT '1' COMMENT '难度：1-初级，2-中级，3-高级',
@@ -198,19 +250,21 @@ CREATE TABLE `course` (
   PRIMARY KEY (`id`),
   KEY `idx_category_id` (`category_id`),
   KEY `idx_coach_id` (`coach_id`),
+  KEY `idx_store_id` (`store_id`),
   KEY `idx_status` (`status`),
   KEY `idx_is_deleted` (`is_deleted`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='课程表';
 
--- 9. 课程排期表
+-- 11. 课程排期表
 DROP TABLE IF EXISTS `course_schedule`;
 CREATE TABLE `course_schedule` (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '排期ID',
   `course_id` bigint NOT NULL COMMENT '课程ID',
   `coach_id` bigint NOT NULL COMMENT '教练ID',
+  `store_id` bigint NOT NULL COMMENT '门店ID',
   `start_time` datetime NOT NULL COMMENT '开始时间',
   `end_time` datetime NOT NULL COMMENT '结束时间',
-  `location` varchar(100) DEFAULT NULL COMMENT '上课地点',
+  `room_location` varchar(100) DEFAULT NULL COMMENT '房间位置（如：瑜伽室1、力量训练区）',
   `current_participants` int DEFAULT '0' COMMENT '当前报名人数',
   `status` tinyint DEFAULT '1' COMMENT '状态：0-已取消，1-正常，2-已结束',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
@@ -219,12 +273,13 @@ CREATE TABLE `course_schedule` (
   PRIMARY KEY (`id`),
   KEY `idx_course_id` (`course_id`),
   KEY `idx_coach_id` (`coach_id`),
+  KEY `idx_store_id` (`store_id`),
   KEY `idx_start_time` (`start_time`),
   KEY `idx_status` (`status`),
   KEY `idx_is_deleted` (`is_deleted`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='课程排期表';
 
--- 10. 课程报名表
+-- 12. 课程报名表
 DROP TABLE IF EXISTS `course_enrollment`;
 CREATE TABLE `course_enrollment` (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '报名ID',
@@ -243,7 +298,7 @@ CREATE TABLE `course_enrollment` (
   KEY `idx_is_deleted` (`is_deleted`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='课程报名表';
 
--- 11. 运动记录表
+-- 13. 运动记录表
 DROP TABLE IF EXISTS `exercise_record`;
 CREATE TABLE `exercise_record` (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '记录ID',
@@ -264,7 +319,7 @@ CREATE TABLE `exercise_record` (
   KEY `idx_is_deleted` (`is_deleted`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='运动记录表';
 
--- 12. 运动计划表
+-- 14. 运动计划表
 DROP TABLE IF EXISTS `exercise_plan`;
 CREATE TABLE `exercise_plan` (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '计划ID',
@@ -284,7 +339,7 @@ CREATE TABLE `exercise_plan` (
   KEY `idx_is_deleted` (`is_deleted`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='运动计划表';
 
--- 13. 食物数据库表
+-- 15. 食物数据库表
 DROP TABLE IF EXISTS `food_database`;
 CREATE TABLE `food_database` (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '食物ID',
@@ -305,7 +360,7 @@ CREATE TABLE `food_database` (
   KEY `idx_is_deleted` (`is_deleted`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='食物数据库表';
 
--- 14. 饮食记录表
+-- 16. 饮食记录表
 DROP TABLE IF EXISTS `diet_record`;
 CREATE TABLE `diet_record` (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '记录ID',
@@ -325,7 +380,7 @@ CREATE TABLE `diet_record` (
   KEY `idx_is_deleted` (`is_deleted`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='饮食记录表';
 
--- 15. 动态表
+-- 17. 动态表
 DROP TABLE IF EXISTS `post`;
 CREATE TABLE `post` (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '动态ID',
@@ -348,7 +403,7 @@ CREATE TABLE `post` (
   KEY `idx_is_deleted` (`is_deleted`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='动态表';
 
--- 16. 评论表
+-- 18. 评论表
 DROP TABLE IF EXISTS `comment`;
 CREATE TABLE `comment` (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '评论ID',
@@ -369,7 +424,7 @@ CREATE TABLE `comment` (
   KEY `idx_is_deleted` (`is_deleted`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='评论表';
 
--- 17. 关注表
+-- 19. 关注表
 DROP TABLE IF EXISTS `follow`;
 CREATE TABLE `follow` (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT 'ID',
@@ -384,7 +439,7 @@ CREATE TABLE `follow` (
   KEY `idx_is_deleted` (`is_deleted`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='关注表';
 
--- 18. 点赞记录表
+-- 20. 点赞记录表
 DROP TABLE IF EXISTS `like_record`;
 CREATE TABLE `like_record` (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT 'ID',
@@ -400,7 +455,7 @@ CREATE TABLE `like_record` (
   KEY `idx_is_deleted` (`is_deleted`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='点赞记录表';
 
--- 19. 订单表
+-- 21. 订单表
 DROP TABLE IF EXISTS `order_info`;
 CREATE TABLE `order_info` (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '订单ID',
@@ -423,7 +478,7 @@ CREATE TABLE `order_info` (
   KEY `idx_is_deleted` (`is_deleted`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='订单表';
 
--- 20. 订单详情表
+-- 22. 订单详情表
 DROP TABLE IF EXISTS `order_detail`;
 CREATE TABLE `order_detail` (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT 'ID',
@@ -442,7 +497,7 @@ CREATE TABLE `order_detail` (
   KEY `idx_is_deleted` (`is_deleted`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='订单详情表';
 
--- 21. 支付记录表
+-- 23. 支付记录表
 DROP TABLE IF EXISTS `payment_record`;
 CREATE TABLE `payment_record` (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT 'ID',
@@ -462,7 +517,7 @@ CREATE TABLE `payment_record` (
   KEY `idx_is_deleted` (`is_deleted`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='支付记录表';
 
--- 22. 退款记录表
+-- 24. 退款记录表
 DROP TABLE IF EXISTS `refund_record`;
 CREATE TABLE `refund_record` (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT 'ID',
@@ -483,7 +538,7 @@ CREATE TABLE `refund_record` (
   KEY `idx_is_deleted` (`is_deleted`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='退款记录表';
 
--- 23. 系统配置表
+-- 25. 系统配置表
 DROP TABLE IF EXISTS `system_config`;
 CREATE TABLE `system_config` (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT 'ID',
@@ -498,7 +553,7 @@ CREATE TABLE `system_config` (
   KEY `idx_is_deleted` (`is_deleted`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='系统配置表';
 
--- 24. 操作日志表
+-- 26. 操作日志表
 DROP TABLE IF EXISTS `operation_log`;
 CREATE TABLE `operation_log` (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT 'ID',
@@ -526,7 +581,7 @@ CREATE TABLE `operation_log` (
 -- 第二部分：教练业务优化模块
 -- ================================================================
 
--- 25. 教练可用时间表
+-- 27. 教练可用时间表
 DROP TABLE IF EXISTS `coach_availability`;
 CREATE TABLE `coach_availability` (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT 'ID',
@@ -544,7 +599,7 @@ CREATE TABLE `coach_availability` (
   KEY `idx_is_deleted` (`is_deleted`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='教练可用时间表';
 
--- 26. 教练日程变更申请表
+-- 28. 教练日程变更申请表
 DROP TABLE IF EXISTS `coach_schedule_change`;
 CREATE TABLE `coach_schedule_change` (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT 'ID',
@@ -572,7 +627,7 @@ CREATE TABLE `coach_schedule_change` (
   KEY `idx_is_deleted` (`is_deleted`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='教练日程变更申请表';
 
--- 27. 教练认证申请表
+-- 29. 教练认证申请表
 DROP TABLE IF EXISTS `coach_certification_apply`;
 CREATE TABLE `coach_certification_apply` (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '申请ID',
@@ -603,7 +658,7 @@ CREATE TABLE `coach_certification_apply` (
   KEY `idx_is_deleted` (`is_deleted`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='教练认证申请表';
 
--- 28. 教练离职申请表
+-- 30. 教练离职申请表
 DROP TABLE IF EXISTS `coach_resignation_apply`;
 CREATE TABLE `coach_resignation_apply` (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '申请ID',
@@ -627,7 +682,7 @@ CREATE TABLE `coach_resignation_apply` (
   KEY `idx_is_deleted` (`is_deleted`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='教练离职申请表';
 
--- 29. 教练服务项目表
+-- 31. 教练服务项目表
 DROP TABLE IF EXISTS `coach_service`;
 CREATE TABLE `coach_service` (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '服务ID',
@@ -649,7 +704,7 @@ CREATE TABLE `coach_service` (
   KEY `idx_is_deleted` (`is_deleted`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='教练服务项目表';
 
--- 30. 教练咨询记录表
+-- 32. 教练咨询记录表
 DROP TABLE IF EXISTS `coach_consultation`;
 CREATE TABLE `coach_consultation` (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '咨询ID',
@@ -673,7 +728,7 @@ CREATE TABLE `coach_consultation` (
   KEY `idx_is_deleted` (`is_deleted`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='教练咨询记录表';
 
--- 31. 教练评价表
+-- 33. 教练评价表
 DROP TABLE IF EXISTS `coach_evaluation`;
 CREATE TABLE `coach_evaluation` (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '评价ID',
@@ -700,7 +755,7 @@ CREATE TABLE `coach_evaluation` (
   KEY `idx_is_deleted` (`is_deleted`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='教练评价表';
 
--- 32. 教练收入记录表
+-- 34. 教练收入记录表
 DROP TABLE IF EXISTS `coach_income`;
 CREATE TABLE `coach_income` (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '收入ID',
@@ -724,7 +779,7 @@ CREATE TABLE `coach_income` (
   KEY `idx_is_deleted` (`is_deleted`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='教练收入记录表';
 
--- 33. 教练结算记录表
+-- 35. 教练结算记录表
 DROP TABLE IF EXISTS `coach_settlement`;
 CREATE TABLE `coach_settlement` (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '结算ID',
@@ -752,11 +807,67 @@ CREATE TABLE `coach_settlement` (
   KEY `idx_is_deleted` (`is_deleted`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='教练结算记录表';
 
+-- 36. 教练资格撤销申请表
+DROP TABLE IF EXISTS `coach_qualification_revoke_apply`;
+CREATE TABLE `coach_qualification_revoke_apply` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '申请ID',
+  `coach_id` bigint NOT NULL COMMENT '教练ID',
+  `user_id` bigint NOT NULL COMMENT '用户ID',
+  `revoke_reason` text NOT NULL COMMENT '撤销原因',
+  `effective_date` date NOT NULL COMMENT '期望生效日期',
+  `status` varchar(20) DEFAULT 'pending' COMMENT '状态: pending待审核 approved已批准 rejected已拒绝 cancelled已取消',
+  `apply_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '申请时间',
+  `review_time` datetime DEFAULT NULL COMMENT '审核时间',
+  `reviewer_id` bigint DEFAULT NULL COMMENT '审核人ID',
+  `review_remark` varchar(500) DEFAULT NULL COMMENT '审核备注',
+  `actual_revoke_date` date DEFAULT NULL COMMENT '实际撤销日期',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time` datetime DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `is_deleted` tinyint DEFAULT 0 COMMENT '是否删除: 0否 1是',
+  PRIMARY KEY (`id`),
+  KEY `idx_coach_id` (`coach_id`),
+  KEY `idx_user_id` (`user_id`),
+  KEY `idx_status` (`status`),
+  KEY `idx_apply_time` (`apply_time`),
+  KEY `idx_is_deleted` (`is_deleted`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='教练资格撤销申请表';
+
+-- 37. 教练预约时段表
+DROP TABLE IF EXISTS `coach_booking_slot`;
+CREATE TABLE `coach_booking_slot` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '时段ID',
+  `coach_id` bigint NOT NULL COMMENT '教练ID',
+  `service_id` bigint NOT NULL COMMENT '服务项目ID',
+  `booking_date` date NOT NULL COMMENT '预约日期',
+  `start_time` time NOT NULL COMMENT '开始时间',
+  `end_time` time NOT NULL COMMENT '结束时间',
+  `status` varchar(20) DEFAULT 'available' COMMENT '状态: available可预约 booked已预约 blocked已屏蔽 completed已完成',
+  `user_id` bigint DEFAULT NULL COMMENT '预约用户ID',
+  `order_id` bigint DEFAULT NULL COMMENT '关联订单ID',
+  `booking_price` decimal(10,2) DEFAULT NULL COMMENT '预约价格',
+  `booking_time` datetime DEFAULT NULL COMMENT '预约时间',
+  `completion_time` datetime DEFAULT NULL COMMENT '完成时间',
+  `cancellation_time` datetime DEFAULT NULL COMMENT '取消时间',
+  `cancellation_reason` varchar(200) DEFAULT NULL COMMENT '取消原因',
+  `remark` varchar(500) DEFAULT NULL COMMENT '备注',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time` datetime DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `is_deleted` tinyint DEFAULT 0 COMMENT '是否删除: 0否 1是',
+  PRIMARY KEY (`id`),
+  KEY `idx_coach_date` (`coach_id`, `booking_date`),
+  KEY `idx_service_id` (`service_id`),
+  KEY `idx_user_id` (`user_id`),
+  KEY `idx_order_id` (`order_id`),
+  KEY `idx_status` (`status`),
+  KEY `idx_booking_time` (`booking_time`),
+  KEY `idx_is_deleted` (`is_deleted`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='教练预约时段表';
+
 -- ================================================================
 -- 第三部分：健康科普文章模块
 -- ================================================================
 
--- 34. 文章分类表
+-- 38. 文章分类表
 DROP TABLE IF EXISTS `article_category`;
 CREATE TABLE `article_category` (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '分类ID',
@@ -780,7 +891,7 @@ CREATE TABLE `article_category` (
   KEY `idx_is_deleted` (`is_deleted`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='文章分类表';
 
--- 35. 健康文章表
+-- 39. 健康文章表
 DROP TABLE IF EXISTS `health_article`;
 CREATE TABLE `health_article` (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '文章ID',
@@ -832,7 +943,7 @@ CREATE TABLE `health_article` (
   KEY `idx_is_deleted` (`is_deleted`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='健康文章表';
 
--- 36. 文章审核日志表
+-- 40. 文章审核日志表
 DROP TABLE IF EXISTS `article_audit_log`;
 CREATE TABLE `article_audit_log` (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '日志ID',
@@ -853,7 +964,7 @@ CREATE TABLE `article_audit_log` (
   KEY `idx_is_deleted` (`is_deleted`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='文章审核日志表';
 
--- 37. 文章浏览记录表
+-- 41. 文章浏览记录表
 DROP TABLE IF EXISTS `article_view_log`;
 CREATE TABLE `article_view_log` (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '记录ID',
@@ -874,7 +985,7 @@ CREATE TABLE `article_view_log` (
   KEY `idx_is_deleted` (`is_deleted`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='文章浏览记录表';
 
--- 38. 文章点赞表
+-- 42. 文章点赞表
 DROP TABLE IF EXISTS `article_like`;
 CREATE TABLE `article_like` (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT 'ID',
@@ -890,7 +1001,7 @@ CREATE TABLE `article_like` (
   KEY `idx_is_deleted` (`is_deleted`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='文章点赞表';
 
--- 39. 文章收藏表
+-- 43. 文章收藏表
 DROP TABLE IF EXISTS `article_collect`;
 CREATE TABLE `article_collect` (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT 'ID',
@@ -908,7 +1019,7 @@ CREATE TABLE `article_collect` (
   KEY `idx_is_deleted` (`is_deleted`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='文章收藏表';
 
--- 40. 文章收藏夹表
+-- 44. 文章收藏夹表
 DROP TABLE IF EXISTS `article_collect_folder`;
 CREATE TABLE `article_collect_folder` (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT 'ID',
@@ -926,7 +1037,7 @@ CREATE TABLE `article_collect_folder` (
   KEY `idx_is_deleted` (`is_deleted`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='文章收藏夹表';
 
--- 41. 文章分享记录表
+-- 45. 文章分享记录表
 DROP TABLE IF EXISTS `article_share_log`;
 CREATE TABLE `article_share_log` (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT 'ID',
@@ -944,7 +1055,7 @@ CREATE TABLE `article_share_log` (
   KEY `idx_is_deleted` (`is_deleted`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='文章分享记录表';
 
--- 42. 文章评论表
+-- 46. 文章评论表
 DROP TABLE IF EXISTS `article_comment`;
 CREATE TABLE `article_comment` (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '评论ID',
@@ -1249,12 +1360,28 @@ INSERT INTO `user_role` (`user_id`, `role_id`, `create_time`, `is_deleted`) VALU
 (12, (SELECT id FROM role WHERE role_code = 'member'), NOW(), 0);  -- user007 -> 普通用户
 
 -- 4. 插入教练信息数据
+-- 插入门店数据
+INSERT INTO `gym_store` (`store_name`, `store_code`, `address`, `phone`, `business_hours`, `manager_name`, `manager_phone`, `area_size`, `equipment_count`, `max_capacity`, `parking_spaces`, `description`, `latitude`, `longitude`, `status`, `create_time`, `update_time`, `is_deleted`) VALUES
+('总店（市中心店）', 'STORE001', '北京市朝阳区建国路88号SOHO现代城B座1层', '010-85551234', '06:00-23:00', '张经理', '13800001001', 1200, 80, 200, 50, '旗舰店，设施齐全，位置优越', 39.913818, 116.437972, 1, NOW(), NOW(), 0),
+('西城分店', 'STORE002', '北京市西城区西单大街123号', '010-85551235', '06:30-22:30', '李经理', '13800001002', 800, 50, 120, 20, '西城区分店，交通便利', 39.906901, 116.373244, 1, NOW(), NOW(), 0),
+('海淀分店', 'STORE003', '北京市海淀区中关村大街456号', '010-85551236', '07:00-22:00', '王经理', '13800001003', 600, 40, 100, 15, '海淀区分店，学生优惠', 39.983424, 116.319142, 1, NOW(), NOW(), 0);
+
+-- 4. 插入教练信息数据
 INSERT INTO `coach` (`user_id`, `real_name`, `certification_no`, `specialties`, `introduction`, `experience_years`, `rating`, `status`, `create_time`, `update_time`, `is_deleted`) VALUES
 (2, '李强', 'CERT001', '力量训练,减脂塑形', '资深健身教练，10年教学经验，擅长力量训练和减脂塑形。', 10, 4.8, 1, NOW(), NOW(), 0),
 (3, '王丽', 'CERT002', '瑜伽,普拉提', '瑜伽高级教练，精通各类瑜伽体式，专注身心健康。', 8, 4.9, 1, NOW(), NOW(), 0),
 (4, '张伟', 'CERT003', '有氧训练,康复训练', '运动康复专家，帮助学员科学训练，预防运动伤害。', 6, 4.7, 1, NOW(), NOW(), 0),
 (5, '刘芳', 'CERT004', '舞蹈,形体', '专业舞蹈教练，擅长各类舞蹈教学，形体塑造专家。', 5, 4.6, 1, NOW(), NOW(), 0),
 (1, '管理员', 'ADMIN001', '综合管理', '系统管理员账户', 5, 5.0, 1, NOW(), NOW(), 0);
+
+-- 插入教练门店关联数据
+INSERT INTO `coach_store_relation` (`coach_id`, `store_id`, `is_primary`, `start_date`, `end_date`, `status`, `create_time`, `update_time`, `is_deleted`) VALUES
+(2, 1, 1, '2025-01-01', NULL, 1, NOW(), NOW(), 0),  -- 李教练主要在总店
+(2, 2, 0, '2025-01-01', NULL, 1, NOW(), NOW(), 0),  -- 李教练也在西城分店工作
+(3, 1, 1, '2025-01-01', NULL, 1, NOW(), NOW(), 0),  -- 王教练主要在总店
+(4, 2, 1, '2025-01-01', NULL, 1, NOW(), NOW(), 0),  -- 张教练主要在西城分店
+(4, 3, 0, '2025-01-01', NULL, 1, NOW(), NOW(), 0),  -- 张教练也在海淀分店工作
+(5, 3, 1, '2025-01-01', NULL, 1, NOW(), NOW(), 0);  -- 刘教练主要在海淀分店
 
 -- 5. 插入健康档案数据
 INSERT INTO `health_record` (`user_id`, `height`, `weight`, `bmi`, `body_fat_rate`, `muscle_rate`, `basal_metabolism`, `health_goal`, `medical_history`, `allergies`, `create_time`, `update_time`, `is_deleted`) VALUES
@@ -1290,18 +1417,18 @@ INSERT INTO `course` (`course_name`, `category_id`, `coach_id`, `cover_image`, `
 ('功能性训练', 2, 4, '/images/course/functional.jpg', '提升日常活动能力的训练', 2, 50, 18, 85.00, 1, NOW(), NOW(), 0),
 ('流瑜伽', 3, 3, '/images/course/flow_yoga.jpg', '动态瑜伽，增强柔韧性', 2, 60, 20, 75.00, 1, NOW(), NOW(), 0);
 
--- 8. 插入课程排期数据
-INSERT INTO `course_schedule` (`course_id`, `coach_id`, `start_time`, `end_time`, `location`, `current_participants`, `status`, `create_time`, `is_deleted`) VALUES
-(1, 2, '2025-09-27 09:00:00', '2025-09-27 09:45:00', '健身房A区', 8, 1, NOW(), 0),
-(1, 2, '2025-09-28 19:00:00', '2025-09-28 19:45:00', '健身房A区', 12, 1, NOW(), 0),
-(2, 2, '2025-09-27 14:00:00', '2025-09-27 15:00:00', '力量训练区', 6, 1, NOW(), 0),
-(2, 2, '2025-09-29 10:00:00', '2025-09-29 11:00:00', '力量训练区', 9, 1, NOW(), 0),
-(3, 3, '2025-09-27 08:00:00', '2025-09-27 09:15:00', '瑜伽室1', 15, 1, NOW(), 0),
-(3, 3, '2025-09-28 18:00:00', '2025-09-28 19:15:00', '瑜伽室1', 18, 1, NOW(), 0),
-(4, 5, '2025-09-27 20:00:00', '2025-09-27 21:00:00', '舞蹈室', 12, 1, NOW(), 0),
-(4, 5, '2025-09-29 19:00:00', '2025-09-29 20:00:00', '舞蹈室', 14, 1, NOW(), 0),
-(5, 4, '2025-09-28 10:00:00', '2025-09-28 10:50:00', '功能训练区', 10, 1, NOW(), 0),
-(6, 3, '2025-09-29 08:00:00', '2025-09-29 09:00:00', '瑜伽室2', 16, 1, NOW(), 0);
+-- 8. 插入课程排期数据（修复字段结构，添加门店信息）
+INSERT INTO `course_schedule` (`course_id`, `coach_id`, `store_id`, `start_time`, `end_time`, `room_location`, `current_participants`, `status`, `create_time`, `is_deleted`) VALUES
+(1, 2, 1, '2025-09-27 09:00:00', '2025-09-27 09:45:00', '健身房A区', 8, 1, NOW(), 0),
+(1, 2, 1, '2025-09-28 19:00:00', '2025-09-28 19:45:00', '健身房A区', 12, 1, NOW(), 0),
+(2, 2, 1, '2025-09-27 14:00:00', '2025-09-27 15:00:00', '力量训练区', 6, 1, NOW(), 0),
+(2, 2, 2, '2025-09-29 10:00:00', '2025-09-29 11:00:00', '力量训练区', 9, 1, NOW(), 0),
+(3, 3, 1, '2025-09-27 08:00:00', '2025-09-27 09:15:00', '瑜伽室1', 15, 1, NOW(), 0),
+(3, 3, 1, '2025-09-28 18:00:00', '2025-09-28 19:15:00', '瑜伽室1', 18, 1, NOW(), 0),
+(4, 5, 3, '2025-09-27 20:00:00', '2025-09-27 21:00:00', '舞蹈室', 12, 1, NOW(), 0),
+(4, 5, 3, '2025-09-29 19:00:00', '2025-09-29 20:00:00', '舞蹈室', 14, 1, NOW(), 0),
+(5, 4, 2, '2025-09-28 10:00:00', '2025-09-28 10:50:00', '功能训练区', 10, 1, NOW(), 0),
+(6, 3, 1, '2025-09-29 08:00:00', '2025-09-29 09:00:00', '瑜伽室2', 16, 1, NOW(), 0);
 
 -- 9. 插入课程报名数据
 INSERT INTO `course_enrollment` (`user_id`, `schedule_id`, `enrollment_time`, `status`, `is_deleted`) VALUES
@@ -1439,6 +1566,36 @@ INSERT INTO `coach_service` (`coach_id`, `service_name`, `service_type`, `descri
 (4, '运动康复咨询', 'consultation', '运动伤害评估和康复建议', 45, 150.00, 1, 1, NOW(), 0),
 (5, '舞蹈编排服务', 'training', '专业舞蹈编排和教学', 90, 220.00, 1, 1, NOW(), 0);
 
+-- 21. 插入教练资格撤销申请测试数据
+INSERT INTO `coach_qualification_revoke_apply` (`coach_id`, `user_id`, `revoke_reason`, `effective_date`, `status`, `apply_time`, `review_time`, `reviewer_id`, `review_remark`, `create_time`, `is_deleted`) VALUES
+(3, 3, '由于个人原因，需要撤销教练资格，专注于其他事业发展', '2025-12-01', 'pending', '2025-10-08 14:30:00', NULL, NULL, NULL, NOW(), 0),
+(4, 4, '家庭原因，需要更多时间陪伴家人，申请撤销教练资格', '2025-11-15', 'approved', '2025-10-01 10:15:00', '2025-10-03 16:20:00', 1, '同意申请，感谢您的贡献', NOW(), 0),
+(2, 2, '计划出国深造，暴停教练工作', '2025-11-30', 'cancelled', '2025-09-25 09:00:00', NULL, NULL, NULL, NOW(), 0);
+
+-- 22. 插入教练预约时段测试数据
+INSERT INTO `coach_booking_slot` (`coach_id`, `service_id`, `booking_date`, `start_time`, `end_time`, `status`, `user_id`, `order_id`, `booking_price`, `booking_time`, `completion_time`, `remark`, `create_time`, `is_deleted`) VALUES
+-- 李教练（coach_id=2）的私人训练时段
+(2, 1, '2025-10-10', '09:00:00', '10:00:00', 'available', NULL, NULL, 200.00, NULL, NULL, '李教练私人训练时段', NOW(), 0),
+(2, 1, '2025-10-10', '10:30:00', '11:30:00', 'booked', 6, 5, 200.00, '2025-10-09 15:30:00', NULL, '小明预约的私教课程', NOW(), 0),
+(2, 1, '2025-10-10', '14:00:00', '15:00:00', 'available', NULL, NULL, 200.00, NULL, NULL, '下午时段', NOW(), 0),
+(2, 1, '2025-10-11', '09:00:00', '10:00:00', 'blocked', NULL, NULL, 200.00, NULL, NULL, '教练临时不可用', NOW(), 0),
+(2, 1, '2025-10-12', '15:00:00', '16:00:00', 'completed', 8, 6, 200.00, '2025-10-08 10:20:00', '2025-10-09 16:00:00', '小刚的私教课程已完成', NOW(), 0),
+
+-- 王教练（coach_id=3）的瑜伽私教时段
+(3, 2, '2025-10-10', '08:00:00', '09:15:00', 'available', NULL, NULL, 180.00, NULL, NULL, '王教练瑜伽时段', NOW(), 0),
+(3, 2, '2025-10-10', '10:00:00', '11:15:00', 'booked', 7, 7, 180.00, '2025-10-09 12:45:00', NULL, '小红预约的瑜伽私教', NOW(), 0),
+(3, 2, '2025-10-10', '18:30:00', '19:45:00', 'available', NULL, NULL, 180.00, NULL, NULL, '晚上时段', NOW(), 0),
+(3, 2, '2025-10-11', '08:00:00', '09:15:00', 'available', NULL, NULL, 180.00, NULL, NULL, '早上瑜伽时段', NOW(), 0),
+
+-- 张教练（coach_id=4）的运动康复咨询时段
+(4, 3, '2025-10-10', '10:00:00', '10:45:00', 'available', NULL, NULL, 150.00, NULL, NULL, '张教练咨询时段', NOW(), 0),
+(4, 3, '2025-10-10', '14:00:00', '14:45:00', 'booked', 9, 8, 150.00, '2025-10-09 09:10:00', NULL, '小丽的咨询预约', NOW(), 0),
+(4, 3, '2025-10-11', '15:30:00', '16:15:00', 'available', NULL, NULL, 150.00, NULL, NULL, '下午咨询时段', NOW(), 0),
+
+-- 刘教练（coach_id=5）的舞蹈服务时段
+(5, 4, '2025-10-10', '19:00:00', '20:30:00', 'available', NULL, NULL, 220.00, NULL, NULL, '晚上舞蹈课程', NOW(), 0),
+(5, 4, '2025-10-11', '19:00:00', '20:30:00', 'booked', 11, 9, 220.00, '2025-10-09 11:30:00', NULL, '小美的舞蹈课程', NOW(), 0);
+
 COMMIT;
 
 -- ================================================================
@@ -1450,7 +1607,8 @@ COMMIT;
 -- ================================================================
 
 SELECT '✅ 健身平台数据库创建成功！' as message,
-       '包含完整表结构 + 丰富测试数据 + Admin/App接口测试支持' as features,
+       '包含44个表结构 + 丰富测试数据 + 教练商业化功能 + Admin/App接口测试支持' as features,
+       '新增教练资格撤销申请表和预约时段表，支持完整商业化流程' as new_features,
        '已修复 last_login_time 等所有字段问题' as fix_status,
        NOW() as complete_time;
 
@@ -1481,6 +1639,12 @@ SELECT '✅ 健身平台数据库创建成功！' as message,
 🎆 其他测试账号：
   - user002/user003/user004... (密码都是 123456)
   - coach002/coach003/coach004... (密码都是 123456)
+
+🎓 新增教练商业化功能测试数据：
+  - 教练资格撤销申请: 3个测试申请(待审核/已批准/已取消)
+  - 教练预约时段: 15个测试时段(可预约/已预约/已完成/已屏蔽)
+  - 支持教练私教/咨询/瑜伽/舞蹈等多种服务类型
+  - 支持完整预约流程: 查看时段 → 预约 → 支付 → 完成/取消
 */
 
 -- ================================================================

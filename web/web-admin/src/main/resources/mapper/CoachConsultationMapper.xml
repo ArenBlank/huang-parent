@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.huang.web.admin.mapper.CoachConsultationMapper">
+
+    <!-- 分页查询咨询记录（带用户和教练信息） -->
+    <select id="selectConsultationPage" resultType="java.util.Map">
+        SELECT 
+            cc.id,
+            cc.coach_id,
+            cc.user_id,
+            cc.consultation_type,
+            cc.consultation_date,
+            cc.duration,
+            cc.topic,
+            cc.content,
+            cc.coach_advice,
+            cc.status,
+            cc.create_time,
+            cc.update_time,
+            c.real_name AS coach_name,
+            c.certification_no,
+            u.username,
+            u.nickname AS user_nickname,
+            u.phone AS user_phone
+        FROM coach_consultation cc
+        LEFT JOIN coach c ON cc.coach_id = c.id
+        LEFT JOIN user u ON cc.user_id = u.id
+        WHERE cc.is_deleted = 0
+        <if test="query.coachId != null">
+            AND cc.coach_id = #{query.coachId}
+        </if>
+        <if test="query.userId != null">
+            AND cc.user_id = #{query.userId}
+        </if>
+        <if test="query.consultationType != null and query.consultationType != ''">
+            AND cc.consultation_type = #{query.consultationType}
+        </if>
+        <if test="query.status != null and query.status != ''">
+            AND cc.status = #{query.status}
+        </if>
+        <if test="query.coachName != null and query.coachName != ''">
+            AND c.real_name LIKE CONCAT('%', #{query.coachName}, '%')
+        </if>
+        <if test="query.userNickname != null and query.userNickname != ''">
+            AND u.nickname LIKE CONCAT('%', #{query.userNickname}, '%')
+        </if>
+        <if test="query.startDate != null and query.endDate != null">
+            AND DATE(cc.consultation_date) BETWEEN #{query.startDate} AND #{query.endDate}
+        </if>
+        ORDER BY cc.consultation_date DESC, cc.create_time DESC
+    </select>
+
+    <!-- 获取教练的咨询统计信息 -->
+    <select id="selectCoachConsultationStats" resultType="java.util.Map">
+        SELECT 
+            COUNT(*) AS total_consultations,
+            COUNT(CASE WHEN status = 'completed' THEN 1 END) AS completed_consultations,
+            COUNT(CASE WHEN status = 'scheduled' THEN 1 END) AS scheduled_consultations,
+            COUNT(CASE WHEN status = 'cancelled' THEN 1 END) AS cancelled_consultations,
+            ROUND(AVG(duration), 0) AS avg_duration,
+            COUNT(CASE WHEN consultation_type = 'online' THEN 1 END) AS online_consultations,
+            COUNT(CASE WHEN consultation_type = 'offline' THEN 1 END) AS offline_consultations
+        FROM coach_consultation
+        WHERE coach_id = #{coachId} AND is_deleted = 0
+    </select>
+
+    <!-- 查询用户的咨询历史 -->
+    <select id="selectUserConsultationHistory" resultType="java.util.Map">
+        SELECT 
+            cc.id,
+            cc.consultation_type,
+            cc.consultation_date,
+            cc.duration,
+            cc.topic,
+            cc.content,
+            cc.coach_advice,
+            cc.status,
+            c.real_name AS coach_name,
+            c.specialties
+        FROM coach_consultation cc
+        LEFT JOIN coach c ON cc.coach_id = c.id
+        WHERE cc.user_id = #{userId} AND cc.is_deleted = 0
+        ORDER BY cc.consultation_date DESC
+    </select>
+
+</mapper>

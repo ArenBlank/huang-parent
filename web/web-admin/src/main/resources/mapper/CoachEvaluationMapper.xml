@@ -1,0 +1,159 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.huang.web.admin.mapper.CoachEvaluationMapper">
+
+    <!-- 分页查询教练评价（带用户和教练信息） -->
+    <select id="selectEvaluationPage" resultType="java.util.Map">
+        SELECT 
+            ce.id,
+            ce.coach_id,
+            ce.user_id,
+            ce.service_id,
+            ce.order_id,
+            ce.overall_rating,
+            ce.professional_rating,
+            ce.attitude_rating,
+            ce.communication_rating,
+            ce.content,
+            ce.tags,
+            ce.images,
+            ce.status,
+            ce.create_time,
+            ce.update_time,
+            c.real_name AS coach_name,
+            c.certification_no,
+            c.specialties,
+            u.username,
+            u.nickname AS user_nickname,
+            u.phone AS user_phone,
+            cs.service_name,
+            cs.service_type
+        FROM coach_evaluation ce
+        LEFT JOIN coach c ON ce.coach_id = c.id
+        LEFT JOIN user u ON ce.user_id = u.id
+        LEFT JOIN coach_service cs ON ce.service_id = cs.id
+        WHERE ce.is_deleted = 0
+        <if test="query.coachId != null">
+            AND ce.coach_id = #{query.coachId}
+        </if>
+        <if test="query.userId != null">
+            AND ce.user_id = #{query.userId}
+        </if>
+        <if test="query.serviceId != null">
+            AND ce.service_id = #{query.serviceId}
+        </if>
+        <if test="query.status != null">
+            AND ce.status = #{query.status}
+        </if>
+        <if test="query.coachName != null and query.coachName != ''">
+            AND c.real_name LIKE CONCAT('%', #{query.coachName}, '%')
+        </if>
+        <if test="query.userNickname != null and query.userNickname != ''">
+            AND u.nickname LIKE CONCAT('%', #{query.userNickname}, '%')
+        </if>
+        <if test="query.minRating != null">
+            AND ce.overall_rating &gt;= #{query.minRating}
+        </if>
+        <if test="query.maxRating != null">
+            AND ce.overall_rating &lt;= #{query.maxRating}
+        </if>
+        <if test="query.startDate != null and query.endDate != null">
+            AND DATE(ce.create_time) BETWEEN #{query.startDate} AND #{query.endDate}
+        </if>
+        ORDER BY ce.create_time DESC
+    </select>
+
+    <!-- 获取教练的评价统计信息 -->
+    <select id="selectCoachEvaluationStats" resultType="java.util.Map">
+        SELECT 
+            COUNT(*) AS total_evaluations,
+            ROUND(AVG(overall_rating), 2) AS avg_overall_rating,
+            ROUND(AVG(professional_rating), 2) AS avg_professional_rating,
+            ROUND(AVG(attitude_rating), 2) AS avg_attitude_rating,
+            ROUND(AVG(communication_rating), 2) AS avg_communication_rating,
+            COUNT(CASE WHEN overall_rating &gt;= 4.5 THEN 1 END) AS excellent_count,
+            COUNT(CASE WHEN overall_rating &gt;= 3.5 AND overall_rating &lt; 4.5 THEN 1 END) AS good_count,
+            COUNT(CASE WHEN overall_rating &gt;= 2.5 AND overall_rating &lt; 3.5 THEN 1 END) AS average_count,
+            COUNT(CASE WHEN overall_rating &lt; 2.5 THEN 1 END) AS poor_count
+        FROM coach_evaluation
+        WHERE coach_id = #{coachId} AND is_deleted = 0 AND status = 1
+    </select>
+
+    <!-- 获取教练的评价分布统计 -->
+    <select id="selectCoachRatingDistribution" resultType="java.util.Map">
+        SELECT 
+            FLOOR(overall_rating) as rating_level,
+            COUNT(*) as count
+        FROM coach_evaluation
+        WHERE coach_id = #{coachId} AND is_deleted = 0 AND status = 1
+        GROUP BY FLOOR(overall_rating)
+        ORDER BY rating_level DESC
+    </select>
+
+    <!-- 查询用户的评价历史 -->
+    <select id="selectUserEvaluationHistory" resultType="java.util.Map">
+        SELECT 
+            ce.id,
+            ce.overall_rating,
+            ce.professional_rating,
+            ce.attitude_rating,
+            ce.communication_rating,
+            ce.content,
+            ce.tags,
+            ce.create_time,
+            c.real_name AS coach_name,
+            c.specialties,
+            cs.service_name,
+            cs.service_type
+        FROM coach_evaluation ce
+        LEFT JOIN coach c ON ce.coach_id = c.id
+        LEFT JOIN coach_service cs ON ce.service_id = cs.id
+        WHERE ce.user_id = #{userId} AND ce.is_deleted = 0 AND ce.status = 1
+        ORDER BY ce.create_time DESC
+    </select>
+
+    <!-- 获取热门评价标签统计 -->
+    <select id="selectPopularTags" resultType="java.util.Map">
+        SELECT 
+            tag_name,
+            COUNT(*) as tag_count
+        FROM (
+            SELECT 
+                TRIM(SUBSTRING_INDEX(SUBSTRING_INDEX(ce.tags, ',', numbers.n), ',', -1)) as tag_name
+            FROM coach_evaluation ce
+            CROSS JOIN (
+                SELECT 1 n UNION SELECT 2 UNION SELECT 3 UNION SELECT 4 UNION SELECT 5 
+                UNION SELECT 6 UNION SELECT 7 UNION SELECT 8 UNION SELECT 9 UNION SELECT 10
+            ) numbers
+            WHERE CHAR_LENGTH(ce.tags) - CHAR_LENGTH(REPLACE(ce.tags, ',', '')) &gt;= numbers.n - 1
+            AND ce.coach_id = #{coachId} AND ce.is_deleted = 0 AND ce.status = 1
+            AND ce.tags IS NOT NULL AND ce.tags != ''
+        ) tag_split
+        WHERE tag_name != ''
+        GROUP BY tag_name
+        ORDER BY tag_count DESC
+        LIMIT 10
+    </select>
+
+    <!-- 获取教练综合评分排行榜 -->
+    <select id="selectCoachRankings" resultType="java.util.Map">
+        SELECT 
+            c.id as coach_id,
+            c.real_name as coach_name,
+            c.certification_no,
+            c.specialties,
+            COUNT(ce.id) as total_evaluations,
+            ROUND(AVG(ce.overall_rating), 2) as avg_rating,
+            ROUND(AVG(ce.professional_rating), 2) as avg_professional_rating,
+            ROUND(AVG(ce.attitude_rating), 2) as avg_attitude_rating,
+            ROUND(AVG(ce.communication_rating), 2) as avg_communication_rating
+        FROM coach c
+        LEFT JOIN coach_evaluation ce ON c.id = ce.coach_id AND ce.is_deleted = 0 AND ce.status = 1
+        WHERE c.is_deleted = 0 AND c.status = 1
+        GROUP BY c.id, c.real_name, c.certification_no, c.specialties
+        HAVING COUNT(ce.id) > 0
+        ORDER BY avg_rating DESC, total_evaluations DESC
+        LIMIT #{limit}
+    </select>
+
+</mapper>

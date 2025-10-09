@@ -27,6 +27,10 @@ public class CourseSchedule extends BaseEntity {
     @TableField(value = "coach_id")
     private Long coachId;
 
+    @Schema(description = "门店ID")
+    @TableField(value = "store_id")
+    private Long storeId;
+
     @Schema(description = "开始时间")
     @TableField(value = "start_time")
     private LocalDateTime startTime;
@@ -35,9 +39,9 @@ public class CourseSchedule extends BaseEntity {
     @TableField(value = "end_time")
     private LocalDateTime endTime;
 
-    @Schema(description = "上课地点")
-    @TableField(value = "location")
-    private String location;
+    @Schema(description = "房间位置（如：瑜伽室1、力量训练区）")
+    @TableField(value = "room_location")
+    private String roomLocation;
 
     @Schema(description = "当前报名人数")
     @TableField(value = "current_participants")
