@@ -227,9 +227,11 @@ public class AdminCoachCertificationService {
      */
     @Transactional(rollbackFor = Exception.class)
     public void createCoachAndAssignRole(CoachCertificationApply application, String certificationNo) {
+        Long userId = application.getUserId();
+        
         // 1. 创建教练记录
         Coach coach = new Coach();
-        coach.setUserId(application.getUserId());
+        coach.setUserId(userId);
         coach.setRealName(application.getRealName());
         coach.setCertificationNo(certificationNo);
         coach.setSpecialties(application.getSpecialties());
@@ -243,29 +245,94 @@ public class AdminCoachCertificationService {
 
         coachMapper.insert(coach);
 
-        // 2. 分配教练角色
+        // 2. 智能角色升级逻辑
+        upgradeUserRoleToCoach(userId);
+
+        log.info("创建教练记录成功: userId={}, certificationNo={}", userId, certificationNo);
+    }
+    
+    /**
+     * 智能升级用户角色为教练
+     * 规则：
+     * 1. 会员(member) -> 教练(coach)
+     * 2. VIP用户(vip) -> VIP教练(保持VIP + 添加教练角色)
+     * 3. 管理员(admin) -> 保持管理员 + 添加教练角色
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void upgradeUserRoleToCoach(Long userId) {
+        // 查询所有角色
+        Role memberRole = roleMapper.selectOne(new LambdaQueryWrapper<Role>().eq(Role::getRoleCode, "member"));
+        Role vipRole = roleMapper.selectOne(new LambdaQueryWrapper<Role>().eq(Role::getRoleCode, "vip"));
         Role coachRole = roleMapper.selectOne(new LambdaQueryWrapper<Role>().eq(Role::getRoleCode, "coach"));
-        if (coachRole != null) {
-            // 检查是否已经有该角色
-            UserRole existingUserRole = userRoleMapper.selectOne(
-                new LambdaQueryWrapper<UserRole>()
-                    .eq(UserRole::getUserId, application.getUserId())
-                    .eq(UserRole::getRoleId, coachRole.getId())
-            );
-
-            if (existingUserRole == null) {
-                UserRole userRole = new UserRole();
-                userRole.setUserId(application.getUserId());
-                userRole.setRoleId(coachRole.getId());
-                userRole.setCreateTime(LocalDateTime.now());
-                userRole.setUpdateTime(LocalDateTime.now());
-                userRole.setIsDeleted((byte) 0);
-
-                userRoleMapper.insert(userRole);
+        Role adminRole = roleMapper.selectOne(new LambdaQueryWrapper<Role>().eq(Role::getRoleCode, "admin"));
+        
+        if (coachRole == null) {
+            throw new RuntimeException("教练角色不存在，请联系系统管理员");
+        }
+        
+        // 查询用户当前角色
+        List<UserRole> currentUserRoles = userRoleMapper.selectList(
+            new LambdaQueryWrapper<UserRole>()
+                .eq(UserRole::getUserId, userId)
+                .eq(UserRole::getIsDeleted, 0)
+        );
+        
+        // 检查用户当前角色类型
+        boolean isVip = false;
+        boolean isAdmin = false;
+        boolean isMember = false;
+        boolean isAlreadyCoach = false;
+        
+        for (UserRole userRole : currentUserRoles) {
+            if (vipRole != null && vipRole.getId().equals(userRole.getRoleId())) {
+                isVip = true;
+            } else if (adminRole != null && adminRole.getId().equals(userRole.getRoleId())) {
+                isAdmin = true;
+            } else if (memberRole != null && memberRole.getId().equals(userRole.getRoleId())) {
+                isMember = true;
+            } else if (coachRole.getId().equals(userRole.getRoleId())) {
+                isAlreadyCoach = true;
             }
         }
-
-        log.info("创建教练记录成功: userId={}, certificationNo={}", application.getUserId(), certificationNo);
+        
+        // 如果已经是教练，直接返回
+        if (isAlreadyCoach) {
+            log.info("用户已经具有教练角色: userId={}", userId);
+            return;
+        }
+        
+        // 角色升级逻辑
+        if (isVip) {
+            // VIP用户：保持VIP + 添加教练角色
+            log.info("VIP用户升级为VIP教练: userId={}", userId);
+        } else if (isAdmin) {
+            // 管理员：保持管理员 + 添加教练角色
+            log.info("管理员用户添加教练角色: userId={}", userId);
+        } else if (isMember) {
+            // 普通会员：升级为教练，移除会员角色
+            log.info("会员用户升级为教练: userId={}", userId);
+            // 删除会员角色
+            userRoleMapper.delete(
+                new LambdaQueryWrapper<UserRole>()
+                    .eq(UserRole::getUserId, userId)
+                    .eq(UserRole::getRoleId, memberRole.getId())
+            );
+        } else {
+            // 用户没有基础角色，直接添加教练角色
+            log.info("用户没有基础角色，直接设置为教练: userId={}", userId);
+        }
+        
+        // 添加教练角色
+        UserRole newCoachRole = new UserRole();
+        newCoachRole.setUserId(userId);
+        newCoachRole.setRoleId(coachRole.getId());
+        newCoachRole.setCreateTime(LocalDateTime.now());
+        newCoachRole.setUpdateTime(LocalDateTime.now());
+        newCoachRole.setIsDeleted((byte) 0);
+        
+        userRoleMapper.insert(newCoachRole);
+        
+        log.info("用户角色升级完成: userId={}, 新增教练角色", userId);
     }
 
     /**

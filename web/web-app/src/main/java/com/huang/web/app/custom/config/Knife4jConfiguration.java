@@ -23,15 +23,17 @@ public class Knife4jConfiguration {
                         .termsOfService("https://github.com/your-project")
                         .license(new License().name("Apache 2.0")
                                 .url("https://www.apache.org/licenses/LICENSE-2.0")))
-                .addSecurityItem(new SecurityRequirement().addList("Bearer Authentication"))
+                // 为所有接口添加JWT认证要求
+                .addSecurityItem(new SecurityRequirement().addList("BearerAuth"))
                 .components(new Components()
-                        .addSecuritySchemes("Bearer Authentication",
+                        .addSecuritySchemes("BearerAuth",
                                 new SecurityScheme()
                                         .type(SecurityScheme.Type.HTTP)
                                         .scheme("bearer")
                                         .bearerFormat("JWT")
-                                        .in(SecurityScheme.In.HEADER)
-                                        .name("Authorization")));
+                                        .description("JWT认证Token，请在值前面加上'Bearer '前缀")
+                                        .name("Authorization")
+                                        .in(SecurityScheme.In.HEADER)));
     }
 
     // ================== 用户认证模块 ==================
@@ -63,6 +65,17 @@ public class Knife4jConfiguration {
                 .group("03-角色管理")
                 .pathsToMatch(
                         "/app/role/**"
+                )
+                .build();
+    }
+
+    // ================== 教练认证申请模块 ==================
+    @Bean
+    public GroupedOpenApi coachCertificationAPI() {
+        return GroupedOpenApi.builder()
+                .group("04-教练认证申请")
+                .pathsToMatch(
+                        "/app/coach/certification/**"
                 )
                 .build();
     }

@@ -20,10 +20,10 @@ public class SmsCodeDTO {
     @Pattern(regexp = "^1[3-9]\\d{9}$", message = "手机号格式不正确")
     private String phone;
 
-    @Schema(description = "验证码类型：register-注册，login-登录，reset_password-重置密码", 
+    @Schema(description = "验证码类型：register-注册，login-登录，reset_password-重置密码，cancel_account-注销账号", 
             requiredMode = Schema.RequiredMode.REQUIRED, example = "register")
     @NotBlank(message = "验证码类型不能为空")
-    @Pattern(regexp = "^(register|login|reset_password)$", message = "验证码类型只能为register、login或reset_password")
+    @Pattern(regexp = "^(register|login|reset_password|cancel_account)$", message = "验证码类型只能为register、login、reset_password或cancel_account")
     private String type;
 
     @Schema(description = "图形验证码（如果开启图形验证码校验）", example = "abcd")

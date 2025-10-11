@@ -1,11 +1,16 @@
 package com.huang.web.app.service.impl;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.huang.common.service.TokenBlacklistService;
 import com.huang.common.utils.JwtUtil;
 import com.huang.common.utils.PasswordUtil;
 import com.huang.common.utils.SmsCodeUtil;
+import com.huang.model.entity.Role;
 import com.huang.model.entity.User;
+import com.huang.model.entity.UserRole;
 import com.huang.web.app.dto.auth.*;
+import com.huang.web.app.mapper.RoleMapper;
+import com.huang.web.app.mapper.UserRoleMapper;
 import com.huang.web.app.service.AuthService;
 import com.huang.web.app.service.UserService;
 import com.huang.web.app.vo.auth.*;
@@ -31,6 +36,12 @@ public class AuthServiceImpl implements AuthService {
 
     @Autowired
     private UserService userService;
+    
+    @Autowired
+    private RoleMapper roleMapper;
+    
+    @Autowired
+    private UserRoleMapper userRoleMapper;
 
     @Override
     public String sendSmsCode(SmsCodeDTO dto) {
@@ -91,6 +102,9 @@ public class AuthServiceImpl implements AuthService {
             throw new RuntimeException("注册失败，请稍后重试");
         }
         
+        // 为新用户分配默认会员角色
+        assignDefaultMemberRole(newUser.getId());
+        
         // 构建返回数据
         RegisterVO vo = new RegisterVO();
         vo.setUserId(newUser.getId());
@@ -108,6 +122,17 @@ public class AuthServiceImpl implements AuthService {
     @Transactional(rollbackFor = Exception.class)
     public LoginVO login(UserLoginDTO dto) {
         log.info("用户登录请求: 账号={}, 登录类型={}", dto.getAccount(), dto.getLoginType());
+        
+        // 参数验证
+        if ("password".equals(dto.getLoginType())) {
+            if (dto.getPassword() == null || dto.getPassword().trim().isEmpty()) {
+                throw new RuntimeException("密码不能为空");
+            }
+        } else if ("sms".equals(dto.getLoginType())) {
+            if (dto.getSmsCode() == null || dto.getSmsCode().trim().isEmpty()) {
+                throw new RuntimeException("短信验证码不能为空");
+            }
+        }
         
         if ("sms".equals(dto.getLoginType())) {
             // 短信登录验证
@@ -293,5 +318,54 @@ public class AuthServiceImpl implements AuthService {
         }
         
         return "退出登录成功";
+    }
+    
+    /**
+     * 为新用户分配默认会员角色
+     */
+    @Transactional(rollbackFor = Exception.class)
+    public void assignDefaultMemberRole(Long userId) {
+        try {
+            // 查询会员角色
+            Role memberRole = roleMapper.selectOne(
+                new LambdaQueryWrapper<Role>().eq(Role::getRoleCode, "member")
+            );
+            
+            if (memberRole == null) {
+                log.error("会员角色不存在，无法为新用户分配默认角色: userId={}", userId);
+                return;
+            }
+            
+            // 检查用户是否已经有该角色
+            UserRole existingUserRole = userRoleMapper.selectOne(
+                new LambdaQueryWrapper<UserRole>()
+                    .eq(UserRole::getUserId, userId)
+                    .eq(UserRole::getRoleId, memberRole.getId())
+                    .eq(UserRole::getIsDeleted, 0)
+            );
+            
+            if (existingUserRole != null) {
+                log.info("用户已经具有会员角色: userId={}", userId);
+                return;
+            }
+            
+            // 创建用户角色关联
+            UserRole userRole = new UserRole();
+            userRole.setUserId(userId);
+            userRole.setRoleId(memberRole.getId());
+            userRole.setCreateTime(LocalDateTime.now());
+            userRole.setUpdateTime(LocalDateTime.now());
+            userRole.setIsDeleted((byte) 0);
+            
+            int insertResult = userRoleMapper.insert(userRole);
+            if (insertResult > 0) {
+                log.info("为新用户分配默认会员角色成功: userId={}, roleId={}", userId, memberRole.getId());
+            } else {
+                log.error("为新用户分配默认会员角色失败: userId={}", userId);
+            }
+            
+        } catch (Exception e) {
+            log.error("为新用户分配默认会员角色时发生异常: userId={}", userId, e);
+        }
     }
 }

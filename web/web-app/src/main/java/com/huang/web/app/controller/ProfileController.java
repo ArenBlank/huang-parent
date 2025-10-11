@@ -5,8 +5,10 @@ import com.huang.common.result.Result;
 import com.huang.common.utils.PasswordUtil;
 import com.huang.common.utils.SmsCodeUtil;
 import com.huang.model.entity.User;
-import com.huang.web.app.service.UserService;
+import com.huang.model.entity.UserAccountCancelApply;
 import com.huang.web.app.dto.profile.*;
+import com.huang.web.app.mapper.UserAccountCancelApplyMapper;
+import com.huang.web.app.service.UserService;
 import com.huang.web.app.vo.profile.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -40,6 +42,9 @@ public class ProfileController {
     
     @Autowired
     private UserService userService;
+    
+    @Autowired
+    private UserAccountCancelApplyMapper cancelApplyMapper;
 
     @Operation(summary = "获取个人信息", description = "获取当前登录用户的详细信息")
     @GetMapping("/info")
@@ -276,29 +281,45 @@ public class ProfileController {
             return Result.fail("密码错误");
         }
         
-        // 2. 创建注销申请记录（这里先模拟，实际项目中需要创建相关数据库表）
-        // 可以在这里实现注销申请记录的保存
+        // 2. 创建注销申请记录
+        UserAccountCancelApply cancelApply = new UserAccountCancelApply();
+        cancelApply.setUserId(currentUserId);
+        cancelApply.setUsername(user.getUsername());
+        cancelApply.setPhone(user.getPhone());
+        cancelApply.setEmail(user.getEmail());
+        cancelApply.setCancelType(dto.getCancelType());
+        cancelApply.setReason(dto.getReason());
+        cancelApply.setApplyTime(LocalDateTime.now());
+        cancelApply.setStatus("pending");
+        cancelApply.setIsCancellable(1);
         
-        // 3. 根据注销类型设置处理时间和4. 发送通知已在下面处理
+        // 根据注销类型设置时间
+        if ("temporary".equals(dto.getCancelType())) {
+            cancelApply.setEffectiveTime(LocalDateTime.now().plusDays(7)); // 7天后生效
+            cancelApply.setCancelDeadline(LocalDateTime.now().plusDays(3)); // 3天内可撤销
+        } else {
+            cancelApply.setEffectiveTime(LocalDateTime.now().plusDays(30)); // 30天后生效
+            cancelApply.setCancelDeadline(LocalDateTime.now().plusDays(15)); // 15天内可撤销
+        }
         
-        // 临时返回模拟数据
+        // 保存申请记录
+        int result = cancelApplyMapper.insert(cancelApply);
+        if (result <= 0) {
+            return Result.fail("注销申请提交失败，请稍后重试");
+        }
+        
+        // 构建返回数据
         AccountCancelVO vo = new AccountCancelVO();
-        vo.setCancelId(System.currentTimeMillis()); // 模拟申请ID
+        vo.setCancelId(cancelApply.getId());
         vo.setUserId(currentUserId);
         vo.setCancelType(dto.getCancelType());
         vo.setStatus("pending");
-        vo.setApplyTime(LocalDateTime.now());
+        vo.setApplyTime(cancelApply.getApplyTime());
         vo.setReason(dto.getReason());
-        vo.setMessage("注销申请已提交，请等待处理");
+        vo.setMessage("注销申请已提交，请等待管理员审核");
         vo.setCancellable(true);
-        
-        if ("temporary".equals(dto.getCancelType())) {
-            vo.setEffectiveTime(LocalDateTime.now().plusDays(7)); // 7天后生效
-            vo.setCancelDeadline(LocalDateTime.now().plusDays(3)); // 3天内可撤销
-        } else {
-            vo.setEffectiveTime(LocalDateTime.now().plusDays(30)); // 30天后生效
-            vo.setCancelDeadline(LocalDateTime.now().plusDays(15)); // 15天内可撤销
-        }
+        vo.setEffectiveTime(cancelApply.getEffectiveTime());
+        vo.setCancelDeadline(cancelApply.getCancelDeadline());
         
         log.info("账号注销申请成功: 用户ID={}, 申请ID={}", currentUserId, vo.getCancelId());
         return Result.ok(vo);

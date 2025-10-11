@@ -26,7 +26,8 @@ public class Knife4jConfiguration {
                 .pathsToMatch(
                         "/admin/user/**",
                         "/admin/role/**",
-                        "/admin/user-role/**"
+                        "/admin/user-role/**",
+                        "/admin/user-account-cancel/**"
                 )
                 .build();
     }
