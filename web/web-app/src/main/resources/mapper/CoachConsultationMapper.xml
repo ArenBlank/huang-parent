@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.huang.web.app.mapper.CoachConsultationMapper">
+
+    <!-- 查询用户的咨询记录 -->
+    <select id="selectMyConsultations" resultType="com.huang.web.app.vo.coach.CoachConsultationVO">
+        SELECT 
+            cc.id,
+            cc.coach_id,
+            c.real_name as coach_name,
+            cc.user_id,
+            u.nickname as user_nickname,
+            cc.consultation_type,
+            CASE cc.consultation_type 
+                WHEN 'online' THEN '在线咨询'
+                WHEN 'offline' THEN '线下咨询'
+                ELSE '未知'
+            END as consultation_type_desc,
+            cc.consultation_date,
+            cc.duration,
+            cc.topic,
+            cc.content,
+            cc.coach_advice,
+            cc.status,
+            CASE cc.status 
+                WHEN 'scheduled' THEN '已预约'
+                WHEN 'completed' THEN '已完成'
+                WHEN 'cancelled' THEN '已取消'
+                ELSE '未知'
+            END as status_desc,
+            cc.create_time,
+            CASE WHEN cc.status = 'scheduled' AND cc.consultation_date > NOW() THEN 1 ELSE 0 END as can_cancel
+        FROM coach_consultation cc
+        LEFT JOIN coach c ON cc.coach_id = c.id
+        LEFT JOIN user u ON cc.user_id = u.id
+        WHERE cc.user_id = #{userId} 
+        AND cc.is_deleted = 0
+        <if test="status != null and status != ''">
+            AND cc.status = #{status}
+        </if>
+        ORDER BY cc.consultation_date DESC
+    </select>
+
+    <!-- 根据ID和用户ID查询咨询详情 -->
+    <select id="selectConsultationByIdAndUserId" resultType="com.huang.web.app.vo.coach.CoachConsultationVO">
+        SELECT 
+            cc.id,
+            cc.coach_id,
+            c.real_name as coach_name,
+            cc.user_id,
+            u.nickname as user_nickname,
+            cc.consultation_type,
+            CASE cc.consultation_type 
+                WHEN 'online' THEN '在线咨询'
+                WHEN 'offline' THEN '线下咨询'
+                ELSE '未知'
+            END as consultation_type_desc,
+            cc.consultation_date,
+            cc.duration,
+            cc.topic,
+            cc.content,
+            cc.coach_advice,
+            cc.status,
+            CASE cc.status 
+                WHEN 'scheduled' THEN '已预约'
+                WHEN 'completed' THEN '已完成'
+                WHEN 'cancelled' THEN '已取消'
+                ELSE '未知'
+            END as status_desc,
+            cc.create_time,
+            CASE WHEN cc.status = 'scheduled' AND cc.consultation_date > NOW() THEN 1 ELSE 0 END as can_cancel
+        FROM coach_consultation cc
+        LEFT JOIN coach c ON cc.coach_id = c.id
+        LEFT JOIN user u ON cc.user_id = u.id
+        WHERE cc.id = #{id} 
+        AND cc.user_id = #{userId}
+        AND cc.is_deleted = 0
+    </select>
+
+    <!-- 检查时间冲突 -->
+    <select id="checkTimeConflict" resultType="int">
+        SELECT COUNT(*)
+        FROM coach_consultation 
+        WHERE coach_id = #{coachId}
+        AND status = 'scheduled'
+        AND is_deleted = 0
+        AND (
+            (consultation_date <![CDATA[<=]]> #{consultationDate} 
+             AND DATE_ADD(consultation_date, INTERVAL duration MINUTE) <![CDATA[>]]> #{consultationDate})
+            OR
+            (consultation_date <![CDATA[<]]> DATE_ADD(#{consultationDate}, INTERVAL #{duration} MINUTE)
+             AND consultation_date <![CDATA[>=]]> #{consultationDate})
+        )
+    </select>
+
+</mapper>

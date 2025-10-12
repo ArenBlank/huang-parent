@@ -110,7 +110,7 @@ CREATE TABLE `coach` (
   `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `is_deleted` tinyint DEFAULT 0 COMMENT '是否删除: 0否 1是',
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_user_id` (`user_id`),
+  KEY `idx_user_id` (`user_id`),
   KEY `idx_status` (`status`),
   KEY `idx_is_deleted` (`is_deleted`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='教练信息表';
@@ -652,7 +652,7 @@ CREATE TABLE `coach_certification_apply` (
   `update_time` datetime DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `is_deleted` tinyint DEFAULT 0 COMMENT '是否删除: 0否 1是',
   PRIMARY KEY (`id`),
-  UNIQUE KEY `uk_user_id` (`user_id`),
+  KEY `idx_user_id` (`user_id`),
   KEY `idx_status` (`status`),
   KEY `idx_apply_time` (`apply_time`),
   KEY `idx_is_deleted` (`is_deleted`)

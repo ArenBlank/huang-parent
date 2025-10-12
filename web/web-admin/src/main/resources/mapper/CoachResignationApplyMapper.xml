@@ -7,7 +7,7 @@
         SELECT 
             cra.id,
             cra.coach_id,
-            u.real_name as coach_name,
+            c.real_name as coach_name,
             u.phone as coach_phone,
             u.email as coach_email,
             cra.resignation_date,
@@ -24,7 +24,7 @@
             cra.apply_time,
             cra.review_time,
             cra.reviewer_id,
-            reviewer.real_name as reviewer_name,
+            reviewer_coach.real_name as reviewer_name,
             cra.review_remark,
             cra.actual_leave_date,
             cra.create_time,
@@ -32,14 +32,15 @@
             CASE WHEN cra.status = 'pending' THEN 1 ELSE 0 END as can_review,
             CASE WHEN cra.status = 'pending' THEN 1 ELSE 0 END as can_cancel
         FROM coach_resignation_apply cra
-        LEFT JOIN user u ON cra.coach_id = u.id
-        LEFT JOIN user reviewer ON cra.reviewer_id = reviewer.id
+        LEFT JOIN coach c ON cra.coach_id = c.id
+        LEFT JOIN user u ON c.user_id = u.id
+        LEFT JOIN coach reviewer_coach ON cra.reviewer_id = reviewer_coach.user_id
         WHERE cra.is_deleted = 0
         <if test="query.coachId != null">
             AND cra.coach_id = #{query.coachId}
         </if>
         <if test="query.coachName != null and query.coachName != ''">
-            AND u.real_name LIKE CONCAT('%', #{query.coachName}, '%')
+            AND c.real_name LIKE CONCAT('%', #{query.coachName}, '%')
         </if>
         <if test="query.status != null and query.status != ''">
             AND cra.status = #{query.status}
@@ -64,7 +65,7 @@
         SELECT 
             cra.id,
             cra.coach_id,
-            u.real_name as coach_name,
+            c.real_name as coach_name,
             u.phone as coach_phone,
             u.email as coach_email,
             cra.resignation_date,
@@ -81,7 +82,7 @@
             cra.apply_time,
             cra.review_time,
             cra.reviewer_id,
-            reviewer.real_name as reviewer_name,
+            reviewer_coach.real_name as reviewer_name,
             cra.review_remark,
             cra.actual_leave_date,
             cra.create_time,
@@ -89,8 +90,9 @@
             CASE WHEN cra.status = 'pending' THEN 1 ELSE 0 END as can_review,
             CASE WHEN cra.status = 'pending' THEN 1 ELSE 0 END as can_cancel
         FROM coach_resignation_apply cra
-        LEFT JOIN user u ON cra.coach_id = u.id
-        LEFT JOIN user reviewer ON cra.reviewer_id = reviewer.id
+        LEFT JOIN coach c ON cra.coach_id = c.id
+        LEFT JOIN user u ON c.user_id = u.id
+        LEFT JOIN coach reviewer_coach ON cra.reviewer_id = reviewer_coach.user_id
         WHERE cra.id = #{id} AND cra.is_deleted = 0
     </select>
 

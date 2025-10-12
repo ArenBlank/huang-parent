@@ -45,6 +45,7 @@ public class Knife4jConfiguration {
                         "/admin/coach-resignation-apply/**",
                         "/admin/coach/certification/**",
                         "/admin/coach/resignation/**",
+                        "/admin/coach/schedule/**",
                         "/admin/coach-service/**",
                         "/admin/coach-consultation/**",
                         "/admin/coach-evaluation/**",

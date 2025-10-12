@@ -10,4 +10,9 @@ import com.huang.model.entity.Coach;
  */
 public interface CoachService extends IService<Coach> {
 
+    /**
+     * 根据用户ID获取教练信息
+     */
+    Coach getCoachByUserId(Long userId);
+
 }

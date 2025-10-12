@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.huang.web.app.mapper.CoachResignationApplyMapper">
+
+    <!-- 基础结果映射 -->
+    <sql id="baseColumns">
+        cra.id,
+        cra.coach_id,
+        c.real_name as coach_name,
+        cra.resignation_date,
+        cra.reason,
+        cra.handover_plan,
+        cra.status,
+        CASE cra.status 
+            WHEN 'pending' THEN '待审核'
+            WHEN 'approved' THEN '已批准'
+            WHEN 'rejected' THEN '已拒绝'
+            WHEN 'cancelled' THEN '已取消'
+            ELSE '未知'
+        END as status_desc,
+        cra.apply_time,
+        cra.review_time,
+        cra.review_remark,
+        cra.actual_leave_date,
+        CASE WHEN cra.status = 'pending' THEN 1 ELSE 0 END as can_cancel,
+        cra.create_time
+    </sql>
+
+    <!-- 根据教练ID查询当前待审核的离职申请 -->
+    <select id="selectPendingByCoachId" resultType="com.huang.web.app.vo.coach.CoachResignationVO">
+        SELECT <include refid="baseColumns"/>
+        FROM coach_resignation_apply cra
+        LEFT JOIN coach c ON cra.coach_id = c.id
+        WHERE cra.coach_id = #{coachId} 
+        AND cra.status = 'pending'
+        AND cra.is_deleted = 0
+        ORDER BY cra.create_time DESC
+        LIMIT 1
+    </select>
+
+    <!-- 根据教练ID查询离职申请历史 -->
+    <select id="selectHistoryByCoachId" resultType="com.huang.web.app.vo.coach.CoachResignationVO">
+        SELECT <include refid="baseColumns"/>
+        FROM coach_resignation_apply cra
+        LEFT JOIN coach c ON cra.coach_id = c.id
+        WHERE cra.coach_id = #{coachId}
+        AND cra.is_deleted = 0
+        ORDER BY cra.create_time DESC
+    </select>
+
+    <!-- 根据申请ID和教练ID查询离职申请详情 -->
+    <select id="selectByIdAndCoachId" resultType="com.huang.web.app.vo.coach.CoachResignationVO">
+        SELECT <include refid="baseColumns"/>
+        FROM coach_resignation_apply cra
+        LEFT JOIN coach c ON cra.coach_id = c.id
+        WHERE cra.id = #{id} 
+        AND cra.coach_id = #{coachId}
+        AND cra.is_deleted = 0
+    </select>
+
+</mapper>

@@ -1,0 +1,93 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.huang.mapper.AppCoachScheduleChangeMapper">
+
+    <!-- 分页查询教练日程变更申请 -->
+    <select id="selectCoachScheduleChangePage" resultType="com.huang.vo.CoachScheduleChangeDetailVO">
+        SELECT 
+            c.id,
+            c.coach_id,
+            c.change_type,
+            CASE 
+                WHEN c.change_type = 'leave' THEN '请假'
+                WHEN c.change_type = 'overtime' THEN '加班'
+                WHEN c.change_type = 'adjust' THEN '调整'
+                ELSE c.change_type
+            END as change_type_name,
+            c.original_date,
+            c.original_start_time,
+            c.original_end_time,
+            c.new_date,
+            c.new_start_time,
+            c.new_end_time,
+            c.reason,
+            c.status,
+            CASE 
+                WHEN c.status = 'pending' THEN '待审核'
+                WHEN c.status = 'approved' THEN '已批准'
+                WHEN c.status = 'rejected' THEN '已拒绝'
+                ELSE c.status
+            END as status_name,
+            c.apply_time,
+            c.review_time,
+            c.reviewer_id,
+            c.review_remark,
+            c.create_time,
+            c.update_time
+        FROM coach_schedule_change c
+        WHERE c.is_deleted = 0 
+        AND c.coach_id = #{coachId}
+        <if test="query.status != null and query.status != ''">
+            AND c.status = #{query.status}
+        </if>
+        <if test="query.changeType != null and query.changeType != ''">
+            AND c.change_type = #{query.changeType}
+        </if>
+        <if test="query.startDate != null">
+            <![CDATA[AND c.original_date >= #{query.startDate}]]>
+        </if>
+        <if test="query.endDate != null">
+            <![CDATA[AND c.original_date <= #{query.endDate}]]>
+        </if>
+        ORDER BY c.apply_time DESC
+    </select>
+
+    <!-- 根据ID查询教练日程变更申请详情 -->
+    <select id="selectCoachScheduleChangeDetail" resultType="com.huang.vo.CoachScheduleChangeDetailVO">
+        SELECT 
+            c.id,
+            c.coach_id,
+            c.change_type,
+            CASE 
+                WHEN c.change_type = 'leave' THEN '请假'
+                WHEN c.change_type = 'overtime' THEN '加班'
+                WHEN c.change_type = 'adjust' THEN '调整'
+                ELSE c.change_type
+            END as change_type_name,
+            c.original_date,
+            c.original_start_time,
+            c.original_end_time,
+            c.new_date,
+            c.new_start_time,
+            c.new_end_time,
+            c.reason,
+            c.status,
+            CASE 
+                WHEN c.status = 'pending' THEN '待审核'
+                WHEN c.status = 'approved' THEN '已批准'
+                WHEN c.status = 'rejected' THEN '已拒绝'
+                ELSE c.status
+            END as status_name,
+            c.apply_time,
+            c.review_time,
+            c.reviewer_id,
+            c.review_remark,
+            c.create_time,
+            c.update_time
+        FROM coach_schedule_change c
+        WHERE c.is_deleted = 0 
+        AND c.id = #{id}
+        AND c.coach_id = #{coachId}
+    </select>
+
+</mapper>

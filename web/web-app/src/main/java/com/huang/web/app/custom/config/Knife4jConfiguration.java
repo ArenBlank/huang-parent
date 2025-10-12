@@ -80,4 +80,37 @@ public class Knife4jConfiguration {
                 .build();
     }
 
+    // ================== 教练离职管理模块 ==================
+    @Bean
+    public GroupedOpenApi coachResignationAPI() {
+        return GroupedOpenApi.builder()
+                .group("05-教练离职管理")
+                .pathsToMatch(
+                        "/app/coach/resignation/**"
+                )
+                .build();
+    }
+
+    // ================== 教练咨询模块 ==================
+    @Bean
+    public GroupedOpenApi consultationAPI() {
+        return GroupedOpenApi.builder()
+                .group("06-教练咨询")
+                .pathsToMatch(
+                        "/app/consultation/**"
+                )
+                .build();
+    }
+
+    // ================== 教练日程管理模块 ==================
+    @Bean
+    public GroupedOpenApi coachScheduleAPI() {
+        return GroupedOpenApi.builder()
+                .group("07-教练日程管理")
+                .pathsToMatch(
+                        "/app/coach/schedule/**"
+                )
+                .build();
+    }
+
 }
