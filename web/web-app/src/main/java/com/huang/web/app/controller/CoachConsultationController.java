@@ -54,10 +54,10 @@ public class CoachConsultationController {
     /**
      * 查看我的咨询记录
      */
-    @Operation(summary = "查看我的咨询记录", description = "查询当前用户的所有咨询记录,可按状态筛选")
+    @Operation(summary = "我的咨询记录", description = "查询当前用户的所有咨询记录，可按状态筛选")
     @GetMapping("/my-list")
     public Result<List<CoachConsultationVO>> getMyConsultations(
-            @Parameter(description = "状态筛选: scheduled已预约 completed已完成 cancelled已取消")
+            @Parameter(description = "状态筛选: scheduled已预约 | completed已完成 | cancelled已取消")
             @RequestParam(required = false) String status) {
         try {
             log.info("查询我的咨询记录, 状态筛选: {}", status);
@@ -75,7 +75,7 @@ public class CoachConsultationController {
     /**
      * 获取咨询详情
      */
-    @Operation(summary = "获取咨询详情", description = "根据咨询ID查看咨询的详细信息")
+    @Operation(summary = "查看咨询详情", description = "根据咨询ID查看咨询的详细信息")
     @GetMapping("/{id}")
     public Result<CoachConsultationVO> getConsultationDetail(
             @Parameter(description = "咨询ID", required = true)
@@ -96,7 +96,7 @@ public class CoachConsultationController {
     /**
      * 取消咨询
      */
-    @Operation(summary = "取消咨询", description = "取消已预约的咨询(只有未开始的咨询可以取消)")
+    @Operation(summary = "取消预约", description = "取消已预约的咨询（只有未开始的咨询可以取消）")
     @DeleteMapping("/{id}/cancel")
     public Result<Void> cancelConsultation(
             @Parameter(description = "咨询ID", required = true)

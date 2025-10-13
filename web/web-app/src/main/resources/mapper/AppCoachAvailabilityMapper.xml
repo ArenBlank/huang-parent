@@ -3,7 +3,7 @@
 <mapper namespace="com.huang.mapper.AppCoachAvailabilityMapper">
 
     <!-- 查询教练可用性列表 -->
-    <select id="selectCoachAvailabilityList" resultType="com.huang.vo.CoachAvailabilityVO">
+    <select id="selectCoachAvailabilityList" resultType="com.huang.web.app.vo.coach.CoachAvailabilityVO">
         SELECT 
             ca.id,
             ca.coach_id,

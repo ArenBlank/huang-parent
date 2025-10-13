@@ -1,11 +1,11 @@
-package com.huang.mapper;
+package com.huang.web.app.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
-import com.huang.dto.CoachScheduleQueryDTO;
+import com.huang.web.app.dto.CoachScheduleQueryDTO;
 import com.huang.model.entity.CoachScheduleChange;
-import com.huang.vo.CoachScheduleChangeDetailVO;
+import com.huang.web.app.vo.coach.CoachScheduleChangeDetailVO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 

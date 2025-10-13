@@ -1,4 +1,4 @@
-package com.huang.vo;
+package com.huang.web.admin.vo;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
@@ -8,19 +8,25 @@ import java.time.LocalDateTime;
 import java.time.LocalTime;
 
 /**
- * 教练日程变更申请详情VO
+ * Admin端教练日程变更申请详情VO
  * @author huang
  * @since 2025-01-24
  */
-@Schema(description = "教练日程变更申请详情VO")
+@Schema(description = "Admin端教练日程变更申请详情VO")
 @Data
-public class CoachScheduleChangeDetailVO {
+public class AdminCoachScheduleChangeDetailVO {
 
     @Schema(description = "申请ID")
     private Long id;
 
     @Schema(description = "教练ID")
     private Long coachId;
+
+    @Schema(description = "教练姓名")
+    private String coachName;
+
+    @Schema(description = "教练手机")
+    private String coachPhone;
 
     @Schema(description = "变更类型: leave请假 overtime加班 adjust调整")
     private String changeType;
@@ -63,6 +69,9 @@ public class CoachScheduleChangeDetailVO {
 
     @Schema(description = "审核人ID")
     private Long reviewerId;
+
+    @Schema(description = "审核人姓名")
+    private String reviewerName;
 
     @Schema(description = "审核备注")
     private String reviewRemark;

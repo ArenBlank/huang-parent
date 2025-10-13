@@ -1,9 +1,9 @@
-package com.huang.service;
+package com.huang.web.app.service;
 
 import com.baomidou.mybatisplus.extension.service.IService;
-import com.huang.dto.CoachAvailabilityDTO;
+import com.huang.web.app.dto.CoachAvailabilityDTO;
 import com.huang.model.entity.CoachAvailability;
-import com.huang.vo.CoachAvailabilityVO;
+import com.huang.web.app.vo.coach.CoachAvailabilityVO;
 
 import java.util.List;
 

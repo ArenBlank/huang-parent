@@ -1,8 +1,8 @@
-package com.huang.mapper;
+package com.huang.web.app.mapper;
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import com.huang.model.entity.CoachAvailability;
-import com.huang.vo.CoachAvailabilityVO;
+import com.huang.web.app.vo.coach.CoachAvailabilityVO;
 import org.apache.ibatis.annotations.Mapper;
 import org.apache.ibatis.annotations.Param;
 

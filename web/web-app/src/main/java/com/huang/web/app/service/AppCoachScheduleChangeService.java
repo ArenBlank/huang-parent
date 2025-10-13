@@ -1,11 +1,11 @@
-package com.huang.service;
+package com.huang.web.app.service;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.IService;
-import com.huang.dto.CoachScheduleChangeDTO;
-import com.huang.dto.CoachScheduleQueryDTO;
+import com.huang.web.app.dto.CoachScheduleChangeDTO;
+import com.huang.web.app.dto.CoachScheduleQueryDTO;
 import com.huang.model.entity.CoachScheduleChange;
-import com.huang.vo.CoachScheduleChangeDetailVO;
+import com.huang.web.app.vo.coach.CoachScheduleChangeDetailVO;
 
 /**
  * App端教练日程变更Service接口

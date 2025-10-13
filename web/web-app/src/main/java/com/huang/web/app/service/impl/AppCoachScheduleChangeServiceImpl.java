@@ -1,19 +1,18 @@
-package com.huang.service.impl;
+package com.huang.web.app.service.impl;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
-import com.huang.dto.CoachScheduleChangeDTO;
-import com.huang.dto.CoachScheduleQueryDTO;
-import com.huang.mapper.AppCoachScheduleChangeMapper;
+import com.huang.web.app.dto.CoachScheduleChangeDTO;
+import com.huang.web.app.dto.CoachScheduleQueryDTO;
+import com.huang.web.app.mapper.AppCoachScheduleChangeMapper;
 import com.huang.model.entity.Coach;
 import com.huang.model.entity.CoachScheduleChange;
-import com.huang.model.entity.User;
-import com.huang.service.AppCoachScheduleChangeService;
+import com.huang.web.app.service.AppCoachScheduleChangeService;
 import com.huang.web.app.service.CoachService;
-import com.huang.web.app.service.UserService;
-import com.huang.common.utils.JwtUtil;
-import com.huang.vo.CoachScheduleChangeDetailVO;
+import com.huang.common.login.LoginUser;
+import com.huang.common.login.LoginUserHolder;
+import com.huang.web.app.vo.coach.CoachScheduleChangeDetailVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.BeanUtils;
@@ -33,19 +32,18 @@ import java.time.LocalDateTime;
 public class AppCoachScheduleChangeServiceImpl extends ServiceImpl<AppCoachScheduleChangeMapper, CoachScheduleChange> implements AppCoachScheduleChangeService {
 
     private final CoachService coachService;
-    private final UserService userService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public void applyScheduleChange(String token, CoachScheduleChangeDTO dto) {
         log.info("教练申请日程变更，参数：{}", dto);
-        
-        // 验证token并获取用户信息
-        Long userId = JwtUtil.getUserIdFromToken(token);
-        User user = userService.getById(userId);
-        if (user == null) {
-            throw new RuntimeException("用户不存在");
+
+        // 从ThreadLocal获取当前登录用户
+        LoginUser loginUser = LoginUserHolder.getLoginUser();
+        if (loginUser == null) {
+            throw new RuntimeException("用户未登录");
         }
+        Long userId = loginUser.getUserId();
 
         // 获取教练信息
         Coach coach = coachService.getCoachByUserId(userId);
@@ -64,7 +62,7 @@ public class AppCoachScheduleChangeServiceImpl extends ServiceImpl<AppCoachSched
         if (!save(scheduleChange)) {
             throw new RuntimeException("申请日程变更失败");
         }
-        
+
         log.info("教练日程变更申请成功，申请ID：{}", scheduleChange.getId());
     }
 
@@ -72,12 +70,12 @@ public class AppCoachScheduleChangeServiceImpl extends ServiceImpl<AppCoachSched
     public IPage<CoachScheduleChangeDetailVO> getScheduleChangePage(String token, CoachScheduleQueryDTO query) {
         log.info("分页查询教练日程变更申请，参数：{}", query);
 
-        // 验证token并获取用户信息
-        Long userId = JwtUtil.getUserIdFromToken(token);
-        User user = userService.getById(userId);
-        if (user == null) {
-            throw new RuntimeException("用户不存在");
+        // 从ThreadLocal获取当前登录用户
+        LoginUser loginUser = LoginUserHolder.getLoginUser();
+        if (loginUser == null) {
+            throw new RuntimeException("用户未登录");
         }
+        Long userId = loginUser.getUserId();
 
         // 获取教练信息
         Coach coach = coachService.getCoachByUserId(userId);
@@ -94,12 +92,12 @@ public class AppCoachScheduleChangeServiceImpl extends ServiceImpl<AppCoachSched
     public CoachScheduleChangeDetailVO getScheduleChangeDetail(String token, Long id) {
         log.info("查询教练日程变更申请详情，ID：{}", id);
 
-        // 验证token并获取用户信息
-        Long userId = JwtUtil.getUserIdFromToken(token);
-        User user = userService.getById(userId);
-        if (user == null) {
-            throw new RuntimeException("用户不存在");
+        // 从ThreadLocal获取当前登录用户
+        LoginUser loginUser = LoginUserHolder.getLoginUser();
+        if (loginUser == null) {
+            throw new RuntimeException("用户未登录");
         }
+        Long userId = loginUser.getUserId();
 
         // 获取教练信息
         Coach coach = coachService.getCoachByUserId(userId);
@@ -121,12 +119,12 @@ public class AppCoachScheduleChangeServiceImpl extends ServiceImpl<AppCoachSched
     public void cancelScheduleChange(String token, Long id) {
         log.info("取消教练日程变更申请，ID：{}", id);
 
-        // 验证token并获取用户信息
-        Long userId = JwtUtil.getUserIdFromToken(token);
-        User user = userService.getById(userId);
-        if (user == null) {
-            throw new RuntimeException("用户不存在");
+        // 从ThreadLocal获取当前登录用户
+        LoginUser loginUser = LoginUserHolder.getLoginUser();
+        if (loginUser == null) {
+            throw new RuntimeException("用户未登录");
         }
+        Long userId = loginUser.getUserId();
 
         // 获取教练信息
         Coach coach = coachService.getCoachByUserId(userId);

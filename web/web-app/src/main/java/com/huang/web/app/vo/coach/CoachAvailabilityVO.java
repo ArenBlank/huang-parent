@@ -1,4 +1,4 @@
-package com.huang.vo;
+package com.huang.web.app.vo.coach;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;

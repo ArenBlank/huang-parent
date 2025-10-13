@@ -1,17 +1,17 @@
-package com.huang.service.impl;
+package com.huang.web.admin.service.impl;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.huang.common.utils.JwtUtil;
-import com.huang.dto.AdminCoachScheduleQueryDTO;
-import com.huang.dto.CoachScheduleReviewDTO;
-import com.huang.mapper.AdminCoachScheduleChangeMapper;
+import com.huang.web.admin.dto.coach.AdminCoachScheduleQueryDTO;
+import com.huang.web.admin.dto.coach.CoachScheduleReviewDTO;
+import com.huang.web.admin.mapper.AdminCoachScheduleChangeMapper;
 import com.huang.model.entity.CoachScheduleChange;
 import com.huang.model.entity.User;
-import com.huang.service.AdminCoachScheduleChangeService;
+import com.huang.web.admin.service.AdminCoachScheduleChangeService;
 import com.huang.web.admin.service.UserService;
-import com.huang.vo.AdminCoachScheduleChangeDetailVO;
+import com.huang.web.admin.vo.AdminCoachScheduleChangeDetailVO;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

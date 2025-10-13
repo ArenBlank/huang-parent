@@ -1,11 +1,11 @@
-package com.huang.controller;
+package com.huang.web.admin.controller;
 
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.huang.common.result.Result;
-import com.huang.dto.AdminCoachScheduleQueryDTO;
-import com.huang.dto.CoachScheduleReviewDTO;
-import com.huang.service.AdminCoachScheduleChangeService;
-import com.huang.vo.AdminCoachScheduleChangeDetailVO;
+import com.huang.web.admin.dto.coach.AdminCoachScheduleQueryDTO;
+import com.huang.web.admin.dto.coach.CoachScheduleReviewDTO;
+import com.huang.web.admin.service.AdminCoachScheduleChangeService;
+import com.huang.web.admin.vo.AdminCoachScheduleChangeDetailVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;

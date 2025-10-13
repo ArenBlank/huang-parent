@@ -3,7 +3,7 @@
 <mapper namespace="com.huang.mapper.AppCoachScheduleChangeMapper">
 
     <!-- 分页查询教练日程变更申请 -->
-    <select id="selectCoachScheduleChangePage" resultType="com.huang.vo.CoachScheduleChangeDetailVO">
+    <select id="selectCoachScheduleChangePage" resultType="com.huang.web.app.vo.coach.CoachScheduleChangeDetailVO">
         SELECT 
             c.id,
             c.coach_id,
@@ -53,7 +53,7 @@
     </select>
 
     <!-- 根据ID查询教练日程变更申请详情 -->
-    <select id="selectCoachScheduleChangeDetail" resultType="com.huang.vo.CoachScheduleChangeDetailVO">
+    <select id="selectCoachScheduleChangeDetail" resultType="com.huang.web.app.vo.coach.CoachScheduleChangeDetailVO">
         SELECT 
             c.id,
             c.coach_id,
