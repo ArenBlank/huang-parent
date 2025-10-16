@@ -1,0 +1,188 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.huang.web.app.mapper.AppGymStoreMapper">
+
+    <!-- 分页查询门店列表(仅营业中的门店) -->
+    <select id="selectStoreListPage" resultType="com.huang.web.app.vo.store.GymStoreListVO">
+        SELECT
+            gs.id,
+            gs.store_name,
+            gs.address,
+            gs.phone,
+            gs.business_hours,
+            gs.area_size,
+            gs.max_capacity,
+            gs.parking_spaces,
+            SUBSTRING_INDEX(SUBSTRING_INDEX(gs.images, '"', 4), '"', -1) AS cover_image,
+            gs.latitude,
+            gs.longitude,
+            gs.status,
+            '营业' AS status_name,
+            COALESCE(coach_stats.coach_count, 0) AS coach_count
+        FROM gym_store gs
+        LEFT JOIN (
+            SELECT store_id, COUNT(DISTINCT coach_id) AS coach_count
+            FROM coach_store_relation
+            WHERE is_deleted = 0
+            GROUP BY store_id
+        ) coach_stats ON gs.id = coach_stats.store_id
+        WHERE gs.is_deleted = 0 AND gs.status = 1
+        <if test="query.storeName != null and query.storeName != ''">
+            AND gs.store_name LIKE CONCAT('%', #{query.storeName}, '%')
+        </if>
+        <if test="query.address != null and query.address != ''">
+            AND gs.address LIKE CONCAT('%', #{query.address}, '%')
+        </if>
+        ORDER BY gs.create_time DESC
+    </select>
+
+    <!-- 查询门店详情(带教练和今日课程统计) -->
+    <select id="selectStoreDetailById" resultType="com.huang.web.app.vo.store.GymStoreDetailVO">
+        SELECT
+            gs.id,
+            gs.store_name,
+            gs.address,
+            gs.phone,
+            gs.business_hours,
+            gs.area_size,
+            gs.equipment_count,
+            gs.max_capacity,
+            gs.parking_spaces,
+            gs.facilities AS facilitiesJson,
+            gs.description,
+            gs.images,
+            gs.latitude,
+            gs.longitude,
+            gs.status,
+            '营业' AS status_name,
+            COALESCE(coach_stats.coach_count, 0) AS coach_count,
+            COALESCE(course_stats.today_available_courses, 0) AS today_available_courses
+            <if test="userLatitude != null and userLongitude != null">
+            ,ROUND(
+                6371 * 2 * ASIN(
+                    SQRT(
+                        POW(SIN((#{userLatitude} - gs.latitude) * PI() / 180 / 2), 2) +
+                        COS(#{userLatitude} * PI() / 180) * COS(gs.latitude * PI() / 180) *
+                        POW(SIN((#{userLongitude} - gs.longitude) * PI() / 180 / 2), 2)
+                    )
+                ), 2
+            ) AS distance
+            </if>
+        FROM gym_store gs
+        LEFT JOIN (
+            SELECT store_id, COUNT(DISTINCT coach_id) AS coach_count
+            FROM coach_store_relation
+            WHERE is_deleted = 0
+            GROUP BY store_id
+        ) coach_stats ON gs.id = coach_stats.store_id
+        LEFT JOIN (
+            SELECT COUNT(*) AS today_available_courses
+            FROM course_schedule cs
+            INNER JOIN course c ON cs.course_id = c.id
+            WHERE DATE(cs.schedule_date) = CURDATE()
+              AND cs.is_deleted = 0
+              AND c.is_deleted = 0
+              AND c.status = 1
+        ) course_stats ON 1=1
+        WHERE gs.id = #{id} AND gs.is_deleted = 0 AND gs.status = 1
+    </select>
+
+    <!-- 查询附近门店列表(基于经纬度计算距离,使用Haversine公式) -->
+    <select id="selectNearbyStores" resultType="com.huang.web.app.vo.store.GymStoreListVO">
+        SELECT
+            gs.id,
+            gs.store_name,
+            gs.address,
+            gs.phone,
+            gs.business_hours,
+            gs.area_size,
+            gs.max_capacity,
+            gs.parking_spaces,
+            SUBSTRING_INDEX(SUBSTRING_INDEX(gs.images, '"', 4), '"', -1) AS cover_image,
+            gs.latitude,
+            gs.longitude,
+            gs.status,
+            '营业' AS status_name,
+            COALESCE(coach_stats.coach_count, 0) AS coach_count,
+            ROUND(
+                6371 * 2 * ASIN(
+                    SQRT(
+                        POW(SIN((#{userLatitude} - gs.latitude) * PI() / 180 / 2), 2) +
+                        COS(#{userLatitude} * PI() / 180) * COS(gs.latitude * PI() / 180) *
+                        POW(SIN((#{userLongitude} - gs.longitude) * PI() / 180 / 2), 2)
+                    )
+                ), 2
+            ) AS distance
+        FROM gym_store gs
+        LEFT JOIN (
+            SELECT store_id, COUNT(DISTINCT coach_id) AS coach_count
+            FROM coach_store_relation
+            WHERE is_deleted = 0
+            GROUP BY store_id
+        ) coach_stats ON gs.id = coach_stats.store_id
+        WHERE gs.is_deleted = 0
+          AND gs.status = 1
+          AND gs.latitude IS NOT NULL
+          AND gs.longitude IS NOT NULL
+        HAVING distance &lt;= #{radius}
+        ORDER BY distance ASC
+    </select>
+
+    <!-- 查询指定门店的教练列表 -->
+    <select id="selectCoachesByStoreId" resultType="java.util.Map">
+        SELECT
+            c.id,
+            c.user_id,
+            c.real_name,
+            c.specialties,
+            c.introduction,
+            c.experience_years,
+            c.rating,
+            u.avatar,
+            u.phone
+        FROM coach_store_relation csr
+        INNER JOIN coach c ON csr.coach_id = c.id
+        LEFT JOIN user u ON c.user_id = u.id
+        WHERE csr.store_id = #{storeId}
+          AND csr.is_deleted = 0
+          AND c.is_deleted = 0
+          AND c.status = 1
+        ORDER BY c.rating DESC, c.experience_years DESC
+    </select>
+
+    <!-- 查询指定门店的课程排期(今日及未来) -->
+    <select id="selectCoursesByStoreId" resultType="java.util.Map">
+        SELECT
+            cs.id AS schedule_id,
+            cs.schedule_date,
+            cs.start_time,
+            cs.end_time,
+            cs.current_participants,
+            c.id AS course_id,
+            c.course_name,
+            c.cover_image,
+            c.difficulty,
+            CASE
+                WHEN c.difficulty = 1 THEN '初级'
+                WHEN c.difficulty = 2 THEN '中级'
+                WHEN c.difficulty = 3 THEN '高级'
+                ELSE '未知'
+            END AS difficulty_name,
+            c.duration,
+            c.max_participants,
+            c.price,
+            cc.course_name AS category_name,
+            coach.real_name AS coach_name
+        FROM course_schedule cs
+        INNER JOIN course c ON cs.course_id = c.id
+        LEFT JOIN course_category cc ON c.category_id = cc.id
+        LEFT JOIN coach ON c.coach_id = coach.id
+        WHERE cs.schedule_date &gt;= CURDATE()
+          AND cs.is_deleted = 0
+          AND c.is_deleted = 0
+          AND c.status = 1
+        ORDER BY cs.schedule_date ASC, cs.start_time ASC
+        LIMIT 20
+    </select>
+
+</mapper>

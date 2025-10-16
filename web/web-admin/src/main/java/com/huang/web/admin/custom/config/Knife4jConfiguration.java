@@ -152,18 +152,30 @@ public class Knife4jConfiguration {
                 .build();
     }
 
+    // ================== 门店管理模块 ==================
+    @Bean
+    public GroupedOpenApi storeManagementAPI() {
+        return GroupedOpenApi.builder()
+                .group("10-门店管理")
+                .pathsToMatch(
+                        "/admin/gym-store/**"
+                )
+                .build();
+    }
+
     // ================== 系统管理模块 ==================
     @Bean
     public GroupedOpenApi systemManagementAPI() {
         return GroupedOpenApi.builder()
-                .group("10-系统管理")
+                .group("11-系统管理")
                 .pathsToMatch(
                         "/admin/login/**",
                         "/admin/info",
                         "/admin/system-config/**",
                         "/admin/operation-log/**",
                         "/admin/dashboard/**",
-                        "/admin/statistics/**"
+                        "/admin/statistics/**",
+                        "/admin/permission/**"
                 )
                 .build();
     }

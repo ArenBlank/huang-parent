@@ -32,3 +32,4 @@
    3. Ensure complete separation of concerns between admin and app functionalities
    4. Consider both frontend and backend implications when making architectural decisions
    5. Respect the dual-endpoint architecture design with independent MVC layers and configurations
+   Use MCP context7 deepwiki.

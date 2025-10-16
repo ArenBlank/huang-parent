@@ -1,0 +1,185 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.huang.web.admin.mapper.GymStoreMapper">
+
+    <!-- 分页查询门店列表(带教练和会员统计) -->
+    <select id="selectStoreListPage" resultType="com.huang.web.admin.vo.store.GymStoreListVO">
+        SELECT
+            gs.id,
+            gs.store_name,
+            gs.store_code,
+            gs.address,
+            gs.phone,
+            gs.business_hours,
+            gs.manager_name,
+            gs.manager_phone,
+            gs.area_size,
+            gs.max_capacity,
+            gs.latitude,
+            gs.longitude,
+            gs.status,
+            CASE
+                WHEN gs.status = 0 THEN '停业'
+                WHEN gs.status = 1 THEN '营业'
+                WHEN gs.status = 2 THEN '装修中'
+                ELSE '未知'
+            END AS status_name,
+            gs.create_time,
+            gs.update_time,
+            COALESCE(coach_stats.coach_count, 0) AS coach_count,
+            COALESCE(member_stats.member_count, 0) AS member_count
+        FROM gym_store gs
+        LEFT JOIN (
+            SELECT store_id, COUNT(DISTINCT coach_id) AS coach_count
+            FROM coach_store_relation
+            WHERE is_deleted = 0
+            GROUP BY store_id
+        ) coach_stats ON gs.id = coach_stats.store_id
+        LEFT JOIN (
+            SELECT COUNT(*) AS member_count
+            FROM user
+            WHERE is_deleted = 0
+        ) member_stats ON 1=1
+        WHERE gs.is_deleted = 0
+        <if test="query.storeName != null and query.storeName != ''">
+            AND gs.store_name LIKE CONCAT('%', #{query.storeName}, '%')
+        </if>
+        <if test="query.storeCode != null and query.storeCode != ''">
+            AND gs.store_code = #{query.storeCode}
+        </if>
+        <if test="query.address != null and query.address != ''">
+            AND gs.address LIKE CONCAT('%', #{query.address}, '%')
+        </if>
+        <if test="query.status != null">
+            AND gs.status = #{query.status}
+        </if>
+        <if test="query.managerName != null and query.managerName != ''">
+            AND gs.manager_name LIKE CONCAT('%', #{query.managerName}, '%')
+        </if>
+        <if test="query.phone != null and query.phone != ''">
+            AND gs.phone LIKE CONCAT('%', #{query.phone}, '%')
+        </if>
+        ORDER BY gs.create_time DESC
+    </select>
+
+    <!-- 查询门店详情(带教练、会员、课程统计) -->
+    <select id="selectStoreDetailById" resultType="com.huang.web.admin.vo.store.GymStoreDetailVO">
+        SELECT
+            gs.id,
+            gs.store_name,
+            gs.store_code,
+            gs.address,
+            gs.phone,
+            gs.business_hours,
+            gs.manager_name,
+            gs.manager_phone,
+            gs.area_size,
+            gs.equipment_count,
+            gs.max_capacity,
+            gs.parking_spaces,
+            gs.facilities,
+            gs.description,
+            gs.images,
+            gs.latitude,
+            gs.longitude,
+            gs.status,
+            CASE
+                WHEN gs.status = 0 THEN '停业'
+                WHEN gs.status = 1 THEN '营业'
+                WHEN gs.status = 2 THEN '装修中'
+                ELSE '未知'
+            END AS status_name,
+            gs.create_time,
+            gs.update_time,
+            COALESCE(coach_stats.coach_count, 0) AS coach_count,
+            COALESCE(member_stats.member_count, 0) AS member_count,
+            COALESCE(course_stats.course_count, 0) AS course_count
+        FROM gym_store gs
+        LEFT JOIN (
+            SELECT store_id, COUNT(DISTINCT coach_id) AS coach_count
+            FROM coach_store_relation
+            WHERE is_deleted = 0
+            GROUP BY store_id
+        ) coach_stats ON gs.id = coach_stats.store_id
+        LEFT JOIN (
+            SELECT COUNT(*) AS member_count
+            FROM user
+            WHERE is_deleted = 0
+        ) member_stats ON 1=1
+        LEFT JOIN (
+            SELECT COUNT(*) AS course_count
+            FROM course
+            WHERE is_deleted = 0 AND status = 1
+        ) course_stats ON 1=1
+        WHERE gs.id = #{id} AND gs.is_deleted = 0
+    </select>
+
+    <!-- 查询门店统计数据 -->
+    <select id="selectStoreStatistics" resultType="java.util.Map">
+        SELECT
+            COUNT(*) AS total_stores,
+            COUNT(CASE WHEN status = 1 THEN 1 END) AS active_stores,
+            COUNT(CASE WHEN status = 0 THEN 1 END) AS closed_stores,
+            COUNT(CASE WHEN status = 2 THEN 1 END) AS renovating_stores,
+            (SELECT COUNT(DISTINCT coach_id) FROM coach_store_relation WHERE is_deleted = 0) AS total_coaches,
+            (SELECT COUNT(*) FROM user WHERE is_deleted = 0) AS total_members,
+            (SELECT COUNT(*) FROM course WHERE is_deleted = 0 AND status = 1) AS total_courses
+        FROM gym_store
+        WHERE is_deleted = 0
+    </select>
+
+    <!-- 查询指定门店的教练列表 -->
+    <select id="selectCoachesByStoreId" resultType="java.util.Map">
+        SELECT
+            c.id,
+            c.user_id,
+            c.real_name,
+            c.certification_no,
+            c.specialties,
+            c.experience_years,
+            c.rating,
+            c.status,
+            CASE
+                WHEN c.status = 0 THEN '离职'
+                WHEN c.status = 1 THEN '在职'
+                WHEN c.status = 2 THEN '休假'
+                ELSE '未知'
+            END AS status_name,
+            u.phone,
+            u.email
+        FROM coach_store_relation csr
+        INNER JOIN coach c ON csr.coach_id = c.id
+        LEFT JOIN user u ON c.user_id = u.id
+        WHERE csr.store_id = #{storeId}
+          AND csr.is_deleted = 0
+          AND c.is_deleted = 0
+        ORDER BY c.rating DESC, c.create_time DESC
+    </select>
+
+    <!-- 查询指定门店的课程排期列表 -->
+    <select id="selectCoursesByStoreId" resultType="java.util.Map">
+        SELECT
+            c.id,
+            c.course_name,
+            c.cover_image,
+            c.difficulty,
+            CASE
+                WHEN c.difficulty = 1 THEN '初级'
+                WHEN c.difficulty = 2 THEN '中级'
+                WHEN c.difficulty = 3 THEN '高级'
+                ELSE '未知'
+            END AS difficulty_name,
+            c.duration,
+            c.max_participants,
+            c.price,
+            cc.course_name AS category_name,
+            coach.real_name AS coach_name
+        FROM course c
+        LEFT JOIN course_category cc ON c.category_id = cc.id
+        LEFT JOIN coach ON c.coach_id = coach.id
+        WHERE c.is_deleted = 0 AND c.status = 1
+        ORDER BY c.create_time DESC
+        LIMIT 10
+    </select>
+
+</mapper>

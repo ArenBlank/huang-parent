@@ -285,6 +285,15 @@ CREATE TABLE `course_enrollment` (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '报名ID',
   `user_id` bigint NOT NULL COMMENT '用户ID',
   `schedule_id` bigint NOT NULL COMMENT '排期ID',
+  `order_id` bigint DEFAULT NULL COMMENT '订单ID',
+  `payment_amount` decimal(10,2) DEFAULT 0.00 COMMENT '支付金额',
+  `payment_status` tinyint DEFAULT 0 COMMENT '支付状态：0-待支付，1-已支付，2-已退款',
+  `payment_time` datetime DEFAULT NULL COMMENT '支付时间',
+  `refund_amount` decimal(10,2) DEFAULT 0.00 COMMENT '退款金额',
+  `refund_time` datetime DEFAULT NULL COMMENT '退款时间',
+  `cancel_time` datetime DEFAULT NULL COMMENT '取消时间',
+  `cancel_reason` varchar(500) DEFAULT NULL COMMENT '取消原因',
+  `cancelled_by` varchar(20) DEFAULT NULL COMMENT '取消方: user用户 coach教练 system系统',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `enrollment_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '报名时间',
   `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
@@ -294,6 +303,8 @@ CREATE TABLE `course_enrollment` (
   PRIMARY KEY (`id`),
   UNIQUE KEY `uk_user_schedule` (`user_id`,`schedule_id`),
   KEY `idx_schedule_id` (`schedule_id`),
+  KEY `idx_order_id` (`order_id`),
+  KEY `idx_payment_status` (`payment_status`),
   KEY `idx_status` (`status`),
   KEY `idx_is_deleted` (`is_deleted`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='课程报名表';
@@ -688,10 +699,10 @@ CREATE TABLE `coach_service` (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '服务ID',
   `coach_id` bigint NOT NULL COMMENT '教练ID',
   `service_name` varchar(100) NOT NULL COMMENT '服务名称',
-  `service_type` varchar(50) NOT NULL COMMENT '服务类型: consultation咨询 training私教 assessment评估',
+  `service_type` varchar(50) NOT NULL COMMENT '服务类型: offline_training线下私教(300-700元/小时) online_text线上文字咨询(48元/25分钟)',
   `description` text COMMENT '服务描述',
   `duration` int NOT NULL COMMENT '服务时长(分钟)',
-  `price` decimal(10,2) NOT NULL COMMENT '价格',
+  `price` decimal(10,2) NOT NULL COMMENT '价格(元)',
   `max_clients` int DEFAULT 1 COMMENT '最大服务人数',
   `status` tinyint DEFAULT 1 COMMENT '状态: 0停用 1启用',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
@@ -710,20 +721,33 @@ CREATE TABLE `coach_consultation` (
   `id` bigint NOT NULL AUTO_INCREMENT COMMENT '咨询ID',
   `coach_id` bigint NOT NULL COMMENT '教练ID',
   `user_id` bigint NOT NULL COMMENT '用户ID',
-  `consultation_type` varchar(20) NOT NULL COMMENT '咨询类型: online在线 offline线下',
+  `service_type` varchar(50) NOT NULL COMMENT '服务类型: offline_training线下私教 online_text线上文字咨询',
+  `consultation_type` varchar(20) NOT NULL COMMENT '咨询类型: online在线 offline线下 (保留兼容)',
   `consultation_date` datetime NOT NULL COMMENT '咨询时间',
   `duration` int DEFAULT NULL COMMENT '咨询时长(分钟)',
   `topic` varchar(200) NOT NULL COMMENT '咨询主题',
   `content` text COMMENT '咨询内容',
   `coach_advice` text COMMENT '教练建议',
-  `status` varchar(20) DEFAULT 'scheduled' COMMENT '状态: scheduled已预约 completed已完成 cancelled已取消',
+  `order_id` bigint DEFAULT NULL COMMENT '订单ID',
+  `payment_amount` decimal(10,2) DEFAULT 0.00 COMMENT '支付金额',
+  `payment_status` tinyint DEFAULT 0 COMMENT '支付状态：0-待支付，1-已支付，2-已退款',
+  `payment_time` datetime DEFAULT NULL COMMENT '支付时间',
+  `refund_amount` decimal(10,2) DEFAULT 0.00 COMMENT '退款金额',
+  `refund_rate` decimal(5,2) DEFAULT 100.00 COMMENT '退款比例（0-100）',
+  `refund_time` datetime DEFAULT NULL COMMENT '退款时间',
+  `cancel_time` datetime DEFAULT NULL COMMENT '取消时间',
+  `cancelled_by` varchar(20) DEFAULT NULL COMMENT '取消方: user用户 coach教练 system系统',
+  `cancel_reason` varchar(500) DEFAULT NULL COMMENT '取消原因',
+  `status` varchar(20) DEFAULT 'booked' COMMENT '状态: booked已预约 in_progress进行中 completed已完成 cancelled_by_user用户取消 cancelled_by_coach教练取消',
   `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
   `update_time` datetime DEFAULT NULL ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
   `is_deleted` tinyint DEFAULT 0 COMMENT '是否删除: 0否 1是',
   PRIMARY KEY (`id`),
   KEY `idx_coach_id` (`coach_id`),
   KEY `idx_user_id` (`user_id`),
+  KEY `idx_order_id` (`order_id`),
   KEY `idx_consultation_date` (`consultation_date`),
+  KEY `idx_payment_status` (`payment_status`),
   KEY `idx_status` (`status`),
   KEY `idx_is_deleted` (`is_deleted`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='教练咨询记录表';
@@ -1114,14 +1138,221 @@ CREATE TABLE `article_comment` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='文章评论表';
 
 -- ================================================================
+-- 第四部分：系统功能增强模块(用户统计、定时任务、权限管理)
+-- ================================================================
+
+-- 47. 用户登录日志表
+DROP TABLE IF EXISTS `user_login_log`;
+CREATE TABLE `user_login_log` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '日志ID',
+  `user_id` bigint NOT NULL COMMENT '用户ID',
+  `username` varchar(50) DEFAULT NULL COMMENT '用户名',
+  `login_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '登录时间',
+  `login_ip` varchar(50) DEFAULT NULL COMMENT '登录IP',
+  `login_device` varchar(100) DEFAULT NULL COMMENT '登录设备',
+  `login_os` varchar(50) DEFAULT NULL COMMENT '操作系统',
+  `browser` varchar(50) DEFAULT NULL COMMENT '浏览器',
+  `login_type` varchar(20) DEFAULT 'normal' COMMENT '登录类型: normal正常 oauth第三方',
+  `login_status` tinyint DEFAULT '1' COMMENT '登录状态: 0失败 1成功',
+  `fail_reason` varchar(200) DEFAULT NULL COMMENT '失败原因',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  PRIMARY KEY (`id`),
+  KEY `idx_user_id` (`user_id`),
+  KEY `idx_login_time` (`login_time`),
+  KEY `idx_login_status` (`login_status`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户登录日志表';
+
+-- 48. 用户活动日志表
+DROP TABLE IF EXISTS `user_activity_log`;
+CREATE TABLE `user_activity_log` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '日志ID',
+  `user_id` bigint NOT NULL COMMENT '用户ID',
+  `activity_date` date NOT NULL COMMENT '活动日期',
+  `activity_type` varchar(50) DEFAULT NULL COMMENT '活动类型: login登录 course_enroll课程报名 exercise运动记录等',
+  `activity_count` int DEFAULT '1' COMMENT '活动次数',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_user_date_type` (`user_id`, `activity_date`, `activity_type`),
+  KEY `idx_user_id` (`user_id`),
+  KEY `idx_activity_date` (`activity_date`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户活动日志表';
+
+-- 49. 课程统计表
+DROP TABLE IF EXISTS `course_statistics`;
+CREATE TABLE `course_statistics` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '统计ID',
+  `statistics_date` date NOT NULL COMMENT '统计日期',
+  `new_enrollment_count` int DEFAULT '0' COMMENT '新增报名数',
+  `cancel_enrollment_count` int DEFAULT '0' COMMENT '取消报名数',
+  `completed_course_count` int DEFAULT '0' COMMENT '完成课程数',
+  `check_in_count` int DEFAULT '0' COMMENT '签到人数',
+  `total_participants` int DEFAULT '0' COMMENT '总参与人数',
+  `popular_course_id` bigint DEFAULT NULL COMMENT '最受欢迎课程ID',
+  `popular_course_name` varchar(100) DEFAULT NULL COMMENT '最受欢迎课程名称',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_statistics_date` (`statistics_date`),
+  KEY `idx_statistics_date` (`statistics_date`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='课程统计表';
+
+-- 50. 教练工作统计表
+DROP TABLE IF EXISTS `coach_work_statistics`;
+CREATE TABLE `coach_work_statistics` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '统计ID',
+  `coach_id` bigint NOT NULL COMMENT '教练ID',
+  `coach_name` varchar(50) DEFAULT NULL COMMENT '教练姓名',
+  `statistics_date` date NOT NULL COMMENT '统计日期',
+  `course_count` int DEFAULT '0' COMMENT '授课次数',
+  `course_hours` decimal(5,2) DEFAULT '0.00' COMMENT '授课时长(小时)',
+  `student_count` int DEFAULT '0' COMMENT '服务学员数',
+  `consultation_count` int DEFAULT '0' COMMENT '咨询次数',
+  `income_amount` decimal(10,2) DEFAULT '0.00' COMMENT '收入金额',
+  `rating_avg` decimal(3,2) DEFAULT '0.00' COMMENT '平均评分',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_coach_date` (`coach_id`, `statistics_date`),
+  KEY `idx_coach_id` (`coach_id`),
+  KEY `idx_statistics_date` (`statistics_date`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='教练工作统计表';
+
+-- 51. 系统通知表
+DROP TABLE IF EXISTS `system_notification`;
+CREATE TABLE `system_notification` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '通知ID',
+  `user_id` bigint DEFAULT NULL COMMENT '用户ID(为NULL表示系统广播)',
+  `notification_type` varchar(50) NOT NULL COMMENT '通知类型: course_reminder课程提醒 system_notice系统通知 course_cancel课程取消',
+  `title` varchar(200) NOT NULL COMMENT '通知标题',
+  `content` text NOT NULL COMMENT '通知内容',
+  `related_id` bigint DEFAULT NULL COMMENT '关联ID(如课程ID)',
+  `related_type` varchar(50) DEFAULT NULL COMMENT '关联类型: course schedule order',
+  `is_read` tinyint DEFAULT '0' COMMENT '是否已读: 0未读 1已读',
+  `read_time` datetime DEFAULT NULL COMMENT '阅读时间',
+  `send_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '发送时间',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  PRIMARY KEY (`id`),
+  KEY `idx_user_id` (`user_id`),
+  KEY `idx_notification_type` (`notification_type`),
+  KEY `idx_is_read` (`is_read`),
+  KEY `idx_send_time` (`send_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='系统通知表';
+
+-- 52. 权限表
+DROP TABLE IF EXISTS `permission`;
+CREATE TABLE `permission` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '权限ID',
+  `permission_name` varchar(100) NOT NULL COMMENT '权限名称',
+  `permission_code` varchar(100) NOT NULL COMMENT '权限编码',
+  `permission_type` varchar(20) DEFAULT 'menu' COMMENT '权限类型: menu菜单 button按钮 api接口',
+  `parent_id` bigint DEFAULT '0' COMMENT '父权限ID',
+  `resource_path` varchar(200) DEFAULT NULL COMMENT '资源路径(菜单路径/接口路径)',
+  `resource_method` varchar(20) DEFAULT NULL COMMENT '请求方法: GET POST PUT DELETE',
+  `icon` varchar(100) DEFAULT NULL COMMENT '图标',
+  `sort_order` int DEFAULT '0' COMMENT '排序',
+  `description` varchar(500) DEFAULT NULL COMMENT '描述',
+  `status` tinyint DEFAULT '1' COMMENT '状态: 0禁用 1启用',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `is_deleted` tinyint DEFAULT 0 COMMENT '是否删除: 0否 1是',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_permission_code` (`permission_code`),
+  KEY `idx_parent_id` (`parent_id`),
+  KEY `idx_permission_type` (`permission_type`),
+  KEY `idx_status` (`status`),
+  KEY `idx_is_deleted` (`is_deleted`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='权限表';
+
+-- 53. 角色权限关联表
+DROP TABLE IF EXISTS `role_permission`;
+CREATE TABLE `role_permission` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT 'ID',
+  `role_id` bigint NOT NULL COMMENT '角色ID',
+  `permission_id` bigint NOT NULL COMMENT '权限ID',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `is_deleted` tinyint DEFAULT 0 COMMENT '是否删除: 0否 1是',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_role_permission_active` (`role_id`, `permission_id`, `is_deleted`),
+  KEY `idx_role_id` (`role_id`),
+  KEY `idx_permission_id` (`permission_id`),
+  KEY `idx_is_deleted` (`is_deleted`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='角色权限关联表';
+
+-- 54. 临时文件记录表
+DROP TABLE IF EXISTS `temp_file_record`;
+CREATE TABLE `temp_file_record` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '记录ID',
+  `file_name` varchar(255) NOT NULL COMMENT '文件名',
+  `file_path` varchar(500) NOT NULL COMMENT '文件路径(MinIO路径)',
+  `file_size` bigint DEFAULT NULL COMMENT '文件大小(字节)',
+  `file_type` varchar(50) DEFAULT NULL COMMENT '文件类型',
+  `upload_user_id` bigint DEFAULT NULL COMMENT '上传用户ID',
+  `business_type` varchar(50) DEFAULT NULL COMMENT '业务类型: avatar头像 import导入 export导出',
+  `status` varchar(20) DEFAULT 'temp' COMMENT '状态: temp临时 used已使用 expired已过期',
+  `expire_time` datetime DEFAULT NULL COMMENT '过期时间',
+  `used_time` datetime DEFAULT NULL COMMENT '使用时间',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  PRIMARY KEY (`id`),
+  KEY `idx_file_path` (`file_path`(255)),
+  KEY `idx_upload_user_id` (`upload_user_id`),
+  KEY `idx_status` (`status`),
+  KEY `idx_expire_time` (`expire_time`),
+  KEY `idx_create_time` (`create_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='临时文件记录表';
+
+-- 55. 用户钱包表
+DROP TABLE IF EXISTS `user_wallet`;
+CREATE TABLE `user_wallet` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '钱包ID',
+  `user_id` bigint NOT NULL COMMENT '用户ID',
+  `balance` decimal(10,2) DEFAULT 0.00 COMMENT '账户余额(元)',
+  `frozen_amount` decimal(10,2) DEFAULT 0.00 COMMENT '冻结金额(元)',
+  `total_recharge` decimal(10,2) DEFAULT 0.00 COMMENT '累计充值',
+  `total_consumption` decimal(10,2) DEFAULT 0.00 COMMENT '累计消费',
+  `total_refund` decimal(10,2) DEFAULT 0.00 COMMENT '累计退款',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
+  `is_deleted` tinyint DEFAULT 0 COMMENT '是否删除: 0否 1是',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_user_id` (`user_id`),
+  KEY `idx_is_deleted` (`is_deleted`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='用户钱包表';
+
+-- 56. 钱包交易流水表
+DROP TABLE IF EXISTS `wallet_transaction`;
+CREATE TABLE `wallet_transaction` (
+  `id` bigint NOT NULL AUTO_INCREMENT COMMENT '流水ID',
+  `transaction_no` varchar(50) NOT NULL COMMENT '交易流水号',
+  `user_id` bigint NOT NULL COMMENT '用户ID',
+  `transaction_type` varchar(50) NOT NULL COMMENT '交易类型: recharge充值 payment支付 refund退款 freeze冻结 unfreeze解冻',
+  `amount` decimal(10,2) NOT NULL COMMENT '金额(元)',
+  `balance_before` decimal(10,2) DEFAULT NULL COMMENT '交易前余额',
+  `balance_after` decimal(10,2) DEFAULT NULL COMMENT '交易后余额',
+  `related_order_id` bigint DEFAULT NULL COMMENT '关联订单ID',
+  `related_type` varchar(50) DEFAULT NULL COMMENT '关联类型: course_enrollment课程报名 coach_consultation教练咨询',
+  `remark` varchar(500) DEFAULT NULL COMMENT '备注',
+  `create_time` datetime DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uk_transaction_no` (`transaction_no`),
+  KEY `idx_user_id` (`user_id`),
+  KEY `idx_transaction_type` (`transaction_type`),
+  KEY `idx_related_order_id` (`related_order_id`),
+  KEY `idx_create_time` (`create_time`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='钱包交易流水表';
+
+-- ================================================================
 -- 初始化数据
 -- ================================================================
 
 -- 插入默认角色
-INSERT INTO `role` (`role_name`, `role_code`, `description`) VALUES 
-('管理员', 'admin', '系统管理员'),
-('教练', 'coach', '健身教练'),
-('会员', 'member', '普通会员');
+INSERT INTO `role` (`role_name`, `role_code`, `description`, `status`, `create_time`, `update_time`, `is_deleted`) VALUES
+('管理员', 'admin', '系统管理员', 1, NOW(), NOW(), 0),
+('教练', 'coach', '健身教练', 1, NOW(), NOW(), 0),
+('会员', 'member', '普通会员', 1, NOW(), NOW(), 0),
+('VIP用户', 'vip', 'VIP用户，享受更多特权服务', 1, NOW(), NOW(), 0);
 
 -- 插入课程分类
 INSERT INTO `course_category` (`category_name`, `parent_id`, `sort_order`) VALUES 
@@ -1141,15 +1372,174 @@ INSERT INTO `article_category` (`category_name`, `category_code`, `description`,
 ('装备推荐', 'equipment', '运动装备选择与使用建议', 6);
 
 -- 插入系统配置
-INSERT INTO `system_config` (`config_key`, `config_value`, `config_desc`) VALUES 
+INSERT INTO `system_config` (`config_key`, `config_value`, `config_desc`) VALUES
 ('system.name', '健身管理平台', '系统名称'),
 ('system.version', '2.0.0', '系统版本'),
 ('file.upload.path', '/uploads', '文件上传路径'),
 ('file.upload.maxSize', '10485760', '文件上传最大大小(字节)');
 
 -- ================================================================
+-- 插入权限初始数据（RBAC权限系统）
+-- ================================================================
+
+-- 一级菜单权限
+INSERT INTO `permission` (`permission_name`, `permission_code`, `permission_type`, `parent_id`, `resource_path`, `sort_order`, `description`, `status`, `create_time`, `is_deleted`) VALUES
+('用户管理', 'user_management', 'menu', 0, '/admin/user', 1, '用户信息管理模块', 1, NOW(), 0),
+('角色管理', 'role_management', 'menu', 0, '/admin/role', 2, '角色权限管理模块', 1, NOW(), 0),
+('教练管理', 'coach_management', 'menu', 0, '/admin/coach', 3, '教练信息管理模块', 1, NOW(), 0),
+('课程管理', 'course_management', 'menu', 0, '/admin/course', 4, '课程信息管理模块', 1, NOW(), 0),
+('门店管理', 'store_management', 'menu', 0, '/admin/gym-store', 5, '门店信息管理模块', 1, NOW(), 0),
+('文章管理', 'article_management', 'menu', 0, '/admin/health-article', 6, '健康文章管理模块', 1, NOW(), 0),
+('订单管理', 'order_management', 'menu', 0, '/admin/order', 7, '订单支付管理模块', 1, NOW(), 0),
+('统计报表', 'statistics', 'menu', 0, '/admin/statistics', 8, '数据统计分析模块', 1, NOW(), 0);
+
+-- 获取父权限ID并存储到变量
+SET @user_mgmt_id = (SELECT id FROM permission WHERE permission_code='user_management');
+SET @role_mgmt_id = (SELECT id FROM permission WHERE permission_code='role_management');
+SET @coach_mgmt_id = (SELECT id FROM permission WHERE permission_code='coach_management');
+SET @course_mgmt_id = (SELECT id FROM permission WHERE permission_code='course_management');
+SET @store_mgmt_id = (SELECT id FROM permission WHERE permission_code='store_management');
+SET @article_mgmt_id = (SELECT id FROM permission WHERE permission_code='article_management');
+SET @order_mgmt_id = (SELECT id FROM permission WHERE permission_code='order_management');
+SET @statistics_id = (SELECT id FROM permission WHERE permission_code='statistics');
+
+-- 用户管理子权限
+INSERT INTO `permission` (`permission_name`, `permission_code`, `permission_type`, `parent_id`, `resource_path`, `resource_method`, `sort_order`, `description`, `status`, `create_time`, `is_deleted`) VALUES
+('用户列表', 'user:list', 'api', @user_mgmt_id, '/admin/user/page', 'GET', 1, '查看用户列表', 1, NOW(), 0),
+('用户详情', 'user:detail', 'api', @user_mgmt_id, '/admin/user/*', 'GET', 2, '查看用户详情', 1, NOW(), 0),
+('新增用户', 'user:add', 'api', @user_mgmt_id, '/admin/user', 'POST', 3, '添加新用户', 1, NOW(), 0),
+('修改用户', 'user:update', 'api', @user_mgmt_id, '/admin/user', 'PUT', 4, '修改用户信息', 1, NOW(), 0),
+('删除用户', 'user:delete', 'api', @user_mgmt_id, '/admin/user/*', 'DELETE', 5, '删除用户', 1, NOW(), 0),
+('批量删除用户', 'user:batch_delete', 'api', @user_mgmt_id, '/admin/user/batch', 'DELETE', 6, '批量删除用户', 1, NOW(), 0),
+('修改用户状态', 'user:status', 'api', @user_mgmt_id, '/admin/user/*/status', 'PUT', 7, '修改用户状态', 1, NOW(), 0);
+
+-- 角色管理子权限
+INSERT INTO `permission` (`permission_name`, `permission_code`, `permission_type`, `parent_id`, `resource_path`, `resource_method`, `sort_order`, `description`, `status`, `create_time`, `is_deleted`) VALUES
+('角色列表', 'role:list', 'api', @role_mgmt_id, '/admin/role/page', 'GET', 1, '查看角色列表', 1, NOW(), 0),
+('角色详情', 'role:detail', 'api', @role_mgmt_id, '/admin/role/*', 'GET', 2, '查看角色详情', 1, NOW(), 0),
+('新增角色', 'role:add', 'api', @role_mgmt_id, '/admin/role', 'POST', 3, '添加新角色', 1, NOW(), 0),
+('修改角色', 'role:update', 'api', @role_mgmt_id, '/admin/role', 'PUT', 4, '修改角色信息', 1, NOW(), 0),
+('删除角色', 'role:delete', 'api', @role_mgmt_id, '/admin/role/*', 'DELETE', 5, '删除角色', 1, NOW(), 0),
+('角色权限配置', 'role:permission', 'api', @role_mgmt_id, '/admin/role/*/permissions', 'POST', 6, '配置角色权限', 1, NOW(), 0);
+
+-- 教练管理子权限
+INSERT INTO `permission` (`permission_name`, `permission_code`, `permission_type`, `parent_id`, `resource_path`, `resource_method`, `sort_order`, `description`, `status`, `create_time`, `is_deleted`) VALUES
+('教练列表', 'coach:list', 'api', @coach_mgmt_id, '/admin/coach/page', 'GET', 1, '查看教练列表', 1, NOW(), 0),
+('教练详情', 'coach:detail', 'api', @coach_mgmt_id, '/admin/coach/*', 'GET', 2, '查看教练详情', 1, NOW(), 0),
+('新增教练', 'coach:add', 'api', @coach_mgmt_id, '/admin/coach', 'POST', 3, '添加新教练', 1, NOW(), 0),
+('修改教练', 'coach:update', 'api', @coach_mgmt_id, '/admin/coach', 'PUT', 4, '修改教练信息', 1, NOW(), 0),
+('删除教练', 'coach:delete', 'api', @coach_mgmt_id, '/admin/coach/*', 'DELETE', 5, '删除教练', 1, NOW(), 0),
+('教练认证审核', 'coach:cert_review', 'api', @coach_mgmt_id, '/admin/coach-certification-apply/*/review', 'PUT', 6, '审核教练认证申请', 1, NOW(), 0),
+('教练离职审核', 'coach:resign_review', 'api', @coach_mgmt_id, '/admin/coach-resignation-apply/*/review', 'PUT', 7, '审核教练离职申请', 1, NOW(), 0);
+
+-- 课程管理子权限
+INSERT INTO `permission` (`permission_name`, `permission_code`, `permission_type`, `parent_id`, `resource_path`, `resource_method`, `sort_order`, `description`, `status`, `create_time`, `is_deleted`) VALUES
+('课程列表', 'course:list', 'api', @course_mgmt_id, '/admin/course/page', 'GET', 1, '查看课程列表', 1, NOW(), 0),
+('课程详情', 'course:detail', 'api', @course_mgmt_id, '/admin/course/*', 'GET', 2, '查看课程详情', 1, NOW(), 0),
+('新增课程', 'course:add', 'api', @course_mgmt_id, '/admin/course', 'POST', 3, '添加新课程', 1, NOW(), 0),
+('修改课程', 'course:update', 'api', @course_mgmt_id, '/admin/course', 'PUT', 4, '修改课程信息', 1, NOW(), 0),
+('删除课程', 'course:delete', 'api', @course_mgmt_id, '/admin/course/*', 'DELETE', 5, '删除课程', 1, NOW(), 0),
+('课程排期管理', 'course:schedule', 'api', @course_mgmt_id, '/admin/course-schedule/**', 'ALL', 6, '课程排期管理', 1, NOW(), 0);
+
+-- 门店管理子权限
+INSERT INTO `permission` (`permission_name`, `permission_code`, `permission_type`, `parent_id`, `resource_path`, `resource_method`, `sort_order`, `description`, `status`, `create_time`, `is_deleted`) VALUES
+('门店列表', 'store:list', 'api', @store_mgmt_id, '/admin/gym-store/page', 'GET', 1, '查看门店列表', 1, NOW(), 0),
+('门店详情', 'store:detail', 'api', @store_mgmt_id, '/admin/gym-store/*', 'GET', 2, '查看门店详情', 1, NOW(), 0),
+('新增门店', 'store:add', 'api', @store_mgmt_id, '/admin/gym-store', 'POST', 3, '添加新门店', 1, NOW(), 0),
+('修改门店', 'store:update', 'api', @store_mgmt_id, '/admin/gym-store', 'PUT', 4, '修改门店信息', 1, NOW(), 0),
+('删除门店', 'store:delete', 'api', @store_mgmt_id, '/admin/gym-store/*', 'DELETE', 5, '删除门店', 1, NOW(), 0);
+
+-- 文章管理子权限
+INSERT INTO `permission` (`permission_name`, `permission_code`, `permission_type`, `parent_id`, `resource_path`, `resource_method`, `sort_order`, `description`, `status`, `create_time`, `is_deleted`) VALUES
+('文章列表', 'article:list', 'api', @article_mgmt_id, '/admin/health-article/page', 'GET', 1, '查看文章列表', 1, NOW(), 0),
+('文章详情', 'article:detail', 'api', @article_mgmt_id, '/admin/health-article/*', 'GET', 2, '查看文章详情', 1, NOW(), 0),
+('新增文章', 'article:add', 'api', @article_mgmt_id, '/admin/health-article', 'POST', 3, '添加新文章', 1, NOW(), 0),
+('修改文章', 'article:update', 'api', @article_mgmt_id, '/admin/health-article', 'PUT', 4, '修改文章信息', 1, NOW(), 0),
+('删除文章', 'article:delete', 'api', @article_mgmt_id, '/admin/health-article/*', 'DELETE', 5, '删除文章', 1, NOW(), 0),
+('文章审核', 'article:audit', 'api', @article_mgmt_id, '/admin/health-article/*/audit', 'PUT', 6, '审核文章', 1, NOW(), 0);
+
+-- 订单管理子权限
+INSERT INTO `permission` (`permission_name`, `permission_code`, `permission_type`, `parent_id`, `resource_path`, `resource_method`, `sort_order`, `description`, `status`, `create_time`, `is_deleted`) VALUES
+('订单列表', 'order:list', 'api', @order_mgmt_id, '/admin/order-info/page', 'GET', 1, '查看订单列表', 1, NOW(), 0),
+('订单详情', 'order:detail', 'api', @order_mgmt_id, '/admin/order-info/*', 'GET', 2, '查看订单详情', 1, NOW(), 0),
+('订单处理', 'order:process', 'api', @order_mgmt_id, '/admin/order-info/*/process', 'PUT', 3, '处理订单', 1, NOW(), 0),
+('退款审核', 'order:refund', 'api', @order_mgmt_id, '/admin/refund-record/*/review', 'PUT', 4, '审核退款申请', 1, NOW(), 0);
+
+-- 统计报表子权限
+INSERT INTO `permission` (`permission_name`, `permission_code`, `permission_type`, `parent_id`, `resource_path`, `resource_method`, `sort_order`, `description`, `status`, `create_time`, `is_deleted`) VALUES
+('用户统计', 'statistics:user', 'api', @statistics_id, '/admin/statistics/user', 'GET', 1, '查看用户统计数据', 1, NOW(), 0),
+('课程统计', 'statistics:course', 'api', @statistics_id, '/admin/statistics/course', 'GET', 2, '查看课程统计数据', 1, NOW(), 0),
+('教练统计', 'statistics:coach', 'api', @statistics_id, '/admin/statistics/coach', 'GET', 3, '查看教练统计数据', 1, NOW(), 0),
+('订单统计', 'statistics:order', 'api', @statistics_id, '/admin/statistics/order', 'GET', 4, '查看订单统计数据', 1, NOW(), 0);
+
+-- ================================================================
+-- 插入角色权限关联数据
+-- ================================================================
+
+-- 管理员角色拥有所有权限
+INSERT INTO `role_permission` (`role_id`, `permission_id`, `create_time`, `is_deleted`)
+SELECT
+    (SELECT id FROM role WHERE role_code = 'admin') as role_id,
+    p.id as permission_id,
+    NOW() as create_time,
+    0 as is_deleted
+FROM permission p
+WHERE p.is_deleted = 0;
+
+-- 教练角色拥有部分权限（自己的信息查看、课程管理、文章管理）
+INSERT INTO `role_permission` (`role_id`, `permission_id`, `create_time`, `is_deleted`)
+SELECT
+    (SELECT id FROM role WHERE role_code = 'coach') as role_id,
+    p.id as permission_id,
+    NOW() as create_time,
+    0 as is_deleted
+FROM permission p
+WHERE p.permission_code IN (
+    'coach:list', 'coach:detail',
+    'course:list', 'course:detail', 'course:schedule',
+    'article:list', 'article:detail', 'article:add', 'article:update'
+) AND p.is_deleted = 0;
+
+-- 会员角色只有基本查看权限
+INSERT INTO `role_permission` (`role_id`, `permission_id`, `create_time`, `is_deleted`)
+SELECT
+    (SELECT id FROM role WHERE role_code = 'member') as role_id,
+    p.id as permission_id,
+    NOW() as create_time,
+    0 as is_deleted
+FROM permission p
+WHERE p.permission_code IN (
+    'user:detail',
+    'course:list', 'course:detail',
+    'coach:list', 'coach:detail',
+    'store:list', 'store:detail',
+    'article:list', 'article:detail'
+) AND p.is_deleted = 0;
+
+-- VIP用户比普通会员多一些权限
+INSERT INTO `role_permission` (`role_id`, `permission_id`, `create_time`, `is_deleted`)
+SELECT
+    (SELECT id FROM role WHERE role_code = 'vip') as role_id,
+    p.id as permission_id,
+    NOW() as create_time,
+    0 as is_deleted
+FROM permission p
+WHERE p.permission_code IN (
+    'user:detail',
+    'course:list', 'course:detail',
+    'coach:list', 'coach:detail',
+    'store:list', 'store:detail',
+    'article:list', 'article:detail',
+    'order:list', 'order:detail'
+) AND p.is_deleted = 0;
+
+-- ================================================================
 -- 存储过程
 -- ================================================================
+
+-- 删除已存在的存储过程
+DROP PROCEDURE IF EXISTS `GenerateArticleNo`;
+DROP PROCEDURE IF EXISTS `GenerateOrderNo`;
 
 DELIMITER $$
 
@@ -1192,6 +1582,15 @@ DELIMITER ;
 -- ================================================================
 -- 触发器
 -- ================================================================
+
+-- 删除已存在的触发器
+DROP TRIGGER IF EXISTS `tr_article_like_insert`;
+DROP TRIGGER IF EXISTS `tr_article_like_delete`;
+DROP TRIGGER IF EXISTS `tr_article_collect_insert`;
+DROP TRIGGER IF EXISTS `tr_article_collect_delete`;
+DROP TRIGGER IF EXISTS `tr_article_comment_insert`;
+DROP TRIGGER IF EXISTS `tr_post_like_insert`;
+DROP TRIGGER IF EXISTS `tr_post_like_delete`;
 
 DELIMITER $$
 
@@ -1356,12 +1755,7 @@ CREATE INDEX idx_article_status_publish_time ON health_article(status, publish_t
 -- ================================================================
 
 -- 1. 更新默认角色数据为完整字段
-UPDATE `role` SET `status` = 1, `create_time` = NOW(), `update_time` = NOW(), `is_deleted` = 0 WHERE `role_code` = 'admin';
-UPDATE `role` SET `status` = 1, `create_time` = NOW(), `update_time` = NOW(), `is_deleted` = 0 WHERE `role_code` = 'coach';
-UPDATE `role` SET `status` = 1, `create_time` = NOW(), `update_time` = NOW(), `is_deleted` = 0 WHERE `role_code` = 'member';
--- 添加VIP角色
-INSERT INTO `role` (`role_name`, `role_code`, `description`, `status`, `create_time`, `update_time`, `is_deleted`) VALUES
-('VIP用户', 'vip', 'VIP用户，享受更多特权服务', 1, NOW(), NOW(), 0);
+-- 1. 角色数据已在前面第1351-1355行统一插入，这里不再重复
 
 -- 2. 插入基础用户数据（增强版 - 更多用户）
 INSERT INTO `user` (`username`, `password`, `nickname`, `email`, `phone`, `gender`, `birth_date`, `status`, `create_time`, `update_time`, `is_deleted`) VALUES
@@ -1595,10 +1989,12 @@ INSERT INTO `payment_record` (`order_id`, `pay_no`, `pay_channel`, `pay_amount`,
 
 -- 20. 插入教练服务项目数据
 INSERT INTO `coach_service` (`coach_id`, `service_name`, `service_type`, `description`, `duration`, `price`, `max_clients`, `status`, `create_time`, `is_deleted`) VALUES
-(2, '私人训练指导', 'training', '一对一力量训练指导，制定个性化训练计划', 60, 200.00, 1, 1, NOW(), 0),
-(3, '瑜伽私教', 'training', '个性化瑜伽指导，针对性解决身体问题', 75, 180.00, 1, 1, NOW(), 0),
-(4, '运动康复咨询', 'consultation', '运动伤害评估和康复建议', 45, 150.00, 1, 1, NOW(), 0),
-(5, '舞蹈编排服务', 'training', '专业舞蹈编排和教学', 90, 220.00, 1, 1, NOW(), 0);
+(2, '线下私人训练指导', 'offline_training', '一对一力量训练指导，制定个性化训练计划', 60, 500.00, 1, 1, NOW(), 0),
+(3, '线下瑜伽私教', 'offline_training', '个性化瑜伽指导，针对性解决身体问题', 75, 450.00, 1, 1, NOW(), 0),
+(4, '线上文字咨询-运动康复', 'online_text', '运动伤害评估和康复建议', 25, 48.00, 1, 1, NOW(), 0),
+(5, '线下舞蹈编排服务', 'offline_training', '专业舞蹈编排和教学', 90, 600.00, 1, 1, NOW(), 0),
+(2, '线上文字咨询-健身指导', 'online_text', '在线解答健身问题，提供训练建议', 25, 48.00, 1, 1, NOW(), 0),
+(3, '线上文字咨询-瑜伽指导', 'online_text', '在线瑜伽问题咨询和体式指导', 25, 48.00, 1, 1, NOW(), 0);
 
 -- ================================================================
 -- 教练认证申请测试数据（coach_certification_apply表）
@@ -1635,24 +2031,24 @@ INSERT INTO `coach_resignation_apply` (`coach_id`, `resignation_date`, `reason`,
 -- ================================================================
 -- 教练咨询记录测试数据（coach_consultation表）
 -- ================================================================
-INSERT INTO `coach_consultation` (`coach_id`, `user_id`, `consultation_type`, `consultation_date`, `duration`, `topic`, `content`, `coach_advice`, `status`, `create_time`, `is_deleted`) VALUES
--- 已完成的在线咨询
-(2, 6, 'online', '2025-10-08 14:00:00', 45, '增肌训练计划咨询', '小明希望在3个月内增加肌肉量，目前身高175cm，体重70kg，有一定健身基础。询问具体的训练计划和饮食建议。', '建议采用分化训练，一周练4次，重点加强复合动作。饮食方面每天摄入蛋白质按体重2g/kg计算，碳水化合物可以适量增加。建议每周测量一次体重和围度变化。', 'completed', NOW(), 0),
+INSERT INTO `coach_consultation` (`coach_id`, `user_id`, `service_type`, `consultation_type`, `consultation_date`, `duration`, `topic`, `content`, `coach_advice`, `status`, `create_time`, `is_deleted`) VALUES
+-- 已完成的在线咨询 (线上文字咨询)
+(2, 6, 'online_text', 'online', '2025-10-08 14:00:00', 25, '增肌训练计划咨询', '小明希望在3个月内增加肌肉量，目前身高175cm，体重70kg，有一定健身基础。询问具体的训练计划和饮食建议。', '建议采用分化训练，一周练4次，重点加强复合动作。饮食方面每天摄入蛋白质按体重2g/kg计算，碳水化合物可以适量增加。建议每周测量一次体重和围度变化。', 'completed', NOW(), 0),
 
--- 已预约的线下咨询
-(3, 7, 'offline', '2025-10-12 10:30:00', 60, '瑜伽体式纠正咨询', '小红在练习瑜伽时经常感到腰部不适，希望教练能够现场指导正确的体式和呼吸方法。', NULL, 'scheduled', NOW(), 0),
+-- 已预约的线下私教
+(3, 7, 'offline_training', 'offline', '2025-10-12 10:30:00', 60, '瑜伽体式纠正咨询', '小红在练习瑜伽时经常感到腰部不适，希望教练能够现场指导正确的体式和呼吸方法。', NULL, 'booked', NOW(), 0),
 
--- 已完成的康复咨询
-(4, 8, 'offline', '2025-10-06 15:30:00', 50, '肩关节康复咨询', '小刚之前运动时肩膀受伤，现在基本康复，但还是有些担心。希望了解后续的康复训练和预防措施。', '肩关节已基本恢复，建议继续进行肩胛骨稳定性训练，避免高强度推举动作。可以逐步增加弹力带训练，每周2-3次。注意运动前充分热身。', 'completed', NOW(), 0),
+-- 已完成的康复咨询 (线上文字咨询)
+(4, 8, 'online_text', 'offline', '2025-10-06 15:30:00', 25, '肩关节康复咨询', '小刚之前运动时肩膀受伤，现在基本康复，但还是有些担心。希望了解后续的康复训练和预防措施。', '肩关节已基本恢复，建议继续进行肩胛骨稳定性训练，避免高强度推举动作。可以逐步增加弹力带训练，每周2-3次。注意运动前充分热身。', 'completed', NOW(), 0),
 
 -- 已取消的在线咨询
-(5, 9, 'online', '2025-10-10 19:00:00', 30, '舞蹈基础入门咨询', '小丽想学习拉丁舞，但完全没有基础，希望了解入门的方法和注意事项。', NULL, 'cancelled', NOW(), 0),
+(5, 9, 'online_text', 'online', '2025-10-10 19:00:00', 25, '舞蹈基础入门咨询', '小丽想学习拉丁舞，但完全没有基础，希望了解入门的方法和注意事项。', NULL, 'cancelled_by_user', NOW(), 0),
 
 -- 进行中的综合咨询
-(2, 10, 'online', '2025-10-09 20:00:00', 40, '健身计划制定咨询', '小华想制定一个综合的健身计划，目标是减脂同时保持肌肉量，工作比较忙，时间有限。', '考虑到时间限制，建议采用HIIT训练结合力量训练，一周3次，每次60分钟。饮食控制是关键，建议轻微热量赤字。', 'completed', NOW(), 0),
+(2, 10, 'online_text', 'online', '2025-10-09 20:00:00', 25, '健身计划制定咨询', '小华想制定一个综合的健身计划，目标是减脂同时保持肌肉量，工作比较忙，时间有限。', '考虑到时间限制，建议采用HIIT训练结合力量训练，一周3次，每次60分钟。饮食控制是关键，建议轻微热量赤字。', 'completed', NOW(), 0),
 
--- 最新预约的瑜伽咨询
-(3, 11, 'offline', '2025-10-15 09:00:00', 75, '孕期瑜伽安全咨询', '小美怀孕4个月，之前有瑜伽基础，想了解孕期可以继续练习的瑜伽体式和注意事项。', NULL, 'scheduled', NOW(), 0);
+-- 最新预约的瑜伽咨询 (线下私教)
+(3, 11, 'offline_training', 'offline', '2025-10-15 09:00:00', 75, '孕期瑜伽安全咨询', '小美怀孕4个月，之前有瑜伽基础，想了解孕期可以继续练习的瑜伽体式和注意事项。', NULL, 'booked', NOW(), 0);
 
 -- ================================================================
 -- 教练评价测试数据（coach_evaluation表）

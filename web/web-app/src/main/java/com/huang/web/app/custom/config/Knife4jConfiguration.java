@@ -113,4 +113,15 @@ public class Knife4jConfiguration {
                 .build();
     }
 
+    // ================== 门店查询模块 ==================
+    @Bean
+    public GroupedOpenApi storeAPI() {
+        return GroupedOpenApi.builder()
+                .group("08-门店查询")
+                .pathsToMatch(
+                        "/app/gym-store/**"
+                )
+                .build();
+    }
+
 }
