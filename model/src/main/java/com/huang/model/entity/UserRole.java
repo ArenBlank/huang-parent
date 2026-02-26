@@ -8,7 +8,7 @@ import lombok.Data;
 /**
  * 用户角色关联表
  * @author system
- * @since 2025-01-24
+ * @since 2026-02-25
  */
 @Schema(description = "用户角色关联表")
 @TableName(value = "user_role")

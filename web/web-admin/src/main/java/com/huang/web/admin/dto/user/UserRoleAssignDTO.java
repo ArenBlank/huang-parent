@@ -11,7 +11,7 @@ import java.util.List;
 /**
  * 用户角色分配DTO
  * @author system
- * @since 2025-01-24
+ * @since 2026-02-25
  */
 @Schema(description = "用户角色分配请求")
 @Data

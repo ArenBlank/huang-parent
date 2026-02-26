@@ -8,7 +8,7 @@ import org.apache.ibatis.annotations.Param;
 /**
  * 角色Mapper接口
  * @author system
- * @since 2025-01-24
+ * @since 2026-02-25
  */
 @Mapper
 public interface RoleMapper extends BaseMapper<Role> {

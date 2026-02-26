@@ -10,7 +10,7 @@ import jakarta.validation.constraints.Size;
 /**
  * 忘记密码请求DTO
  * @author system
- * @since 2025-01-24
+ * @since 2026-02-25
  */
 @Schema(description = "忘记密码请求")
 @Data

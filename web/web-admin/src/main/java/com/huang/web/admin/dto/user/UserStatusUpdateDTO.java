@@ -9,7 +9,7 @@ import jakarta.validation.constraints.Min;
 /**
  * 用户状态更新DTO
  * @author system
- * @since 2025-01-24
+ * @since 2026-02-25
  */
 @Schema(description = "用户状态更新请求")
 @Data

@@ -9,7 +9,7 @@ import java.util.List;
 /**
  * 批量角色分配DTO
  * @author system
- * @since 2025-01-24
+ * @since 2026-02-25
  */
 @Schema(description = "批量角色分配请求")
 @Data

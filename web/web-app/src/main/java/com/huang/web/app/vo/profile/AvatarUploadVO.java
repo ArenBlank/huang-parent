@@ -8,7 +8,7 @@ import java.time.LocalDateTime;
 /**
  * 头像上传响应VO
  * @author system
- * @since 2025-01-24
+ * @since 2026-02-25
  */
 @Schema(description = "头像上传响应")
 @Data

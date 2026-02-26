@@ -6,7 +6,7 @@ import com.huang.model.entity.UserRole;
 /**
  * UserRole服务接口
  * @author system
- * @since 2025-01-24
+ * @since 2026-02-25
  */
 public interface UserRoleService extends IService<UserRole> {
 

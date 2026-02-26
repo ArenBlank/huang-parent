@@ -10,7 +10,7 @@ import java.math.BigDecimal;
 /**
  * 课程表
  * @author system
- * @since 2025-01-24
+ * @since 2026-02-25
  */
 @Schema(description = "课程表")
 @TableName(value = "course")

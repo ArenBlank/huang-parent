@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
 /**
  * 用户信息VO
  * @author system
- * @since 2025-01-24
+ * @since 2026-02-25
  */
 @Schema(description = "用户信息")
 @Data

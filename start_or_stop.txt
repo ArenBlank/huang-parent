@@ -1,0 +1,7 @@
+docker start mysql-container-huang redis-container-huang minio-container-huang
+docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
+
+Start-Process powershell -ArgumentList '-NoExit','-Command','cd web\web-admin; mvn spring-boot:run'
+Start-Process powershell -ArgumentList '-NoExit','-Command','cd web\web-app; mvn spring-boot:run'
+
+$ports = 8080,8081; foreach($p in $ports){ $pid=(Get-NetTCPConnection -LocalPort $p -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1 -Expand OwningProcess); if($pid){ Stop-Process -Id $pid -Force } }

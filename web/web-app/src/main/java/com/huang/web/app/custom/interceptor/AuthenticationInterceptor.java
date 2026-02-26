@@ -16,7 +16,7 @@ import org.springframework.web.servlet.HandlerInterceptor;
 /**
  * App端JWT认证拦截器
  * @author system
- * @since 2025-01-24
+ * @since 2026-02-25
  */
 @Slf4j
 @Component

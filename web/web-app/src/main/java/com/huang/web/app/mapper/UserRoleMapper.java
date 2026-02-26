@@ -7,7 +7,7 @@ import org.apache.ibatis.annotations.Mapper;
 /**
  * UserRoleMapper接口
  * @author system
- * @since 2025-01-24
+ * @since 2026-02-25
  */
 @Mapper
 public interface UserRoleMapper extends BaseMapper<UserRole> {

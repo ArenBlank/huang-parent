@@ -10,7 +10,7 @@ import java.time.LocalDateTime;
 /**
  * 课程报名表
  * @author system
- * @since 2025-01-24
+ * @since 2026-02-25
  */
 @Schema(description = "课程报名表")
 @TableName(value = "course_enrollment")

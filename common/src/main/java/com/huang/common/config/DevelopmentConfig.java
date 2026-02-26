@@ -6,7 +6,7 @@ import org.springframework.stereotype.Component;
 /**
  * 开发配置类
  * @author system
- * @since 2025-01-24
+ * @since 2026-02-25
  */
 @Component
 @ConfigurationProperties(prefix = "development")

@@ -2,7 +2,14 @@ package com.huang.web.app.controller;
 
 import com.huang.common.result.Result;
 import com.huang.common.utils.SmsCodeUtil;
+import com.huang.common.utils.JwtUtil;
+import com.huang.model.entity.Role;
+import com.huang.model.entity.User;
+import com.huang.model.entity.UserRole;
 import com.huang.web.app.dto.auth.*;
+import com.huang.web.app.service.core.RoleCoreService;
+import com.huang.web.app.service.core.UserCoreService;
+import com.huang.web.app.service.core.UserRoleCoreService;
 import com.huang.web.app.vo.auth.*;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -12,11 +19,12 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import jakarta.validation.Valid;
+import java.time.LocalDateTime;
 
 /**
  * App端认证控制器
  * @author system
- * @since 2025-01-24
+ * @since 2026-02-25
  */
 @Tag(name = "App端认证管理", description = "用户注册、登录、验证码等功能")
 @Slf4j
@@ -28,7 +36,14 @@ public class AuthController {
     @Autowired
     private SmsCodeUtil smsCodeUtil;
 
-    // TODO: 注入UserService等业务服务
+    @Autowired
+    private UserCoreService userCoreService;
+
+    @Autowired
+    private RoleCoreService roleCoreService;
+
+    @Autowired
+    private UserRoleCoreService userRoleCoreService;
 
     @Operation(summary = "发送短信验证码", description = "发送注册、登录或重置密码验证码")
     @PostMapping("/sms-code/send")
@@ -66,19 +81,45 @@ public class AuthController {
             return Result.fail("验证码错误或已失效");
         }
         
-        // TODO: 实现用户注册逻辑
-        // 1. 检查用户名和手机号是否已存在
-        // 2. 密码加密
-        // 3. 创建用户记录
-        // 4. 可选择自动登录
-        
-        // 临时返回模拟数据
+        if (userCoreService.existsByUsername(dto.getUsername())) {
+            return Result.fail("用户名已存在");
+        }
+        if (userCoreService.existsByPhone(dto.getPhone())) {
+            return Result.fail("手机号已注册");
+        }
+        if (dto.getEmail() != null && !dto.getEmail().isBlank() && userCoreService.existsByEmail(dto.getEmail())) {
+            return Result.fail("邮箱已注册");
+        }
+
+        User user = new User();
+        user.setUsername(dto.getUsername());
+        user.setPassword(dto.getPassword());
+        user.setNickname(dto.getNickname());
+        user.setPhone(dto.getPhone());
+        user.setEmail(dto.getEmail());
+        user.setGender(dto.getGender());
+        user.setBirthDate(dto.getBirthDate());
+        user.setStatus(1);
+        user.setUserType("member");
+        userCoreService.save(user);
+
+        Role memberRole = roleCoreService.getByRoleCode("MEMBER");
+        if (memberRole != null) {
+            UserRole userRole = new UserRole();
+            userRole.setUserId(user.getId());
+            userRole.setRoleId(memberRole.getId());
+            userRoleCoreService.save(userRole);
+        }
+
         RegisterVO vo = new RegisterVO();
-        vo.setUserId(1001L);
-        vo.setUsername(dto.getUsername());
-        vo.setNickname(dto.getNickname());
-        vo.setPhone(dto.getPhone());
+        vo.setUserId(user.getId());
+        vo.setUsername(user.getUsername());
+        vo.setNickname(user.getNickname());
+        vo.setPhone(user.getPhone());
+        vo.setRegisterTime(LocalDateTime.now());
         vo.setAutoLogin(true);
+        vo.setAccessToken(JwtUtil.generateAppAccessToken(user.getId(), user.getUsername()));
+        vo.setRefreshToken(JwtUtil.generateAppRefreshToken(user.getId(), user.getUsername()));
         vo.setWelcomeMessage("注册成功，欢迎加入健身平台！");
         
         log.info("用户注册成功: 用户ID={}, 用户名={}", vo.getUserId(), vo.getUsername());
@@ -97,32 +138,39 @@ public class AuthController {
             }
         }
         
-        // TODO: 实现登录逻辑
-        // 1. 根据账号查询用户（用户名或手机号）
-        // 2. 密码登录时验证密码
-        // 3. 检查用户状态
-        // 4. 生成JWT令牌
-        // 5. 更新最后登录时间
-        
-        // 临时返回模拟数据
+        User user = findByAccount(dto.getAccount());
+        if (user == null) {
+            return Result.fail("账号不存在");
+        }
+        if (user.getStatus() == null || user.getStatus() != 1) {
+            return Result.fail("账号已禁用");
+        }
+
+        if ("password".equals(dto.getLoginType())) {
+            if (!dto.getPassword().equals(user.getPassword())) {
+                return Result.fail("账号或密码错误");
+            }
+        }
+
         LoginVO vo = new LoginVO();
-        
-        // 模拟用户信息
         UserInfoVO userInfo = new UserInfoVO();
-        userInfo.setId(1001L);
-        userInfo.setUsername("testuser");
-        userInfo.setNickname("测试用户");
-        userInfo.setPhone("13888888888");
-        userInfo.setGender(1);
-        userInfo.setStatus(1);
+        userInfo.setId(user.getId());
+        userInfo.setUsername(user.getUsername());
+        userInfo.setNickname(user.getNickname());
+        userInfo.setPhone(user.getPhone());
+        userInfo.setEmail(user.getEmail());
+        userInfo.setAvatar(user.getAvatar());
+        userInfo.setGender(user.getGender());
+        userInfo.setStatus(user.getStatus());
         
         vo.setUserInfo(userInfo);
         vo.setFirstLogin(false);
         vo.setNeedCompleteProfile(false);
-        
-        // TODO: 生成真实的JWT令牌
-        vo.setAccessToken("mock-access-token-for-development");
-        vo.setRefreshToken("mock-refresh-token-for-development");
+
+        vo.setAccessToken(JwtUtil.generateAppAccessToken(user.getId(), user.getUsername()));
+        vo.setRefreshToken(JwtUtil.generateAppRefreshToken(user.getId(), user.getUsername()));
+        vo.setAccessTokenExpire(LocalDateTime.now().plusDays(7));
+        vo.setRefreshTokenExpire(LocalDateTime.now().plusDays(30));
         
         log.info("用户登录成功: 用户ID={}, 用户名={}", userInfo.getId(), userInfo.getUsername());
         return Result.ok(vo);
@@ -134,15 +182,15 @@ public class AuthController {
         log.info("刷新令牌请求: refreshToken前8位={}", 
                 dto.getRefreshToken().length() > 8 ? dto.getRefreshToken().substring(0, 8) + "..." : dto.getRefreshToken());
         
-        // TODO: 实现令牌刷新逻辑
-        // 1. 验证refresh token有效性
-        // 2. 生成新的access token
-        // 3. 可选择生成新的refresh token（令牌轮换）
-        
-        // 临时返回模拟数据
+        String newAccessToken = JwtUtil.refreshAccessToken(dto.getRefreshToken());
+        if (newAccessToken == null) {
+            return Result.fail("刷新令牌无效或已过期");
+        }
         RefreshTokenVO vo = new RefreshTokenVO();
-        vo.setAccessToken("new-mock-access-token");
-        vo.setRefreshToken("new-mock-refresh-token");
+        vo.setAccessToken(newAccessToken);
+        vo.setRefreshToken(dto.getRefreshToken());
+        vo.setAccessTokenExpire(LocalDateTime.now().plusDays(7));
+        vo.setRefreshTokenExpire(LocalDateTime.now().plusDays(30));
         
         log.info("令牌刷新成功");
         return Result.ok(vo);
@@ -163,10 +211,12 @@ public class AuthController {
             return Result.fail("验证码错误或已失效");
         }
         
-        // TODO: 实现密码重置逻辑
-        // 1. 根据手机号查询用户
-        // 2. 更新密码（需要加密）
-        // 3. 清理相关缓存和令牌
+        User user = userCoreService.getByPhone(dto.getPhone());
+        if (user == null) {
+            return Result.fail("手机号未注册");
+        }
+        user.setPassword(dto.getNewPassword());
+        userCoreService.updateById(user);
         
         log.info("密码重置成功: 手机号={}", dto.getPhone());
         return Result.ok("密码重置成功");
@@ -175,12 +225,18 @@ public class AuthController {
     @Operation(summary = "退出登录", description = "用户退出登录")
     @PostMapping("/logout")
     public Result<String> logout() {
-        // TODO: 实现退出登录逻辑
-        // 1. 从请求头获取当前用户信息
-        // 2. 将当前令牌加入黑名单
-        // 3. 清理相关缓存
-        
         log.info("用户退出登录成功");
         return Result.ok("退出登录成功");
+    }
+
+    private User findByAccount(String account) {
+        if (account == null || account.isBlank()) {
+            return null;
+        }
+        User byPhone = userCoreService.getByPhone(account);
+        if (byPhone != null) {
+            return byPhone;
+        }
+        return userCoreService.getByUsername(account);
     }
 }

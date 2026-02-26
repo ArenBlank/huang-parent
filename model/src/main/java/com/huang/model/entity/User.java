@@ -10,7 +10,7 @@ import java.time.LocalDate;
 /**
  * 用户表
  * @author system
- * @since 2025-01-24
+ * @since 2026-02-25
  */
 @Schema(description = "用户表")
 @TableName(value = "user")
@@ -54,4 +54,8 @@ public class User extends BaseEntity {
     @Schema(description = "状态：0-禁用，1-正常")
     @TableField(value = "status")
     private Integer status;
+
+    @Schema(description = "用户类型：member/coach/admin")
+    @TableField(value = "user_type")
+    private String userType;
 }

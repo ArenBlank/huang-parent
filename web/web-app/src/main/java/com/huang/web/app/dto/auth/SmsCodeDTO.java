@@ -9,7 +9,7 @@ import jakarta.validation.constraints.Pattern;
 /**
  * 短信验证码请求DTO
  * @author system
- * @since 2025-01-24
+ * @since 2026-02-25
  */
 @Schema(description = "短信验证码请求")
 @Data

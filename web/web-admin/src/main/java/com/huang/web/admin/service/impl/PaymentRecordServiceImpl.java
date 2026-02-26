@@ -9,7 +9,7 @@ import org.springframework.stereotype.Service;
 /**
  * PaymentRecord服务实现类
  * @author system
- * @since 2025-01-24
+ * @since 2026-02-25
  */
 @Service
 public class PaymentRecordServiceImpl extends ServiceImpl<PaymentRecordMapper, PaymentRecord> implements PaymentRecordService {

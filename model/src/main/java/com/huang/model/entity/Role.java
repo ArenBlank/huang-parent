@@ -8,7 +8,7 @@ import lombok.Data;
 /**
  * 角色表
  * @author system
- * @since 2025-01-24
+ * @since 2026-02-25
  */
 @Schema(description = "角色表")
 @TableName(value = "role")
@@ -24,10 +24,6 @@ public class Role extends BaseEntity {
     @Schema(description = "角色编码")
     @TableField(value = "role_code")
     private String roleCode;
-
-    @Schema(description = "描述")
-    @TableField(value = "description")
-    private String description;
 
     @Schema(description = "状态：0-禁用，1-正常")
     @TableField(value = "status")

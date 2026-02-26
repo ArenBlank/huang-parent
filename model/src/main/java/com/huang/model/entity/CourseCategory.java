@@ -8,7 +8,7 @@ import lombok.Data;
 /**
  * 课程分类表
  * @author system
- * @since 2025-01-24
+ * @since 2026-02-25
  */
 @Schema(description = "课程分类表")
 @TableName(value = "course_category")

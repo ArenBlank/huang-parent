@@ -11,7 +11,7 @@ import java.time.format.DateTimeFormatter;
 /**
  * 健身平台定时任务
  * @author system
- * @since 2025-01-24
+ * @since 2026-02-25
  */
 // @Component // 暂时禁用定时任务
 public class ScheduleTasks {

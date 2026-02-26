@@ -8,7 +8,7 @@ import jakarta.validation.constraints.NotBlank;
 /**
  * 刷新令牌请求DTO
  * @author system
- * @since 2025-01-24
+ * @since 2026-02-25
  */
 @Schema(description = "刷新令牌请求")
 @Data

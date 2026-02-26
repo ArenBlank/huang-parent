@@ -9,7 +9,7 @@ import jakarta.validation.constraints.Pattern;
 /**
  * 用户登录请求DTO
  * @author system
- * @since 2025-01-24
+ * @since 2026-02-25
  */
 @Schema(description = "用户登录请求")
 @Data

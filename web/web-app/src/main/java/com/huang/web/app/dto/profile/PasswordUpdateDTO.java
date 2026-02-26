@@ -9,7 +9,7 @@ import jakarta.validation.constraints.Size;
 /**
  * 密码修改请求DTO
  * @author system
- * @since 2025-01-24
+ * @since 2026-02-25
  */
 @Schema(description = "密码修改请求")
 @Data

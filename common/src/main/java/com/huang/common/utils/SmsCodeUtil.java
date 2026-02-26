@@ -10,7 +10,7 @@ import java.util.concurrent.ThreadLocalRandom;
 /**
  * 短信验证码工具类
  * @author system
- * @since 2025-01-24
+ * @since 2026-02-25
  */
 @Slf4j
 @Component

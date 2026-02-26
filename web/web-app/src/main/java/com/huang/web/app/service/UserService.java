@@ -6,7 +6,7 @@ import com.huang.model.entity.User;
 /**
  * 用户服务接口
  * @author system
- * @since 2025-01-24
+ * @since 2026-02-25
  */
 public interface UserService extends IService<User> {
 
