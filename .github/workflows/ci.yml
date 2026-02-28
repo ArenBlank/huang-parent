@@ -1,10 +1,17 @@
-﻿name: CI
+name: CI
 
 on:
+  workflow_dispatch:
   push:
     branches: [ "**" ]
+    paths-ignore:
+      - "**/*.md"
+      - "doc/**"
   pull_request:
     branches: [ "**" ]
+    paths-ignore:
+      - "**/*.md"
+      - "doc/**"
 
 jobs:
   build:

@@ -1,4 +1,4 @@
-﻿{
+{
   "info": {
     "name": "Fitness Platform API Regression",
     "_postman_id": "f1b2e9fe-7f8d-4f89-9b11-7f08008f2a01",
@@ -48,6 +48,38 @@
               "pm.test('biz code 200', function () { pm.expect(res.code).to.eql(200); });",
               "pm.test('accessToken exists', function () { pm.expect(res.data.accessToken).to.be.a('string').and.not.empty; });",
               "pm.collectionVariables.set('appAccessToken', res.data.accessToken);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "01A Admin Login",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"account\": \"{{adminAccount}}\",\n  \"password\": \"{{adminPassword}}\"\n}"
+        },
+        "url": "{{adminBaseUrl}}/admin/auth/login"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+              "const res = pm.response.json();",
+              "pm.test('admin login success', function () { pm.expect(res.code).to.eql(200); });",
+              "pm.test('admin accessToken exists', function () { pm.expect(res.data.accessToken).to.be.a('string').and.not.empty; });",
+              "pm.collectionVariables.set('adminAccessToken', res.data.accessToken);"
             ]
           }
         }
@@ -309,6 +341,12 @@
       "name": "08 Close Timeout Bookings",
       "request": {
         "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{adminAccessToken}}"
+          }
+        ],
         "url": "{{adminBaseUrl}}/admin/ops/booking/close-timeout?timeoutMinutes=1"
       },
       "event": [
@@ -329,6 +367,12 @@
       "name": "09 Upload Video",
       "request": {
         "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{adminAccessToken}}"
+          }
+        ],
         "body": {
           "mode": "formdata",
           "formdata": [
@@ -367,6 +411,10 @@
         "method": "POST",
         "header": [
           {
+            "key": "Authorization",
+            "value": "Bearer {{adminAccessToken}}"
+          },
+          {
             "key": "Content-Type",
             "value": "application/json"
           }
@@ -399,6 +447,10 @@
         "method": "PUT",
         "header": [
           {
+            "key": "Authorization",
+            "value": "Bearer {{adminAccessToken}}"
+          },
+          {
             "key": "Content-Type",
             "value": "application/json"
           }
@@ -428,6 +480,10 @@
       "request": {
         "method": "POST",
         "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{adminAccessToken}}"
+          },
           {
             "key": "Content-Type",
             "value": "application/json"
@@ -460,6 +516,12 @@
       "name": "11B Admin Publish Course",
       "request": {
         "method": "PUT",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{adminAccessToken}}"
+          }
+        ],
         "url": "{{adminBaseUrl}}/admin/course/{{adminCourseId}}/status?status=1"
       },
       "event": [
@@ -481,6 +543,10 @@
       "request": {
         "method": "POST",
         "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{adminAccessToken}}"
+          },
           {
             "key": "Content-Type",
             "value": "application/json"
@@ -753,6 +819,12 @@
       "name": "18 Admin Refund Audit List",
       "request": {
         "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{adminAccessToken}}"
+          }
+        ],
         "url": "{{adminBaseUrl}}/admin/refund/list?refundStatus=REFUNDED&userId={{refundAuditUserId}}&orderNo={{refundAuditOrderNo}}&startTime={{refundAuditStartTime}}&endTime={{refundAuditEndTime}}&limit=20"
       },
       "event": [
@@ -774,6 +846,12 @@
       "name": "19 Admin Payment Callback Audit List",
       "request": {
         "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{adminAccessToken}}"
+          }
+        ],
         "url": "{{adminBaseUrl}}/admin/pay/callback/list?payNo={{callbackAuditPayNo}}&tradeNo={{callbackAuditTradeNo}}&processResult={{callbackAuditProcessResult}}&startTime={{callbackAuditStartTime}}&endTime={{callbackAuditEndTime}}&limit=20"
       },
       "event": [
@@ -827,6 +905,7 @@
     { "key": "currentDate", "value": "" },
     { "key": "checkinDate", "value": "" },
     { "key": "appAccessToken", "value": "" },
+    { "key": "adminAccessToken", "value": "" },
     { "key": "canRunBookingFlow", "value": "" },
     { "key": "scheduleId", "value": "" },
     { "key": "bookingId", "value": "" },

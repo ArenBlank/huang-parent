@@ -4,7 +4,11 @@
 - 确保中间件与服务已启动：
   - admin: `http://localhost:8080`
   - app: `http://localhost:8081`
-- 修改 `tests/local.postman_environment.json` 中的 `videoFilePath` 为你本机真实视频路径。
+- 默认使用仓库内测试文件：`tests/assets/demo.mp4`
+- 如需改为本机文件，修改 `tests/local.postman_environment.json` 中的 `videoFilePath`。
+- 默认账号变量：
+  - 用户端：`account=member_chen`，`password=$2a$10$demoMemberPasswordHash`
+  - 管理端：`adminAccount=admin`，`adminPassword=$2a$10$demoAdminPasswordHash`
 
 可选：每次回归前重置测试数据（推荐）
 ```powershell
@@ -61,4 +65,4 @@ UPDATE coach_schedule SET booked_count = 0, status = 1 WHERE id IN (1,2);
     - `spring.servlet.multipart.max-file-size: 200MB`
     - `spring.servlet.multipart.max-request-size: 200MB`
 - 上传报文件不存在：
-  - 检查 `videoFilePath` 是否是本机绝对路径。
+  - 检查 `videoFilePath` 是否有效（本机绝对路径或 `tests/assets/demo.mp4`）。
