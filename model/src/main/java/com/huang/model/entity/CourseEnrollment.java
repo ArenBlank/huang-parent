@@ -7,12 +7,7 @@ import lombok.Data;
 
 import java.time.LocalDateTime;
 
-/**
- * 课程报名表
- * @author system
- * @since 2026-02-25
- */
-@Schema(description = "课程报名表")
+@Schema(description = "课程报名")
 @TableName(value = "course_enrollment")
 @Data
 public class CourseEnrollment extends BaseEntity {
@@ -23,19 +18,23 @@ public class CourseEnrollment extends BaseEntity {
     @TableField(value = "user_id")
     private Long userId;
 
+    @Schema(description = "课程ID")
+    @TableField(value = "course_id")
+    private Long courseId;
+
     @Schema(description = "排期ID")
     @TableField(value = "schedule_id")
     private Long scheduleId;
 
-    @Schema(description = "报名时间")
-    @TableField(value = "enrollment_time")
-    private LocalDateTime enrollmentTime;
+    @Schema(description = "订单ID")
+    @TableField(value = "order_id")
+    private Long orderId;
 
-    @Schema(description = "状态：0-已取消，1-已报名，2-已签到")
+    @Schema(description = "状态:0取消 1已报名")
     @TableField(value = "status")
     private Integer status;
 
-    @Schema(description = "签到时间")
-    @TableField(value = "check_in_time")
-    private LocalDateTime checkInTime;
+    @Schema(description = "报名时间")
+    @TableField(value = "enroll_time")
+    private LocalDateTime enrollTime;
 }

@@ -7,12 +7,7 @@ import lombok.Data;
 
 import java.time.LocalDateTime;
 
-/**
- * 课程排期表
- * @author system
- * @since 2026-02-25
- */
-@Schema(description = "课程排期表")
+@Schema(description = "课程排期")
 @TableName(value = "course_schedule")
 @Data
 public class CourseSchedule extends BaseEntity {
@@ -35,15 +30,15 @@ public class CourseSchedule extends BaseEntity {
     @TableField(value = "end_time")
     private LocalDateTime endTime;
 
-    @Schema(description = "上课地点")
-    @TableField(value = "location")
-    private String location;
+    @Schema(description = "容量")
+    @TableField(value = "capacity")
+    private Integer capacity;
 
-    @Schema(description = "当前报名人数")
-    @TableField(value = "current_participants")
-    private Integer currentParticipants;
+    @Schema(description = "已报名人数")
+    @TableField(value = "booked_count")
+    private Integer bookedCount;
 
-    @Schema(description = "状态：0-已取消，1-正常，2-已结束")
+    @Schema(description = "状态:0关闭 1可报名")
     @TableField(value = "status")
     private Integer status;
 }

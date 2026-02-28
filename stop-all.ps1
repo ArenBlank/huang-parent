@@ -1,4 +1,4 @@
-$ErrorActionPreference = "Continue"
+﻿$ErrorActionPreference = "Continue"
 
 $root = Split-Path -Parent $MyInvocation.MyCommand.Path
 Set-Location $root
@@ -16,8 +16,12 @@ if (Test-Path $pidFile) {
     }
     Remove-Item $pidFile -Force -ErrorAction SilentlyContinue
 } else {
-    Write-Host "No pid file found, skipping app process stop."
+    Write-Host "No pid file found, trying port-based stop..."
+    Get-NetTCPConnection -LocalPort 8080,8081 -State Listen -ErrorAction SilentlyContinue |
+    Select-Object -ExpandProperty OwningProcess -Unique |
+    ForEach-Object { Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue }
 }
 
-docker compose down
-Write-Host "Compose services stopped."
+# Optional: stop external containers
+docker stop mysql-container-huang redis-container-huang minio-container-huang nginx-container-huang rabbitmq-container-huang | Out-Null
+Write-Host "Containers stopped."

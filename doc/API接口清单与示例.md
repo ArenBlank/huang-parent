@@ -16,6 +16,11 @@
 9. `POST /app/booking/pay-success`：支付成功回调（模拟）
 10. `POST /app/booking/complete`：确认授课完成
 11. `POST /app/booking/review`：授课后评价
+12. `GET /app/course/list`：课程列表
+13. `GET /app/course/{courseId}/schedule/list`：课程排期
+14. `POST /app/course/enroll`：课程报名并下单
+15. `POST /app/course/pay-success`：课程支付成功回调（模拟）
+16. `GET /app/course/my/enrollments`：我的课程报名记录
 
 ## 3. Admin 端接口（已实现）
 1. `GET /admin/dashboard/summary`：运营汇总看板
@@ -107,4 +112,3 @@ curl -X GET "http://localhost:8081/app/plan/1" \
 检查响应：
 - `data.items[*].video.videoId`
 - `data.items[*].video.playUrl`
-

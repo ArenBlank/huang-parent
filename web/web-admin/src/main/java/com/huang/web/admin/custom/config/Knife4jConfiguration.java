@@ -43,7 +43,7 @@ public class Knife4jConfiguration {
     public GroupedOpenApi adminOpsGroup() {
         return GroupedOpenApi.builder()
                 .group("admin-ops-dashboard-video")
-                .pathsToMatch("/admin/ops/**", "/admin/dashboard/**", "/admin/video/**")
+                .pathsToMatch("/admin/ops/**", "/admin/dashboard/**", "/admin/video/**", "/admin/course/**", "/admin/refund/**", "/admin/pay/**")
                 .build();
     }
 }

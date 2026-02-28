@@ -17,6 +17,6 @@ public class WebMvcConfiguration implements WebMvcConfigurer {
         // App端需要JWT认证，但排除登录相关接口
         registry.addInterceptor(this.authenticationInterceptor)
                 .addPathPatterns("/app/**")
-                .excludePathPatterns("/app/auth/**", "/app/test/**", "/doc.html", "/webjars/**", "/v3/api-docs/**");
+                .excludePathPatterns("/app/auth/**", "/app/test/**", "/app/pay/callback", "/doc.html", "/webjars/**", "/v3/api-docs/**");
     }
 }

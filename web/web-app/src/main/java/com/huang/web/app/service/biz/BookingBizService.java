@@ -2,6 +2,7 @@ package com.huang.web.app.service.biz;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.huang.common.constant.BizStatusConstant;
 import com.huang.model.entity.*;
 import com.huang.web.app.dto.booking.BookingReviewDTO;
 import com.huang.web.app.dto.booking.CreateBookingDTO;
@@ -83,9 +84,9 @@ public class BookingBizService {
         orderInfo.setOrderNo(genNo("ORD"));
         orderInfo.setUserId(userId);
         orderInfo.setTotalAmount(schedule.getPrice() == null ? BigDecimal.ZERO : schedule.getPrice());
-        orderInfo.setOrderStatus("NEW");
-        orderInfo.setPayStatus("UNPAID");
-        orderInfo.setBizType("coach_booking");
+        orderInfo.setOrderStatus(BizStatusConstant.OrderStatus.NEW);
+        orderInfo.setPayStatus(BizStatusConstant.PayStatus.UNPAID);
+        orderInfo.setBizType(BizStatusConstant.BizType.COACH_BOOKING);
         orderInfoMapper.insert(orderInfo);
 
         OrderItem orderItem = new OrderItem();
@@ -103,7 +104,7 @@ public class BookingBizService {
         paymentRecord.setPayNo(genNo("PAY"));
         paymentRecord.setPayChannel("wechat");
         paymentRecord.setPayAmount(orderInfo.getTotalAmount());
-        paymentRecord.setPayStatus("UNPAID");
+        paymentRecord.setPayStatus(BizStatusConstant.PayStatus.UNPAID);
         paymentRecordMapper.insert(paymentRecord);
 
         CoachBooking booking = new CoachBooking();
@@ -111,8 +112,8 @@ public class BookingBizService {
         booking.setCoachId(schedule.getCoachId());
         booking.setScheduleId(schedule.getId());
         booking.setOrderId(orderInfo.getId());
-        booking.setBookingStatus("WAIT_PAY");
-        booking.setPayStatus("UNPAID");
+        booking.setBookingStatus(BizStatusConstant.BookingStatus.WAIT_PAY);
+        booking.setPayStatus(BizStatusConstant.PayStatus.UNPAID);
         coachBookingMapper.insert(booking);
 
         orderInfo.setBizId(booking.getId());
@@ -155,22 +156,23 @@ public class BookingBizService {
 
         String idempotencyKey = "CALLBACK_" + paymentRecord.getPayNo();
         // 工程亮点：DB 幂等键二次兜底；即使 Redis 失效，也可保证回调“至多一次”生效。
-        if (idempotencyKey.equals(paymentRecord.getCallbackIdempotencyKey()) || "PAID".equals(paymentRecord.getPayStatus())) {
+        if (idempotencyKey.equals(paymentRecord.getCallbackIdempotencyKey())
+                || BizStatusConstant.PayStatus.PAID.equals(paymentRecord.getPayStatus())) {
             return true;
         }
 
-        booking.setPayStatus("PAID");
-        booking.setBookingStatus("PAID");
+        booking.setPayStatus(BizStatusConstant.PayStatus.PAID);
+        booking.setBookingStatus(BizStatusConstant.BookingStatus.PAID);
         coachBookingMapper.updateById(booking);
 
         OrderInfo orderInfo = orderInfoMapper.selectById(booking.getOrderId());
         if (orderInfo != null) {
-            orderInfo.setPayStatus("PAID");
-            orderInfo.setOrderStatus("PAID");
+            orderInfo.setPayStatus(BizStatusConstant.PayStatus.PAID);
+            orderInfo.setOrderStatus(BizStatusConstant.OrderStatus.PAID);
             orderInfoMapper.updateById(orderInfo);
         }
 
-        paymentRecord.setPayStatus("PAID");
+        paymentRecord.setPayStatus(BizStatusConstant.PayStatus.PAID);
         paymentRecord.setPayTime(LocalDateTime.now());
         paymentRecord.setCallbackIdempotencyKey(idempotencyKey);
         paymentRecordMapper.updateById(paymentRecord);
@@ -183,10 +185,10 @@ public class BookingBizService {
         if (booking == null || !booking.getUserId().equals(userId)) {
             return false;
         }
-        if (!"PAID".equals(booking.getPayStatus())) {
+        if (!BizStatusConstant.PayStatus.PAID.equals(booking.getPayStatus())) {
             return false;
         }
-        booking.setBookingStatus("COMPLETED");
+        booking.setBookingStatus(BizStatusConstant.BookingStatus.COMPLETED);
         booking.setFinishTime(LocalDateTime.now());
         return coachBookingMapper.updateById(booking) > 0;
     }
@@ -197,7 +199,7 @@ public class BookingBizService {
         if (booking == null || !booking.getUserId().equals(userId)) {
             return false;
         }
-        if (!"COMPLETED".equals(booking.getBookingStatus())) {
+        if (!BizStatusConstant.BookingStatus.COMPLETED.equals(booking.getBookingStatus())) {
             return false;
         }
         // 工程亮点：服务完成后才能评价，防止“未履约先评价”污染评分体系。

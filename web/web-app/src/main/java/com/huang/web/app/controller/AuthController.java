@@ -1,32 +1,41 @@
 package com.huang.web.app.controller;
 
 import com.huang.common.result.Result;
-import com.huang.common.utils.SmsCodeUtil;
 import com.huang.common.utils.JwtUtil;
+import com.huang.common.utils.PasswordUtil;
+import com.huang.common.utils.SmsCodeUtil;
 import com.huang.model.entity.Role;
 import com.huang.model.entity.User;
 import com.huang.model.entity.UserRole;
-import com.huang.web.app.dto.auth.*;
+import com.huang.web.app.dto.auth.ForgetPasswordDTO;
+import com.huang.web.app.dto.auth.RefreshTokenDTO;
+import com.huang.web.app.dto.auth.SmsCodeDTO;
+import com.huang.web.app.dto.auth.UserLoginDTO;
+import com.huang.web.app.dto.auth.UserRegisterDTO;
 import com.huang.web.app.service.core.RoleCoreService;
 import com.huang.web.app.service.core.UserCoreService;
 import com.huang.web.app.service.core.UserRoleCoreService;
-import com.huang.web.app.vo.auth.*;
+import com.huang.web.app.vo.auth.LoginVO;
+import com.huang.web.app.vo.auth.RefreshTokenVO;
+import com.huang.web.app.vo.auth.RegisterVO;
+import com.huang.web.app.vo.auth.UserInfoVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
-import jakarta.validation.Valid;
 import java.time.LocalDateTime;
 
 /**
- * App端认证控制器
- * @author system
- * @since 2026-02-25
+ * App authentication controller.
  */
-@Tag(name = "App端认证管理", description = "用户注册、登录、验证码等功能")
+@Tag(name = "App认证", description = "用户注册、登录、验证码、重置密码")
 @Slf4j
 @RestController
 @RequestMapping("/app/auth")
@@ -45,42 +54,34 @@ public class AuthController {
     @Autowired
     private UserRoleCoreService userRoleCoreService;
 
-    @Operation(summary = "发送短信验证码", description = "发送注册、登录或重置密码验证码")
+    @Operation(summary = "发送短信验证码", description = "发送注册、登录、重置密码验证码")
     @PostMapping("/sms-code/send")
     public Result<String> sendSmsCode(@Valid @RequestBody SmsCodeDTO dto) {
-        log.info("发送短信验证码请求: 手机号={}, 类型={}", dto.getPhone(), dto.getType());
-        
-        // 检查发送频率限制
+        log.info("发送短信验证码请求: phone={}, type={}", dto.getPhone(), dto.getType());
+
         if (!smsCodeUtil.canSendSms(dto.getPhone(), dto.getType())) {
             return Result.fail("发送过于频繁，请稍后再试");
         }
-        
-        // 发送验证码
+
         String code = smsCodeUtil.sendSmsCode(dto.getPhone(), dto.getType());
-        
         if (code != null) {
-            // 开发模式下返回验证码
             return Result.ok("验证码发送成功，开发模式验证码: " + code);
         }
-        
         return Result.ok("验证码发送成功");
     }
 
     @Operation(summary = "用户注册", description = "新用户注册")
     @PostMapping("/register")
     public Result<RegisterVO> register(@Valid @RequestBody UserRegisterDTO dto) {
-        log.info("用户注册请求: 用户名={}, 手机号={}", dto.getUsername(), dto.getPhone());
-        
-        // 验证确认密码
+        log.info("用户注册请求: username={}, phone={}", dto.getUsername(), dto.getPhone());
+
         if (!dto.getPassword().equals(dto.getConfirmPassword())) {
             return Result.fail("两次输入的密码不一致");
         }
-        
-        // 验证短信验证码
         if (!smsCodeUtil.verifySmsCode(dto.getPhone(), dto.getSmsCode(), "register")) {
             return Result.fail("验证码错误或已失效");
         }
-        
+
         if (userCoreService.existsByUsername(dto.getUsername())) {
             return Result.fail("用户名已存在");
         }
@@ -93,7 +94,7 @@ public class AuthController {
 
         User user = new User();
         user.setUsername(dto.getUsername());
-        user.setPassword(dto.getPassword());
+        user.setPassword(PasswordUtil.encode(dto.getPassword()));
         user.setNickname(dto.getNickname());
         user.setPhone(dto.getPhone());
         user.setEmail(dto.getEmail());
@@ -120,24 +121,22 @@ public class AuthController {
         vo.setAutoLogin(true);
         vo.setAccessToken(JwtUtil.generateAppAccessToken(user.getId(), user.getUsername()));
         vo.setRefreshToken(JwtUtil.generateAppRefreshToken(user.getId(), user.getUsername()));
-        vo.setWelcomeMessage("注册成功，欢迎加入健身平台！");
-        
-        log.info("用户注册成功: 用户ID={}, 用户名={}", vo.getUserId(), vo.getUsername());
+        vo.setWelcomeMessage("注册成功，欢迎加入健身平台");
+
+        log.info("用户注册成功: userId={}, username={}", vo.getUserId(), vo.getUsername());
         return Result.ok(vo);
     }
 
     @Operation(summary = "用户登录", description = "密码登录或短信验证码登录")
     @PostMapping("/login")
     public Result<LoginVO> login(@Valid @RequestBody UserLoginDTO dto) {
-        log.info("用户登录请求: 账号={}, 登录类型={}", dto.getAccount(), dto.getLoginType());
-        
-        if ("sms".equals(dto.getLoginType())) {
-            // 短信登录验证
-            if (!smsCodeUtil.verifySmsCode(dto.getAccount(), dto.getSmsCode(), "login")) {
-                return Result.fail("验证码错误或已失效");
-            }
+        log.info("用户登录请求: account={}, loginType={}", dto.getAccount(), dto.getLoginType());
+
+        if ("sms".equals(dto.getLoginType())
+                && !smsCodeUtil.verifySmsCode(dto.getAccount(), dto.getSmsCode(), "login")) {
+            return Result.fail("验证码错误或已失效");
         }
-        
+
         User user = findByAccount(dto.getAccount());
         if (user == null) {
             return Result.fail("账号不存在");
@@ -146,10 +145,8 @@ public class AuthController {
             return Result.fail("账号已禁用");
         }
 
-        if ("password".equals(dto.getLoginType())) {
-            if (!dto.getPassword().equals(user.getPassword())) {
-                return Result.fail("账号或密码错误");
-            }
+        if ("password".equals(dto.getLoginType()) && !PasswordUtil.matches(dto.getPassword(), user.getPassword())) {
+            return Result.fail("账号或密码错误");
         }
 
         LoginVO vo = new LoginVO();
@@ -162,36 +159,36 @@ public class AuthController {
         userInfo.setAvatar(user.getAvatar());
         userInfo.setGender(user.getGender());
         userInfo.setStatus(user.getStatus());
-        
+
         vo.setUserInfo(userInfo);
         vo.setFirstLogin(false);
         vo.setNeedCompleteProfile(false);
-
         vo.setAccessToken(JwtUtil.generateAppAccessToken(user.getId(), user.getUsername()));
         vo.setRefreshToken(JwtUtil.generateAppRefreshToken(user.getId(), user.getUsername()));
         vo.setAccessTokenExpire(LocalDateTime.now().plusDays(7));
         vo.setRefreshTokenExpire(LocalDateTime.now().plusDays(30));
-        
-        log.info("用户登录成功: 用户ID={}, 用户名={}", userInfo.getId(), userInfo.getUsername());
+
+        log.info("用户登录成功: userId={}, username={}", userInfo.getId(), userInfo.getUsername());
         return Result.ok(vo);
     }
 
-    @Operation(summary = "刷新令牌", description = "使用refresh token获取新的access token")
+    @Operation(summary = "刷新令牌", description = "使用 refresh token 获取新的 access token")
     @PostMapping("/refresh-token")
     public Result<RefreshTokenVO> refreshToken(@Valid @RequestBody RefreshTokenDTO dto) {
-        log.info("刷新令牌请求: refreshToken前8位={}", 
+        log.info("刷新令牌请求: refreshToken前缀={}",
                 dto.getRefreshToken().length() > 8 ? dto.getRefreshToken().substring(0, 8) + "..." : dto.getRefreshToken());
-        
+
         String newAccessToken = JwtUtil.refreshAccessToken(dto.getRefreshToken());
         if (newAccessToken == null) {
             return Result.fail("刷新令牌无效或已过期");
         }
+
         RefreshTokenVO vo = new RefreshTokenVO();
         vo.setAccessToken(newAccessToken);
         vo.setRefreshToken(dto.getRefreshToken());
         vo.setAccessTokenExpire(LocalDateTime.now().plusDays(7));
         vo.setRefreshTokenExpire(LocalDateTime.now().plusDays(30));
-        
+
         log.info("令牌刷新成功");
         return Result.ok(vo);
     }
@@ -199,26 +196,24 @@ public class AuthController {
     @Operation(summary = "忘记密码", description = "通过短信验证码重置密码")
     @PostMapping("/forget-password")
     public Result<String> forgetPassword(@Valid @RequestBody ForgetPasswordDTO dto) {
-        log.info("忘记密码请求: 手机号={}", dto.getPhone());
-        
-        // 验证确认密码
+        log.info("忘记密码请求: phone={}", dto.getPhone());
+
         if (!dto.getNewPassword().equals(dto.getConfirmPassword())) {
             return Result.fail("两次输入的密码不一致");
         }
-        
-        // 验证短信验证码
         if (!smsCodeUtil.verifySmsCode(dto.getPhone(), dto.getSmsCode(), "reset_password")) {
             return Result.fail("验证码错误或已失效");
         }
-        
+
         User user = userCoreService.getByPhone(dto.getPhone());
         if (user == null) {
             return Result.fail("手机号未注册");
         }
-        user.setPassword(dto.getNewPassword());
+
+        user.setPassword(PasswordUtil.encode(dto.getNewPassword()));
         userCoreService.updateById(user);
-        
-        log.info("密码重置成功: 手机号={}", dto.getPhone());
+
+        log.info("密码重置成功: phone={}", dto.getPhone());
         return Result.ok("密码重置成功");
     }
 

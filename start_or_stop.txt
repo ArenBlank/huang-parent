@@ -1,7 +1,28 @@
-docker start mysql-container-huang redis-container-huang minio-container-huang
+﻿# 启动外部中间件容器
+# 如果你的 Docker Desktop 容器名不同，请自行替换
+docker start mysql-container-huang redis-container-huang minio-container-huang nginx-container-huang rabbitmq-container-huang
+
 docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
 
-Start-Process powershell -ArgumentList '-NoExit','-Command','cd web\web-admin; mvn spring-boot:run'
-Start-Process powershell -ArgumentList '-NoExit','-Command','cd web\web-app; mvn spring-boot:run'
+# 停止外部中间件容器
+docker stop mysql-container-huang redis-container-huang minio-container-huang nginx-container-huang rabbitmq-container-huang
 
-$ports = 8080,8081; foreach($p in $ports){ $pid=(Get-NetTCPConnection -LocalPort $p -State Listen -ErrorAction SilentlyContinue | Select-Object -First 1 -Expand OwningProcess); if($pid){ Stop-Process -Id $pid -Force } }
+# 先构建公共模块（当 model/common 有改动时执行）
+mvn -pl common,model -am -DskipTests install
+
+# 从子模块 pom 启动 admin/app，避免在父工程执行 spring-boot:run 报错
+Start-Process powershell -ArgumentList '-NoExit','-Command','mvn -f web/web-admin/pom.xml spring-boot:run'
+Start-Process powershell -ArgumentList '-NoExit','-Command','mvn -f web/web-app/pom.xml spring-boot:run'
+
+# 按端口 8080/8081 快速关闭 admin/app
+Get-NetTCPConnection -LocalPort 8080,8081 -State Listen -ErrorAction SilentlyContinue |
+Select-Object -ExpandProperty OwningProcess -Unique |
+ForEach-Object { Stop-Process -Id $_ -Force }
+
+# 兜底方式：按命令行特征关闭 app/admin 的 spring-boot:run Java 进程
+Get-CimInstance Win32_Process |
+Where-Object { $_.Name -eq 'java.exe' -and $_.CommandLine -match 'spring-boot:run' -and $_.CommandLine -match 'web-(admin|app)' } |
+ForEach-Object { Stop-Process -Id $_.ProcessId -Force }
+
+# 重置回归测试数据
+powershell -ExecutionPolicy Bypass -File tests/reset-test-data.ps1

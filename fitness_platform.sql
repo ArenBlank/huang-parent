@@ -311,6 +311,25 @@ CREATE TABLE IF NOT EXISTS refund_record (
   KEY idx_refund_order (order_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE IF NOT EXISTS payment_callback_log (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  pay_no VARCHAR(50) NOT NULL,
+  order_id BIGINT DEFAULT NULL,
+  channel_trade_no VARCHAR(64) DEFAULT NULL,
+  callback_status VARCHAR(20) NOT NULL,
+  sign_valid TINYINT NOT NULL DEFAULT 0,
+  callback_payload TEXT,
+  process_result VARCHAR(30) NOT NULL,
+  error_message VARCHAR(255) DEFAULT NULL,
+  notified_at DATETIME DEFAULT NULL,
+  create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  is_deleted TINYINT NOT NULL DEFAULT 0,
+  KEY idx_pay_callback_payno (pay_no),
+  KEY idx_pay_callback_order (order_id),
+  KEY idx_pay_callback_time (notified_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 CREATE TABLE IF NOT EXISTS banner (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
   title VARCHAR(100) NOT NULL,

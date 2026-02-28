@@ -2,6 +2,7 @@ package com.huang.web.admin.service.biz;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.huang.common.constant.BizStatusConstant;
 import com.huang.model.entity.CoachBooking;
 import com.huang.model.entity.CoachSchedule;
 import com.huang.model.entity.OrderInfo;
@@ -58,11 +59,11 @@ public class AdminOpsBizService {
     @Transactional(rollbackFor = Exception.class)
     public boolean markBookingCompleted(Long bookingId) {
         CoachBooking booking = coachBookingMapper.selectById(bookingId);
-        if (booking == null || !"PAID".equals(booking.getPayStatus())) {
+        if (booking == null || !BizStatusConstant.PayStatus.PAID.equals(booking.getPayStatus())) {
             return false;
         }
         // 工程亮点：严格状态前置校验，避免未支付订单被误标完成，保证状态机单向流转。
-        booking.setBookingStatus("COMPLETED");
+        booking.setBookingStatus(BizStatusConstant.BookingStatus.COMPLETED);
         booking.setFinishTime(LocalDateTime.now());
         return coachBookingMapper.updateById(booking) > 0;
     }
@@ -80,7 +81,7 @@ public class AdminOpsBizService {
         long userCount = userMapper.selectCount(new LambdaQueryWrapper<User>());
         long bookingCount = coachBookingMapper.selectCount(new LambdaQueryWrapper<CoachBooking>());
         long paidOrderCount = orderInfoMapper.selectCount(
-                new LambdaQueryWrapper<OrderInfo>().eq(OrderInfo::getPayStatus, "PAID"));
+                new LambdaQueryWrapper<OrderInfo>().eq(OrderInfo::getPayStatus, BizStatusConstant.PayStatus.PAID));
         long recordCount = trainingRecordMapper.selectCount(new LambdaQueryWrapper<TrainingRecord>());
 
         Map<String, Object> summary = new HashMap<>();
@@ -96,14 +97,14 @@ public class AdminOpsBizService {
         LocalDateTime threshold = LocalDateTime.now().minusMinutes(timeoutMinutes);
         List<CoachBooking> timeoutBookings = coachBookingMapper.selectList(
                 new LambdaQueryWrapper<CoachBooking>()
-                        .eq(CoachBooking::getPayStatus, "UNPAID")
-                        .eq(CoachBooking::getBookingStatus, "WAIT_PAY")
+                        .eq(CoachBooking::getPayStatus, BizStatusConstant.PayStatus.UNPAID)
+                        .eq(CoachBooking::getBookingStatus, BizStatusConstant.BookingStatus.WAIT_PAY)
                         .lt(CoachBooking::getCreateTime, java.sql.Timestamp.valueOf(threshold))
         );
 
         int closed = 0;
         for (CoachBooking booking : timeoutBookings) {
-            booking.setBookingStatus("CANCELLED");
+            booking.setBookingStatus(BizStatusConstant.BookingStatus.CANCELLED);
             if (coachBookingMapper.updateById(booking) > 0) {
                 closed++;
                 // 工程亮点：关单后联动回滚订单/支付/档期占用，避免“状态成功但容量未释放”的一致性问题。
@@ -111,13 +112,13 @@ public class AdminOpsBizService {
                         null,
                         new LambdaUpdateWrapper<OrderInfo>()
                                 .eq(OrderInfo::getId, booking.getOrderId())
-                                .set(OrderInfo::getOrderStatus, "CANCELLED")
+                                .set(OrderInfo::getOrderStatus, BizStatusConstant.OrderStatus.CANCELLED)
                 );
                 paymentRecordMapper.update(
                         null,
                         new LambdaUpdateWrapper<PaymentRecord>()
                                 .eq(PaymentRecord::getOrderId, booking.getOrderId())
-                                .set(PaymentRecord::getPayStatus, "CLOSED")
+                                .set(PaymentRecord::getPayStatus, BizStatusConstant.PayStatus.CLOSED)
                 );
                 coachScheduleMapper.update(
                         null,

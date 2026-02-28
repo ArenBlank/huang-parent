@@ -48,36 +48,36 @@ public class JwtUtil {
      * 生成App端Access Token
      */
     public static String generateAppAccessToken(Long userId, String username) {
-        Map<String, Object> claims = new HashMap<>();
-        claims.put("userId", userId);
-        claims.put("username", username);
-        claims.put("type", "access_token");
-        claims.put("platform", "app");
-        
-        return Jwts.builder()
-                .setClaims(claims)
-                .setSubject(username)
-                .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + ACCESS_TOKEN_EXPIRE_TIME))
-                .signWith(secretKey, SignatureAlgorithm.HS256)
-                .compact();
+        return generateToken(userId, username, "access_token", "app", ACCESS_TOKEN_EXPIRE_TIME);
     }
 
     /**
      * 生成App端Refresh Token
      */
     public static String generateAppRefreshToken(Long userId, String username) {
+        return generateToken(userId, username, "refresh_token", "app", REFRESH_TOKEN_EXPIRE_TIME);
+    }
+
+    public static String generateAdminAccessToken(Long userId, String username) {
+        return generateToken(userId, username, "access_token", "admin", ACCESS_TOKEN_EXPIRE_TIME);
+    }
+
+    public static String generateAdminRefreshToken(Long userId, String username) {
+        return generateToken(userId, username, "refresh_token", "admin", REFRESH_TOKEN_EXPIRE_TIME);
+    }
+
+    private static String generateToken(Long userId, String username, String type, String platform, long expireMs) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("userId", userId);
         claims.put("username", username);
-        claims.put("type", "refresh_token");
-        claims.put("platform", "app");
-        
+        claims.put("type", type);
+        claims.put("platform", platform);
+
         return Jwts.builder()
                 .setClaims(claims)
                 .setSubject(username)
                 .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + REFRESH_TOKEN_EXPIRE_TIME))
+                .setExpiration(new Date(System.currentTimeMillis() + expireMs))
                 .signWith(secretKey, SignatureAlgorithm.HS256)
                 .compact();
     }

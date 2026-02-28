@@ -42,7 +42,7 @@ public class Knife4jConfiguration {
     public GroupedOpenApi appTrainingGroup() {
         return GroupedOpenApi.builder()
                 .group("app-plan-record-booking")
-                .pathsToMatch("/app/plan/**", "/app/record/**", "/app/booking/**")
+                .pathsToMatch("/app/plan/**", "/app/record/**", "/app/booking/**", "/app/course/**")
                 .build();
     }
 }

@@ -11,21 +11,26 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 @Configuration
 public class WebMvcConfiguration implements WebMvcConfigurer {
 
+    @Autowired
+    private StringToBaseEnumConverterFactory stringToBaseEnumConverterFactory;
 
-//    @Autowired
-//    private StringToBaseEnumConverterFactory stringToBaseEnumConverterFactory;
-//
-//    @Autowired
-//    private AuthenticationInterceptor authenticationInterceptor;
-//
-//    @Override
-//    public void addFormatters(FormatterRegistry registry) {
-//        registry.addConverterFactory(this.stringToBaseEnumConverterFactory);
-//    }
-//
-//
-//    @Override
-//    public void addInterceptors(InterceptorRegistry registry) {
-//        registry.addInterceptor(this.authenticationInterceptor).addPathPatterns("/admin/**").excludePathPatterns("/admin/login/**");
-//    }
+    @Autowired
+    private AuthenticationInterceptor authenticationInterceptor;
+
+    @Override
+    public void addFormatters(FormatterRegistry registry) {
+        registry.addConverterFactory(this.stringToBaseEnumConverterFactory);
+    }
+
+    @Override
+    public void addInterceptors(InterceptorRegistry registry) {
+        registry.addInterceptor(this.authenticationInterceptor)
+                .addPathPatterns("/admin/**")
+                .excludePathPatterns(
+                        "/admin/auth/**",
+                        "/doc.html",
+                        "/webjars/**",
+                        "/v3/api-docs/**"
+                );
+    }
 }
