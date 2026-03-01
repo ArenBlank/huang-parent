@@ -5,14 +5,14 @@ import com.huang.common.minio.MinioProperties;
 import com.huang.model.entity.TrainingPlanItem;
 import com.huang.model.entity.VideoAsset;
 import com.huang.web.admin.dto.video.VideoAssetUpsertDTO;
+import com.huang.web.admin.mapper.TrainingPlanItemMapper;
+import com.huang.web.admin.mapper.VideoAssetMapper;
 import io.minio.BucketExistsArgs;
 import io.minio.GetPresignedObjectUrlArgs;
 import io.minio.MakeBucketArgs;
 import io.minio.MinioClient;
 import io.minio.PutObjectArgs;
 import io.minio.http.Method;
-import com.huang.web.admin.mapper.TrainingPlanItemMapper;
-import com.huang.web.admin.mapper.VideoAssetMapper;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -147,21 +147,21 @@ public class VideoContentBizService {
             result.put("contentType", file.getContentType());
             return result;
         } catch (Exception e) {
-            throw new RuntimeException("视频上传失败: " + e.getMessage(), e);
+            throw new RuntimeException("video upload failed: " + e.getMessage(), e);
         }
     }
 
     private void validateUpload(MultipartFile file) {
         if (file == null || file.isEmpty()) {
-            throw new IllegalArgumentException("文件不能为空");
+            throw new IllegalArgumentException("file is empty");
         }
         long maxBytes = 200L * 1024 * 1024;
         if (file.getSize() > maxBytes) {
-            throw new IllegalArgumentException("视频大小不能超过200MB");
+            throw new IllegalArgumentException("file size exceeds 200MB");
         }
         String extension = getFileExtension(file.getOriginalFilename()).toLowerCase();
         if (!".mp4".equals(extension) && !".mov".equals(extension) && !".webm".equals(extension)) {
-            throw new IllegalArgumentException("仅支持 mp4/mov/webm 视频格式");
+            throw new IllegalArgumentException("only mp4/mov/webm are supported");
         }
     }
 

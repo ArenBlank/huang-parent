@@ -6,9 +6,7 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 /**
- * 操作日志
- * @author system
- * @since 2026-02-25
+ * Operation log.
  */
 @Schema(description = "操作日志")
 @TableName(value = "operation_log")
@@ -17,7 +15,7 @@ public class OperationLog extends BaseEntity {
 
     private static final long serialVersionUID = 1L;
 
-    @Schema(description = "操作者ID")
+    @Schema(description = "操作人ID")
     @TableField(value = "operator_id")
     private Long operatorId;
 

@@ -102,9 +102,9 @@ jobs:
           tail -n 200 app.log || true
           exit 1
 
-      - name: Run Postman regression
+      - name: Run Postman full regression
         run: |
-          newman run tests/fitness-platform.postman_collection.json \
+          newman run tests/fitness-platform-full.postman_collection.json \
             -e tests/local.postman_environment.json \
             --working-dir "$GITHUB_WORKSPACE" \
             --env-var "videoFilePath=tests/assets/demo.mp4" \

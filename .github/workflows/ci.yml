@@ -30,3 +30,124 @@ jobs:
 
       - name: Compile modules
         run: mvn -B -ntp -pl web/web-admin,web/web-app -am -DskipTests compile
+
+  api-core-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=20
+      redis:
+        image: redis:7.2-alpine
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+
+      - name: Install tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y mysql-client curl
+          npm install -g newman
+
+      - name: Init database
+        run: |
+          mysql -h 127.0.0.1 -P 3306 -uroot -proot -e "CREATE DATABASE IF NOT EXISTS fitness_platform DEFAULT CHARSET utf8mb4;"
+          mysql -h 127.0.0.1 -P 3306 -uroot -proot fitness_platform < fitness_platform.sql
+
+      - name: Start MinIO
+        run: |
+          docker run -d --name ci-minio \
+            -p 9000:9000 -p 9001:9001 \
+            -e MINIO_ROOT_USER=root \
+            -e MINIO_ROOT_PASSWORD=rootroot \
+            minio/minio:latest server /data --console-address ":9001"
+          for i in {1..30}; do
+            if curl -fsS http://127.0.0.1:9000/minio/health/live >/dev/null; then
+              echo "minio is up"
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "minio not ready in time"
+          exit 1
+
+      - name: Build
+        run: mvn -B -ntp -pl web/web-admin,web/web-app -am -DskipTests compile
+
+      - name: Install common/model to local maven repo
+        run: mvn -B -ntp -pl common,model -am -DskipTests install
+
+      - name: Start admin and app
+        run: |
+          nohup mvn -B -ntp -f web/web-admin/pom.xml -DskipTests spring-boot:run -Dspring-boot.run.arguments="--spring.data.redis.password=" > admin.log 2>&1 &
+          nohup mvn -B -ntp -f web/web-app/pom.xml -DskipTests spring-boot:run -Dspring-boot.run.arguments="--spring.data.redis.password=" > app.log 2>&1 &
+
+      - name: Wait services up
+        run: |
+          for i in {1..150}; do
+            if curl -fsS http://127.0.0.1:8080/v3/api-docs >/dev/null && curl -fsS http://127.0.0.1:8081/v3/api-docs >/dev/null; then
+              echo "apps are up"
+              exit 0
+            fi
+            if (( i % 15 == 0 )); then
+              echo "still waiting... ${i}"
+              tail -n 40 admin.log || true
+              tail -n 40 app.log || true
+            fi
+            sleep 2
+          done
+          echo "apps not ready in time"
+          echo "===== admin.log ====="
+          tail -n 200 admin.log || true
+          echo "===== app.log ====="
+          tail -n 200 app.log || true
+          exit 1
+
+      - name: Run Postman core regression
+        run: |
+          newman run tests/fitness-platform-core.postman_collection.json \
+            -e tests/local.postman_environment.json \
+            --working-dir "$GITHUB_WORKSPACE" \
+            --env-var "videoFilePath=tests/assets/demo.mp4" \
+            --reporters cli
+
+      - name: Dump logs on failure
+        if: failure()
+        run: |
+          echo "===== admin.log ====="
+          tail -n 200 admin.log || true
+          echo "===== app.log ====="
+          tail -n 200 app.log || true
+
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: core-app-logs
+          path: |
+            admin.log
+            app.log
+
+      - name: Cleanup MinIO
+        if: always()
+        run: |
+          docker rm -f ci-minio || true

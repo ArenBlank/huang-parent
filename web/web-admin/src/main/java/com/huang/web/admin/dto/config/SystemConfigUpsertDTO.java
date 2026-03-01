@@ -1,0 +1,17 @@
+package com.huang.web.admin.dto.config;
+
+import jakarta.validation.constraints.NotBlank;
+import lombok.Data;
+
+@Data
+public class SystemConfigUpsertDTO {
+
+    @NotBlank
+    private String configKey;
+
+    @NotBlank
+    private String configValue;
+
+    private String remark;
+}
+

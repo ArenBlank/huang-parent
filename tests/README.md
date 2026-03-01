@@ -16,7 +16,9 @@ powershell -ExecutionPolicy Bypass -File tests/reset-test-data.ps1
 ```
 
 ## 2. 导入Postman
-1. 导入集合：`tests/fitness-platform.postman_collection.json`
+1. 导入集合（二选一）：
+   - `tests/fitness-platform-core.postman_collection.json`（核心链路，31条，日常开发使用）
+   - `tests/fitness-platform-full.postman_collection.json`（扩展回归，75条，发版前使用）
 2. 导入环境：`tests/local.postman_environment.json`
 3. 选择环境 `fitness-local`
 4. 点击 `Run collection`
@@ -24,7 +26,12 @@ powershell -ExecutionPolicy Bypass -File tests/reset-test-data.ps1
 ## 3. 一键命令行运行（推荐）
 ```powershell
 npm install -g newman
-newman run tests/fitness-platform.postman_collection.json -e tests/local.postman_environment.json
+newman run tests/fitness-platform-core.postman_collection.json -e tests/local.postman_environment.json
+```
+
+全量基线命令：
+```powershell
+newman run tests/fitness-platform-full.postman_collection.json -e tests/local.postman_environment.json
 ```
 
 ## 4. 覆盖用例
@@ -51,6 +58,19 @@ newman run tests/fitness-platform.postman_collection.json -e tests/local.postman
 21. Admin 退款审计列表
 22. Admin 支付回调审计列表
 23. 计划详情校验视频播放地址
+24. Admin 操作日志查询
+25. Admin 新增 Banner
+26. App Banner 列表校验
+27. Admin 新增 Notice
+28. App Notice 列表校验
+29. Admin 新增 SystemConfig
+30. App SystemConfig 按 key 读取校验
+31. Admin/App 运营模块更新/上下架/删除（Banner/Notice/SystemConfig）
+32. Admin 视频/课程更新链路（素材状态、解绑、课程更新、排期状态）
+33. App 教练申请 + Admin 审核闭环
+34. Admin 用户/角色/用户角色写接口（状态、分配）
+35. App 个人资料读取与更新
+36. Coach Apply 操作日志校验
 
 ## 5. 档期占满说明
 - 集合已内置“无可用档期时自动跳过预约链路（05/06/07）”逻辑，避免出现脚本报错中断。

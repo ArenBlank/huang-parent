@@ -62,7 +62,6 @@ public class AdminOpsBizService {
         if (booking == null || !BizStatusConstant.PayStatus.PAID.equals(booking.getPayStatus())) {
             return false;
         }
-        // 工程亮点：严格状态前置校验，避免未支付订单被误标完成，保证状态机单向流转。
         booking.setBookingStatus(BizStatusConstant.BookingStatus.COMPLETED);
         booking.setFinishTime(LocalDateTime.now());
         return coachBookingMapper.updateById(booking) > 0;
@@ -107,7 +106,6 @@ public class AdminOpsBizService {
             booking.setBookingStatus(BizStatusConstant.BookingStatus.CANCELLED);
             if (coachBookingMapper.updateById(booking) > 0) {
                 closed++;
-                // 工程亮点：关单后联动回滚订单/支付/档期占用，避免“状态成功但容量未释放”的一致性问题。
                 orderInfoMapper.update(
                         null,
                         new LambdaUpdateWrapper<OrderInfo>()

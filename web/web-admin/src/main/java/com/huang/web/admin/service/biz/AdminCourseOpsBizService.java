@@ -18,7 +18,8 @@ public class AdminCourseOpsBizService {
     private final CourseMapper courseMapper;
     private final CourseScheduleMapper courseScheduleMapper;
 
-    public AdminCourseOpsBizService(CourseMapper courseMapper, CourseScheduleMapper courseScheduleMapper) {
+    public AdminCourseOpsBizService(CourseMapper courseMapper,
+                                    CourseScheduleMapper courseScheduleMapper) {
         this.courseMapper = courseMapper;
         this.courseScheduleMapper = courseScheduleMapper;
     }

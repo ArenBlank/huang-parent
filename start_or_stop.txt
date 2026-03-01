@@ -25,4 +25,4 @@ Where-Object { $_.Name -eq 'java.exe' -and $_.CommandLine -match 'spring-boot:ru
 ForEach-Object { Stop-Process -Id $_.ProcessId -Force }
 
 # 重置回归测试数据
-powershell -ExecutionPolicy Bypass -File tests/reset-test-data.ps1
+powershell -ExecutionPolicy Bypass -File tests/reset-test-data.ps1 -ContainerName "mysql-container-huang" -DbName "fitness_platform" -User "root" -Password "root"

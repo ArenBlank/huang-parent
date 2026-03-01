@@ -1,82 +1,88 @@
-# API接口清单与示例
+﻿# API接口清单与示例
 
 ## 1. 鉴权说明
-- 除 `/app/auth/**` 外，`/app/**` 接口都需要 JWT。
+- `/app/auth/**` 与 `/admin/auth/login` 为免登录接口。
+- 其余 `/app/**`、`/admin/**` 接口默认需要 JWT。
 - Header 示例：`Authorization: Bearer <accessToken>`
 
-## 2. App 端接口（已实现）
-1. `GET /app/plan/list`：训练计划列表
-2. `GET /app/plan/{planId}`：训练计划详情（含动作视频 `playUrl`）
-3. `POST /app/plan/subscribe`：订阅训练计划
-4. `POST /app/record/checkin`：训练打卡
-5. `GET /app/record/my/list`：我的打卡记录
-6. `GET /app/record/my/weekly-stat`：近7日训练统计
-7. `GET /app/booking/schedule/list`：教练档期列表
-8. `POST /app/booking/create`：创建预约+订单
-9. `POST /app/booking/pay-success`：支付成功回调（模拟）
-10. `POST /app/booking/complete`：确认授课完成
-11. `POST /app/booking/review`：授课后评价
-12. `GET /app/course/list`：课程列表
-13. `GET /app/course/{courseId}/schedule/list`：课程排期
-14. `POST /app/course/enroll`：课程报名并下单
-15. `POST /app/course/pay-success`：课程支付成功回调（模拟）
-16. `GET /app/course/my/enrollments`：我的课程报名记录
+## 2. App端接口（核心）
+1. `POST /app/auth/login`：用户登录
+2. `POST /app/plan/subscribe`：订阅训练计划
+3. `POST /app/record/checkin`：训练打卡
+4. `GET /app/booking/schedule/list`：教练档期列表
+5. `POST /app/booking/create`：创建预约订单
+6. `POST /app/pay/mock-notify`：支付回调（模拟）
+7. `GET /app/plan/{planId}`：计划详情（含视频）
+8. `GET /app/course/list`：课程列表
+9. `POST /app/course/enroll`：课程报名并下单
+10. `POST /app/course/pay/mock-notify`：课程支付回调（模拟）
+11. `POST /app/course/refund`：课程退款申请
+12. `GET /app/course/my/enrollments`：我的报名记录
+13. `POST /app/coach/apply`：提交教练申请
+14. `GET /app/coach/my-application`：我的教练申请
+15. `GET /app/banner/list`：首页Banner列表
+16. `GET /app/notice/list`：公告列表
+17. `GET /app/system-config/map?keys=site_name&keys=xxx`：按key批量读配置
 
-## 3. Admin 端接口（已实现）
-1. `GET /admin/dashboard/summary`：运营汇总看板
-2. `GET /admin/ops/booking/list`：预约列表
-3. `POST /admin/ops/booking/complete`：管理员标记授课完成
-4. `GET /admin/ops/order/list`：订单列表
+## 3. Admin端接口（核心）
+1. `POST /admin/auth/login`：管理员登录
+2. `GET /admin/dashboard/summary`：看板汇总
+3. `GET /admin/ops/booking/list`：预约列表
+4. `POST /admin/ops/booking/complete`：授课完成
 5. `POST /admin/ops/booking/close-timeout`：关闭超时未支付预约
+6. `POST /admin/video/upload`：上传视频到 MinIO
+7. `POST /admin/video`：新增视频素材
+8. `PUT /admin/video/bind-plan-item`：计划项绑定视频
+9. `POST /admin/course`：创建课程
+10. `PUT /admin/course/{id}/status`：上架/下架课程
+11. `POST /admin/course/schedule`：创建课程排期
+12. `GET /admin/refund/list`：退款审计列表
+13. `GET /admin/pay/callback/list`：支付回调审计列表
+14. `GET /admin/coach-apply/list`：教练申请列表
+15. `POST /admin/coach-apply/audit`：教练申请审核
+16. `GET /admin/operation-log/list`：操作日志列表
+17. `GET /admin/banner/list`：Banner列表
+18. `POST /admin/banner`：新增Banner
+19. `PUT /admin/banner/{id}`：更新Banner
+20. `PUT /admin/banner/{id}/status`：更新Banner状态
+21. `DELETE /admin/banner/{id}`：删除Banner
+22. `GET /admin/notice/list`：公告列表
+23. `POST /admin/notice`：新增公告
+24. `PUT /admin/notice/{id}`：更新公告
+25. `PUT /admin/notice/{id}/status`：更新公告状态
+26. `DELETE /admin/notice/{id}`：删除公告
+27. `GET /admin/system-config/list`：系统配置列表
+28. `POST /admin/system-config`：新增系统配置
+29. `PUT /admin/system-config/{id}`：更新系统配置
+30. `DELETE /admin/system-config/{id}`：删除系统配置
 
-## 4. 视频教学接口（已实现）
-1. `POST /admin/video/upload`：上传视频到 MinIO（返回 `objectPath` + `previewUrl`）
-2. `POST /admin/video`：新增视频素材元数据
-3. `PUT /admin/video/{id}`：更新视频素材元数据
-4. `PUT /admin/video/{id}/status`：启用/停用素材
-5. `GET /admin/video/list`：视频素材列表（支持状态/关键字）
-6. `PUT /admin/video/bind-plan-item`：训练计划项绑定视频
-7. `PUT /admin/video/unbind-plan-item/{planItemId}`：训练计划项解绑视频
+## 4. 快速联调顺序
+1. 登录获取 app/admin token
+2. app 订阅计划并打卡
+3. app 创建预约，调用 mock 支付回调
+4. admin 关闭超时单或完成授课
+5. admin 上传视频并绑定计划项
+6. app 查看计划详情，确认 `items[].video.playUrl`
+7. app 课程报名、mock 支付、退款
+8. admin 查询退款审计与操作日志
 
-## 5. 端到端测试顺序（你现在可直接照这个测）
-1. 启动中间件与服务  
-   MySQL: `localhost:3306`，Redis: `localhost:6379`，MinIO: `localhost:9000`  
-   admin: `8080`，app: `8081`
-2. 获取用户 Token（用于 app 端）
-3. Admin 上传教学视频
-4. Admin 新增视频素材元数据
-5. Admin 将视频绑定到训练计划项
-6. App 查询训练计划详情，确认 `items[].video.playUrl` 存在且可播放
+## 5. 示例请求
 
-## 6. 示例请求
-### 6.1 用户登录（获取 app token）
+### 5.1 用户登录
 ```bash
 curl -X POST "http://localhost:8081/app/auth/login" \
   -H "Content-Type: application/json" \
-  -d "{\"phone\":\"13800000000\",\"password\":\"123456\"}"
+  -d "{\"account\":\"member_chen\",\"password\":\"123456\",\"loginType\":\"password\"}"
 ```
 
-### 6.2 Admin 上传视频到 MinIO
+### 5.2 上传视频到MinIO
 ```bash
 curl -X POST "http://localhost:8080/admin/video/upload" \
   -H "Authorization: Bearer <adminToken>" \
   -F "file=@D:/videos/squat.mp4"
 ```
 
-返回示例（关键字段）：
-```json
-{
-  "code": 200,
-  "data": {
-    "objectPath": "videos/upload/20260225/abc123.mp4",
-    "previewUrl": "http://localhost:9000/lease/videos/upload/20260225/abc123.mp4?...",
-    "size": 1024000,
-    "contentType": "video/mp4"
-  }
-}
-```
-
-### 6.3 Admin 新增视频素材
+### 5.3 创建视频素材
 ```bash
 curl -X POST "http://localhost:8080/admin/video" \
   -H "Authorization: Bearer <adminToken>" \
@@ -84,31 +90,16 @@ curl -X POST "http://localhost:8080/admin/video" \
   -d "{
     \"title\":\"深蹲教学-初级\",
     \"sourceSite\":\"pexels\",
-    \"sourceUrl\":\"https://www.pexels.com/video/xxxx/\",
     \"licenseType\":\"Pexels License\",
-    \"attributionRequired\":0,
-    \"authorName\":\"Pexels Author\",
     \"durationSec\":45,
     \"tags\":\"squat,legs,beginner\",
-    \"minioPath\":\"videos/upload/20260225/abc123.mp4\",
+    \"minioPath\":\"videos/upload/20260228/abc.mp4\",
     \"status\":1
   }"
 ```
 
-### 6.4 绑定计划项与视频
+### 5.4 查询操作日志
 ```bash
-curl -X PUT "http://localhost:8080/admin/video/bind-plan-item" \
-  -H "Authorization: Bearer <adminToken>" \
-  -H "Content-Type: application/json" \
-  -d "{\"planItemId\":1,\"videoId\":3}"
+curl -X GET "http://localhost:8080/admin/operation-log/list?module=course&limit=20" \
+  -H "Authorization: Bearer <adminToken>"
 ```
-
-### 6.5 App 查询计划详情验证视频播放地址
-```bash
-curl -X GET "http://localhost:8081/app/plan/1" \
-  -H "Authorization: Bearer <appToken>"
-```
-
-检查响应：
-- `data.items[*].video.videoId`
-- `data.items[*].video.playUrl`

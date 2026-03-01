@@ -17,3 +17,8 @@ WHERE is_deleted = 0 AND pay_status = 'UNPAID';
 UPDATE payment_record
 SET pay_status = 'CLOSED'
 WHERE is_deleted = 0 AND pay_status = 'UNPAID';
+
+-- cleanup autotest operation data
+DELETE FROM banner WHERE title LIKE 'AutoTest Banner%';
+DELETE FROM notice WHERE title LIKE 'AutoTest Notice%';
+DELETE FROM system_config WHERE config_key LIKE 'autotest.%';
