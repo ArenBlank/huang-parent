@@ -2,6 +2,8 @@ package com.huang.web.admin.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.huang.common.result.Result;
+import com.huang.web.admin.constant.AdminRoleCode;
+import com.huang.web.admin.custom.annotation.RequireAdminRole;
 import com.huang.model.entity.Role;
 import com.huang.web.admin.dto.role.RoleStatusUpdateDTO;
 import com.huang.web.admin.service.RoleService;
@@ -15,6 +17,7 @@ import java.util.List;
 @Tag(name = "Admin角色管理", description = "角色查询与状态维护")
 @RestController
 @RequestMapping("/admin/role")
+@RequireAdminRole(AdminRoleCode.ADMIN)
 public class RoleController {
 
     private final RoleService roleService;

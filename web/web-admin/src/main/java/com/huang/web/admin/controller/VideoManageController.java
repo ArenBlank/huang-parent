@@ -2,6 +2,8 @@ package com.huang.web.admin.controller;
 
 import com.huang.common.result.Result;
 import com.huang.web.admin.constant.AdminErrorCode;
+import com.huang.web.admin.constant.AdminRoleCode;
+import com.huang.web.admin.custom.annotation.RequireAdminRole;
 import com.huang.web.admin.custom.aop.OperationLog;
 import com.huang.web.admin.dto.video.PlanItemVideoBindDTO;
 import com.huang.web.admin.dto.video.VideoAssetUpsertDTO;
@@ -22,6 +24,7 @@ import org.springframework.web.multipart.MultipartFile;
 @Tag(name = "Admin视频内容", description = "教学视频素材管理与计划项绑定")
 @RestController
 @RequestMapping("/admin/video")
+@RequireAdminRole({AdminRoleCode.ADMIN, AdminRoleCode.OPS_ADMIN})
 public class VideoManageController {
 
     private final VideoContentBizService videoContentBizService;

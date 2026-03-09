@@ -2,6 +2,8 @@ package com.huang.web.admin.controller;
 
 import com.huang.common.result.Result;
 import com.huang.web.admin.constant.AdminErrorCode;
+import com.huang.web.admin.constant.AdminRoleCode;
+import com.huang.web.admin.custom.annotation.RequireAdminRole;
 import com.huang.web.admin.custom.aop.OperationLog;
 import com.huang.web.admin.service.biz.AdminOpsBizService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -15,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "Admin预约订单", description = "预约与订单管理")
 @RestController
 @RequestMapping("/admin/ops")
+@RequireAdminRole({AdminRoleCode.ADMIN, AdminRoleCode.OPS_ADMIN})
 public class BookingManageController {
 
     private final AdminOpsBizService adminOpsBizService;

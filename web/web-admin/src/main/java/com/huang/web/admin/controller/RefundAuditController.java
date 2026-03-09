@@ -1,6 +1,8 @@
 package com.huang.web.admin.controller;
 
 import com.huang.common.result.Result;
+import com.huang.web.admin.constant.AdminRoleCode;
+import com.huang.web.admin.custom.annotation.RequireAdminRole;
 import com.huang.web.admin.service.biz.AdminRefundAuditBizService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -15,6 +17,7 @@ import java.time.LocalDateTime;
 @Tag(name = "Admin Refund Audit", description = "Refund records and order/payment reconciliation query")
 @RestController
 @RequestMapping("/admin/refund")
+@RequireAdminRole({AdminRoleCode.ADMIN, AdminRoleCode.AUDIT_ADMIN})
 public class RefundAuditController {
 
     private final AdminRefundAuditBizService adminRefundAuditBizService;

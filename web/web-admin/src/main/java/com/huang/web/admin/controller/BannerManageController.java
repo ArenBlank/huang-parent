@@ -2,6 +2,8 @@ package com.huang.web.admin.controller;
 
 import com.huang.common.result.Result;
 import com.huang.web.admin.constant.AdminErrorCode;
+import com.huang.web.admin.constant.AdminRoleCode;
+import com.huang.web.admin.custom.annotation.RequireAdminRole;
 import com.huang.web.admin.custom.aop.OperationLog;
 import com.huang.web.admin.dto.banner.BannerUpsertDTO;
 import com.huang.web.admin.service.biz.AdminBannerBizService;
@@ -21,6 +23,7 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "Admin运营Banner", description = "首页轮播图管理")
 @RestController
 @RequestMapping("/admin/banner")
+@RequireAdminRole({AdminRoleCode.ADMIN, AdminRoleCode.OPS_ADMIN})
 public class BannerManageController {
 
     private final AdminBannerBizService adminBannerBizService;
@@ -69,4 +72,3 @@ public class BannerManageController {
         return ok ? Result.ok("删除成功") : Result.fail(AdminErrorCode.BANNER_NOT_FOUND, "Banner不存在");
     }
 }
-

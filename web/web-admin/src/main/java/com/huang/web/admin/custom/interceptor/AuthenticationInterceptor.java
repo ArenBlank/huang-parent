@@ -5,15 +5,28 @@ import com.huang.common.login.LoginUser;
 import com.huang.common.login.LoginUserHolder;
 import com.huang.common.result.ResultCodeEnum;
 import com.huang.common.utils.JwtUtil;
+import com.huang.web.admin.custom.annotation.RequireAdminRole;
+import com.huang.web.admin.service.core.AdminRoleCoreService;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.util.StringUtils;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 import org.springframework.web.servlet.HandlerInterceptor;
+import org.springframework.web.method.HandlerMethod;
+
+import java.util.Arrays;
+import java.util.Set;
 
 @Component
 public class AuthenticationInterceptor implements HandlerInterceptor {
+
+    private final AdminRoleCoreService adminRoleCoreService;
+
+    public AuthenticationInterceptor(AdminRoleCoreService adminRoleCoreService) {
+        this.adminRoleCoreService = adminRoleCoreService;
+    }
+
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
         String token = request.getHeader("Authorization");
@@ -37,7 +50,20 @@ public class AuthenticationInterceptor implements HandlerInterceptor {
         if (userId == null || !StringUtils.hasText(username)) {
             throw new HuangException(ResultCodeEnum.TOKEN_INVALID);
         }
-        LoginUserHolder.setLoginUser(new LoginUser(userId, username));
+        Set<String> roleCodes = adminRoleCoreService.getRoleCodes(userId);
+        LoginUser loginUser = new LoginUser(userId, username, roleCodes);
+        LoginUserHolder.setLoginUser(loginUser);
+
+        if (!(handler instanceof HandlerMethod handlerMethod)) {
+            return true;
+        }
+        RequireAdminRole requireAdminRole = handlerMethod.getMethodAnnotation(RequireAdminRole.class);
+        if (requireAdminRole == null) {
+            requireAdminRole = handlerMethod.getBeanType().getAnnotation(RequireAdminRole.class);
+        }
+        if (requireAdminRole != null && !loginUser.hasAnyRole(Arrays.asList(requireAdminRole.value()))) {
+            throw new HuangException(ResultCodeEnum.ADMIN_ACCESS_FORBIDDEN);
+        }
 
         return true;
 

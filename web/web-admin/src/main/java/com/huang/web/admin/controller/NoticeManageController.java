@@ -2,6 +2,8 @@ package com.huang.web.admin.controller;
 
 import com.huang.common.result.Result;
 import com.huang.web.admin.constant.AdminErrorCode;
+import com.huang.web.admin.constant.AdminRoleCode;
+import com.huang.web.admin.custom.annotation.RequireAdminRole;
 import com.huang.web.admin.custom.aop.OperationLog;
 import com.huang.web.admin.dto.notice.NoticeUpsertDTO;
 import com.huang.web.admin.service.biz.AdminNoticeBizService;
@@ -21,6 +23,7 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "Admin运营公告", description = "公告管理")
 @RestController
 @RequestMapping("/admin/notice")
+@RequireAdminRole({AdminRoleCode.ADMIN, AdminRoleCode.OPS_ADMIN})
 public class NoticeManageController {
 
     private final AdminNoticeBizService adminNoticeBizService;
@@ -69,4 +72,3 @@ public class NoticeManageController {
         return ok ? Result.ok("删除成功") : Result.fail(AdminErrorCode.NOTICE_NOT_FOUND, "公告不存在");
     }
 }
-

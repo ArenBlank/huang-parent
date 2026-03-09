@@ -1,6 +1,8 @@
 package com.huang.web.admin.controller;
 
 import com.huang.common.result.Result;
+import com.huang.web.admin.constant.AdminRoleCode;
+import com.huang.web.admin.custom.annotation.RequireAdminRole;
 import com.huang.web.admin.service.biz.AdminOperationLogBizService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -12,6 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "Admin操作日志", description = "关键写操作审计日志查询")
 @RestController
 @RequestMapping("/admin/operation-log")
+@RequireAdminRole({AdminRoleCode.ADMIN, AdminRoleCode.AUDIT_ADMIN})
 public class OperationLogController {
 
     private final AdminOperationLogBizService adminOperationLogBizService;
@@ -30,4 +33,3 @@ public class OperationLogController {
         return Result.ok(adminOperationLogBizService.list(module, action, success, operatorId, limit));
     }
 }
-

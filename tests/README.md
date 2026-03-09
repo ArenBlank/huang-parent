@@ -9,6 +9,8 @@
 - 默认账号变量：
   - 用户端：`account=member_chen`，`password=$2a$10$demoMemberPasswordHash`
   - 管理端：`adminAccount=admin`，`adminPassword=$2a$10$demoAdminPasswordHash`
+  - 运营管理员：`opsAdminAccount=ops_admin`，`opsAdminPassword=ops_admin_123`
+  - 审核管理员：`auditAdminAccount=audit_admin`，`auditAdminPassword=audit_admin_123`
 
 可选：每次回归前重置测试数据（推荐）
 ```powershell
@@ -17,8 +19,8 @@ powershell -ExecutionPolicy Bypass -File tests/reset-test-data.ps1
 
 ## 2. 导入Postman
 1. 导入集合（二选一）：
-   - `tests/fitness-platform-core.postman_collection.json`（核心链路，31条，日常开发使用）
-   - `tests/fitness-platform-full.postman_collection.json`（扩展回归，75条，发版前使用）
+   - `tests/fitness-platform-core.postman_collection.json`（核心链路，33条，日常开发使用）
+   - `tests/fitness-platform-full.postman_collection.json`（扩展回归，79条，发版前使用）
 2. 导入环境：`tests/local.postman_environment.json`
 3. 选择环境 `fitness-local`
 4. 点击 `Run collection`
@@ -71,6 +73,7 @@ newman run tests/fitness-platform-full.postman_collection.json -e tests/local.po
 34. Admin 用户/角色/用户角色写接口（状态、分配）
 35. App 个人资料读取与更新
 36. Coach Apply 操作日志校验
+37. RBAC 受限管理员无权限访问校验（309）
 
 ## 5. 档期占满说明
 - 集合已内置“无可用档期时自动跳过预约链路（05/06/07）”逻辑，避免出现脚本报错中断。

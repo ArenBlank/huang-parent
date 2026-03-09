@@ -1,6 +1,8 @@
 package com.huang.web.admin.controller;
 
 import com.huang.common.result.Result;
+import com.huang.web.admin.constant.AdminRoleCode;
+import com.huang.web.admin.custom.annotation.RequireAdminRole;
 import com.huang.web.admin.service.biz.AdminPaymentCallbackAuditBizService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -15,6 +17,7 @@ import java.time.LocalDateTime;
 @Tag(name = "Admin Payment Callback Audit", description = "Async callback processing audit query")
 @RestController
 @RequestMapping("/admin/pay/callback")
+@RequireAdminRole({AdminRoleCode.ADMIN, AdminRoleCode.AUDIT_ADMIN})
 public class PaymentCallbackAuditController {
 
     private final AdminPaymentCallbackAuditBizService adminPaymentCallbackAuditBizService;
@@ -34,4 +37,3 @@ public class PaymentCallbackAuditController {
         return Result.ok(adminPaymentCallbackAuditBizService.list(payNo, tradeNo, processResult, startTime, endTime, limit));
     }
 }
-

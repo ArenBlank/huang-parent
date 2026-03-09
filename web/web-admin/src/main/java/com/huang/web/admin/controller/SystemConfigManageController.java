@@ -2,6 +2,8 @@ package com.huang.web.admin.controller;
 
 import com.huang.common.result.Result;
 import com.huang.web.admin.constant.AdminErrorCode;
+import com.huang.web.admin.constant.AdminRoleCode;
+import com.huang.web.admin.custom.annotation.RequireAdminRole;
 import com.huang.web.admin.custom.aop.OperationLog;
 import com.huang.web.admin.dto.config.SystemConfigUpsertDTO;
 import com.huang.web.admin.service.biz.AdminSystemConfigBizService;
@@ -21,6 +23,7 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "Admin系统配置", description = "系统参数配置管理")
 @RestController
 @RequestMapping("/admin/system-config")
+@RequireAdminRole(AdminRoleCode.ADMIN)
 public class SystemConfigManageController {
 
     private final AdminSystemConfigBizService adminSystemConfigBizService;
@@ -59,4 +62,3 @@ public class SystemConfigManageController {
         return ok ? Result.ok("删除成功") : Result.fail(AdminErrorCode.SYSTEM_CONFIG_NOT_FOUND, "配置不存在");
     }
 }
-

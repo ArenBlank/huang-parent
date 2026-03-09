@@ -2,6 +2,8 @@ package com.huang.web.admin.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.huang.common.result.Result;
+import com.huang.web.admin.constant.AdminRoleCode;
+import com.huang.web.admin.custom.annotation.RequireAdminRole;
 import com.huang.model.entity.User;
 import com.huang.model.entity.UserRole;
 import com.huang.web.admin.dto.user.UserRoleAssignDTO;
@@ -18,6 +20,7 @@ import java.util.List;
 @Tag(name = "Admin用户管理", description = "用户查询与状态维护")
 @RestController
 @RequestMapping("/admin/user")
+@RequireAdminRole(AdminRoleCode.ADMIN)
 public class UserController {
 
     private final UserService userService;

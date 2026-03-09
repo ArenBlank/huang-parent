@@ -6,6 +6,7 @@ import com.huang.common.utils.JwtUtil;
 import com.huang.common.utils.PasswordUtil;
 import com.huang.model.entity.User;
 import com.huang.web.admin.dto.auth.AdminLoginDTO;
+import com.huang.web.admin.service.core.AdminRoleCoreService;
 import com.huang.web.admin.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -24,9 +25,11 @@ import java.util.Map;
 public class AdminAuthController {
 
     private final UserService userService;
+    private final AdminRoleCoreService adminRoleCoreService;
 
-    public AdminAuthController(UserService userService) {
+    public AdminAuthController(UserService userService, AdminRoleCoreService adminRoleCoreService) {
         this.userService = userService;
+        this.adminRoleCoreService = adminRoleCoreService;
     }
 
     @Operation(summary = "Admin login")
@@ -51,9 +54,9 @@ public class AdminAuthController {
         Map<String, Object> data = new HashMap<>();
         data.put("userId", user.getId());
         data.put("username", user.getUsername());
+        data.put("roleCodes", adminRoleCoreService.getRoleCodes(user.getId()));
         data.put("accessToken", JwtUtil.generateAdminAccessToken(user.getId(), user.getUsername()));
         data.put("refreshToken", JwtUtil.generateAdminRefreshToken(user.getId(), user.getUsername()));
         return Result.ok(data);
     }
 }
-

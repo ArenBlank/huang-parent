@@ -386,7 +386,9 @@ USE fitness_platform;
 INSERT INTO role (role_name, role_code, status) VALUES
 ('管理员', 'ADMIN', 1),
 ('教练', 'COACH', 1),
-('学员', 'MEMBER', 1);
+('学员', 'MEMBER', 1),
+('运营管理员', 'OPS_ADMIN', 1),
+('审核管理员', 'AUDIT_ADMIN', 1);
 
 INSERT INTO course_category (name, sort, status) VALUES
 ('燃脂', 1, 1),
@@ -402,12 +404,20 @@ INSERT INTO system_config (config_key, config_value, remark) VALUES
 INSERT IGNORE INTO user (id, username, password, nickname, email, phone, gender, birth_date, status, user_type) VALUES
 (1, 'admin', '$2a$10$demoAdminPasswordHash', '平台管理员', 'admin@fitness.local', '13800000001', 1, '1995-01-01', 1, 'admin'),
 (2, 'coach_lee', '$2a$10$demoCoachPasswordHash', '李教练', 'coach.lee@fitness.local', '13800000002', 1, '1992-05-12', 1, 'coach'),
-(3, 'member_chen', '$2a$10$demoMemberPasswordHash', '陈同学', 'member.chen@fitness.local', '13800000003', 2, '2002-09-09', 1, 'member');
+(3, 'member_chen', '$2a$10$demoMemberPasswordHash', '陈同学', 'member.chen@fitness.local', '13800000003', 2, '2002-09-09', 1, 'member'),
+(11, 'ops_admin', 'ops_admin_123', '运营管理员', 'ops.admin@fitness.local', '13800000011', 1, '1994-06-01', 1, 'admin'),
+(12, 'audit_admin', 'audit_admin_123', '审核管理员', 'audit.admin@fitness.local', '13800000012', 2, '1993-08-18', 1, 'admin');
 
 INSERT IGNORE INTO user_role (id, user_id, role_id) VALUES
 (1, 1, 1),
 (2, 2, 2),
 (3, 3, 3);
+
+INSERT IGNORE INTO user_role (user_id, role_id)
+SELECT 11, id FROM role WHERE role_code = 'OPS_ADMIN';
+
+INSERT IGNORE INTO user_role (user_id, role_id)
+SELECT 12, id FROM role WHERE role_code = 'AUDIT_ADMIN';
 
 INSERT IGNORE INTO coach_profile (id, user_id, bio, expertise, years, price, rating, cert_status, status) VALUES
 (1, 2, '国家职业健身教练，擅长减脂增肌与动作矫正', '减脂,增肌,力量训练', 5, 199.00, 4.80, 1, 1);

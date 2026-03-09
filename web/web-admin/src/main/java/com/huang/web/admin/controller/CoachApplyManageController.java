@@ -2,6 +2,8 @@ package com.huang.web.admin.controller;
 
 import com.huang.common.result.Result;
 import com.huang.web.admin.constant.AdminErrorCode;
+import com.huang.web.admin.constant.AdminRoleCode;
+import com.huang.web.admin.custom.annotation.RequireAdminRole;
 import com.huang.web.admin.custom.aop.OperationLog;
 import com.huang.web.admin.dto.coach.CoachApplyAuditDTO;
 import com.huang.web.admin.service.biz.AdminCoachApplyBizService;
@@ -19,6 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "Admin教练申请")
 @RestController
 @RequestMapping("/admin/coach-apply")
+@RequireAdminRole({AdminRoleCode.ADMIN, AdminRoleCode.AUDIT_ADMIN})
 public class CoachApplyManageController {
 
     private final AdminCoachApplyBizService adminCoachApplyBizService;
