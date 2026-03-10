@@ -9,6 +9,7 @@ import com.huang.web.admin.constant.AdminRoleCode;
 import com.huang.web.admin.custom.annotation.RequireAdminPermission;
 import com.huang.web.admin.custom.annotation.RequireAdminRole;
 import com.huang.web.admin.custom.config.AdminPermissionProperties;
+import com.huang.web.admin.service.biz.AdminOperationLogBizService;
 import com.huang.web.admin.service.core.AdminRoleCoreService;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.http.HttpServletRequest;
@@ -27,11 +28,14 @@ public class AuthenticationInterceptor implements HandlerInterceptor {
 
     private final AdminRoleCoreService adminRoleCoreService;
     private final AdminPermissionProperties adminPermissionProperties;
+    private final AdminOperationLogBizService adminOperationLogBizService;
 
     public AuthenticationInterceptor(AdminRoleCoreService adminRoleCoreService,
-                                     AdminPermissionProperties adminPermissionProperties) {
+                                     AdminPermissionProperties adminPermissionProperties,
+                                     AdminOperationLogBizService adminOperationLogBizService) {
         this.adminRoleCoreService = adminRoleCoreService;
         this.adminPermissionProperties = adminPermissionProperties;
+        this.adminOperationLogBizService = adminOperationLogBizService;
     }
 
     @Override
@@ -71,6 +75,7 @@ public class AuthenticationInterceptor implements HandlerInterceptor {
             requireAdminRole = handlerMethod.getBeanType().getAnnotation(RequireAdminRole.class);
         }
         if (requireAdminRole != null && !loginUser.hasAnyRole(Arrays.asList(requireAdminRole.value()))) {
+            recordAccessDenied("role_deny", request, "required=" + Arrays.toString(requireAdminRole.value()));
             throw new HuangException(ResultCodeEnum.ADMIN_ACCESS_FORBIDDEN);
         }
 
@@ -79,6 +84,7 @@ public class AuthenticationInterceptor implements HandlerInterceptor {
             requireAdminPermission = handlerMethod.getBeanType().getAnnotation(RequireAdminPermission.class);
         }
         if (requireAdminPermission != null && !hasPermission(roleCodes, requireAdminPermission.value())) {
+            recordAccessDenied("perm_deny", request, "required=" + Arrays.toString(requireAdminPermission.value()));
             throw new HuangException(ResultCodeEnum.ADMIN_ACCESS_FORBIDDEN);
         }
 
@@ -113,5 +119,12 @@ public class AuthenticationInterceptor implements HandlerInterceptor {
             }
         }
         return false;
+    }
+
+    private void recordAccessDenied(String action, HttpServletRequest request, String detail) {
+        String uri = request.getRequestURI();
+        String method = request.getMethod();
+        String detailText = "method=" + method + ", uri=" + uri + (detail == null ? "" : (", " + detail));
+        adminOperationLogBizService.record("authz", action, detailText, false);
     }
 }

@@ -7,6 +7,7 @@ import com.huang.web.admin.dto.course.CourseScheduleCreateDTO;
 import com.huang.web.admin.dto.course.CourseUpsertDTO;
 import com.huang.web.admin.mapper.CourseMapper;
 import com.huang.web.admin.mapper.CourseScheduleMapper;
+import com.huang.web.admin.service.core.AdminPermissionScopeService;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,11 +18,14 @@ public class AdminCourseOpsBizService {
 
     private final CourseMapper courseMapper;
     private final CourseScheduleMapper courseScheduleMapper;
+    private final AdminPermissionScopeService adminPermissionScopeService;
 
     public AdminCourseOpsBizService(CourseMapper courseMapper,
-                                    CourseScheduleMapper courseScheduleMapper) {
+                                    CourseScheduleMapper courseScheduleMapper,
+                                    AdminPermissionScopeService adminPermissionScopeService) {
         this.courseMapper = courseMapper;
         this.courseScheduleMapper = courseScheduleMapper;
+        this.adminPermissionScopeService = adminPermissionScopeService;
     }
 
     public List<Course> listCourses(Integer status, Long categoryId) {
@@ -37,6 +41,7 @@ public class AdminCourseOpsBizService {
 
     @Transactional(rollbackFor = Exception.class)
     public Long createCourse(CourseUpsertDTO dto) {
+        adminPermissionScopeService.assertCourseCategoryAccess(dto.getCategoryId(), "course:create", null);
         Course course = new Course();
         fillCourse(course, dto);
         courseMapper.insert(course);
@@ -49,6 +54,8 @@ public class AdminCourseOpsBizService {
         if (exists == null) {
             return false;
         }
+        Long categoryId = dto.getCategoryId() == null ? exists.getCategoryId() : dto.getCategoryId();
+        adminPermissionScopeService.assertCourseCategoryAccess(categoryId, "course:update", "courseId=" + id);
         fillCourse(exists, dto);
         return courseMapper.updateById(exists) > 0;
     }
@@ -59,6 +66,7 @@ public class AdminCourseOpsBizService {
         if (exists == null) {
             return false;
         }
+        adminPermissionScopeService.assertCourseCategoryAccess(exists.getCategoryId(), "course:publish", "courseId=" + id);
         exists.setStatus(status);
         return courseMapper.updateById(exists) > 0;
     }
@@ -81,6 +89,7 @@ public class AdminCourseOpsBizService {
         if (course == null) {
             return null;
         }
+        adminPermissionScopeService.assertCourseCategoryAccess(course.getCategoryId(), "course:schedule", "courseId=" + course.getId());
         CourseSchedule schedule = new CourseSchedule();
         schedule.setCourseId(dto.getCourseId());
         schedule.setCoachId(dto.getCoachId());
@@ -98,6 +107,10 @@ public class AdminCourseOpsBizService {
         CourseSchedule schedule = courseScheduleMapper.selectById(id);
         if (schedule == null) {
             return false;
+        }
+        Course course = courseMapper.selectById(schedule.getCourseId());
+        if (course != null) {
+            adminPermissionScopeService.assertCourseCategoryAccess(course.getCategoryId(), "course:schedule", "scheduleId=" + id);
         }
         schedule.setStatus(status);
         return courseScheduleMapper.updateById(schedule) > 0;

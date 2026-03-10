@@ -197,7 +197,41 @@
       ]
     },
     {
-      "name": "01E Audit Admin Login",
+      "name": "01E Ops Admin Forbidden Course Create (Category Scope)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{opsAdminAccessToken}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"categoryId\": 2,\n  \"title\": \"RBAC Forbidden Course {{currentDate}}\",\n  \"summary\": \"should be blocked by category scope\",\n  \"coverUrl\": \"/minio/course/cover/rbac.jpg\",\n  \"level\": \"beginner\",\n  \"durationMin\": 30,\n  \"price\": 9.90,\n  \"status\": 0\n}"
+        },
+        "url": "{{adminBaseUrl}}/admin/course"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+              "const res = pm.response.json();",
+              "pm.test('ops admin forbidden on course create (category scope)', function () { pm.expect(res.code).to.eql(309); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "01F Audit Admin Login",
       "request": {
         "method": "POST",
         "header": [
@@ -229,7 +263,7 @@
       ]
     },
     {
-      "name": "01F Audit Admin Refund Audit List (Allowed)",
+      "name": "01G Audit Admin Refund Audit List (Allowed)",
       "request": {
         "method": "GET",
         "header": [

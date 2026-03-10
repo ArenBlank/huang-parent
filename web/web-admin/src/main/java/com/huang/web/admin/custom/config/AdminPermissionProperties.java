@@ -16,6 +16,8 @@ public class AdminPermissionProperties {
 
     private Map<String, Set<String>> roleMap = new HashMap<>();
 
+    private Map<String, Set<Long>> courseCategoryScope = new HashMap<>();
+
     public boolean isAdminAll() {
         return adminAll;
     }
@@ -32,7 +34,19 @@ public class AdminPermissionProperties {
         this.roleMap = roleMap == null ? new HashMap<>() : roleMap;
     }
 
+    public Map<String, Set<Long>> getCourseCategoryScope() {
+        return courseCategoryScope;
+    }
+
+    public void setCourseCategoryScope(Map<String, Set<Long>> courseCategoryScope) {
+        this.courseCategoryScope = courseCategoryScope == null ? new HashMap<>() : courseCategoryScope;
+    }
+
     public Set<String> permissionsFor(String roleCode) {
         return roleMap.getOrDefault(roleCode, new HashSet<>());
+    }
+
+    public Set<Long> courseCategoriesFor(String roleCode) {
+        return courseCategoryScope.getOrDefault(roleCode, new HashSet<>());
     }
 }

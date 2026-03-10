@@ -64,6 +64,9 @@ admin:
         - pay:callback:audit
         - coach:apply:audit
         - operation:log:read
+    course-category-scope:
+      OPS_ADMIN:
+        - 1
 
 logging:
   pattern:

@@ -9,6 +9,7 @@ on:
       - main
       - master
       - V2
+      - V3
 
 jobs:
   api-regression:
@@ -52,6 +53,10 @@ jobs:
         run: |
           mysql -h 127.0.0.1 -P 3306 -uroot -proot -e "CREATE DATABASE IF NOT EXISTS fitness_platform DEFAULT CHARSET utf8mb4;"
           mysql -h 127.0.0.1 -P 3306 -uroot -proot fitness_platform < fitness_platform.sql
+
+      - name: Reset test data
+        run: |
+          mysql -h 127.0.0.1 -P 3306 -uroot -proot fitness_platform < tests/reset_test_data.sql
 
       - name: Start MinIO
         run: |
@@ -109,6 +114,11 @@ jobs:
             --working-dir "$GITHUB_WORKSPACE" \
             --env-var "videoFilePath=tests/assets/demo.mp4" \
             --reporters cli
+
+      - name: Cleanup test data
+        if: always()
+        run: |
+          mysql -h 127.0.0.1 -P 3306 -uroot -proot fitness_platform < tests/reset_test_data.sql || true
 
       - name: Dump logs on failure
         if: failure()
