@@ -1359,7 +1359,76 @@
             "exec": [
               "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
               "const res = pm.response.json();",
-              "pm.test('biz code 200', function () { pm.expect(res.code).to.eql(200); });"
+              "pm.test('biz code 200', function () { pm.expect(res.code).to.eql(200); });",
+              "const roles = Array.isArray(res.data) ? res.data : [];",
+              "const opsRole = roles.find(r => r && r.roleCode === 'OPS_ADMIN');",
+              "if (opsRole && opsRole.id) { pm.collectionVariables.set('opsRoleId', opsRole.id); }",
+              "pm.test('opsRoleId exists', function () { pm.expect(pm.collectionVariables.get('opsRoleId')).to.be.ok; });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "33A Admin Update Ops Course Category Scope",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{adminAccessToken}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{adminBaseUrl}}/admin/role/{{opsRoleId}}/course-category-scope",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"categoryIds\": [1]\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+              "const res = pm.response.json();",
+              "pm.test('update scope success', function () { pm.expect(res.code).to.eql(200); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "33B Admin Get Ops Course Category Scope",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{adminAccessToken}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{adminBaseUrl}}/admin/role/{{opsRoleId}}/course-category-scope"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+              "const res = pm.response.json();",
+              "pm.test('get scope success', function () { pm.expect(res.code).to.eql(200); });",
+              "pm.test('scope contains category 1', function () { pm.expect(Array.isArray(res.data)).to.eql(true); pm.expect(res.data).to.include(1); });"
             ]
           }
         }

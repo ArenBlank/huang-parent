@@ -3,10 +3,13 @@ package com.huang.web.admin.controller;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.huang.common.result.Result;
 import com.huang.web.admin.constant.AdminRoleCode;
+import com.huang.web.admin.custom.aop.OperationLog;
 import com.huang.web.admin.custom.annotation.RequireAdminRole;
+import com.huang.web.admin.dto.role.RoleCourseCategoryScopeUpdateDTO;
 import com.huang.model.entity.Role;
 import com.huang.web.admin.dto.role.RoleStatusUpdateDTO;
 import com.huang.web.admin.service.RoleService;
+import com.huang.web.admin.service.biz.AdminRoleScopeBizService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -21,9 +24,12 @@ import java.util.List;
 public class RoleController {
 
     private final RoleService roleService;
+    private final AdminRoleScopeBizService adminRoleScopeBizService;
 
-    public RoleController(RoleService roleService) {
+    public RoleController(RoleService roleService,
+                          AdminRoleScopeBizService adminRoleScopeBizService) {
         this.roleService = roleService;
+        this.adminRoleScopeBizService = adminRoleScopeBizService;
     }
 
     @Operation(summary = "角色列表")
@@ -61,5 +67,24 @@ public class RoleController {
         return Result.ok(roleService.list(new LambdaQueryWrapper<Role>()
                 .eq(Role::getStatus, 1)
                 .orderByAsc(Role::getId)));
+    }
+
+    @Operation(summary = "瑙掕壊璇剧▼鍒嗙被鑼冨洿鏌ヨ")
+    @GetMapping("/{roleId}/course-category-scope")
+    public Result<List<Long>> courseCategoryScope(@PathVariable Long roleId) {
+        Role role = roleService.getById(roleId);
+        if (role == null) {
+            return Result.fail("瑙掕壊涓嶅瓨鍦?");
+        }
+        return Result.ok(adminRoleScopeBizService.listCourseCategoryScope(roleId));
+    }
+
+    @Operation(summary = "鏇存柊瑙掕壊璇剧▼鍒嗙被鑼冨洿")
+    @OperationLog(module = "role_scope", action = "update", detail = "admin update role course category scope")
+    @PutMapping("/{roleId}/course-category-scope")
+    public Result<String> updateCourseCategoryScope(@PathVariable Long roleId,
+                                                    @Valid @RequestBody RoleCourseCategoryScopeUpdateDTO dto) {
+        boolean ok = adminRoleScopeBizService.updateCourseCategoryScope(roleId, dto.getCategoryIds());
+        return ok ? Result.ok("鏇存柊鎴愬姛") : Result.fail("瑙掕壊涓嶅瓨鍦?");
     }
 }
