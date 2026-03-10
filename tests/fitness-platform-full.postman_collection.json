@@ -218,7 +218,41 @@
       ]
     },
     {
-      "name": "01F Audit Admin Forbidden Course Create",
+      "name": "01F Ops Admin Allowed Course Create (Category Scope)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{opsAdminAccessToken}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"categoryId\": 1,\n  \"title\": \"RBAC Allowed Course {{currentDate}}\",\n  \"summary\": \"should be allowed by category scope\",\n  \"coverUrl\": \"/minio/course/cover/rbac-ok.jpg\",\n  \"level\": \"beginner\",\n  \"durationMin\": 30,\n  \"price\": 9.90,\n  \"status\": 0\n}"
+        },
+        "url": "{{adminBaseUrl}}/admin/course"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+              "const res = pm.response.json();",
+              "pm.test('ops admin allowed course create', function () { pm.expect(res.code).to.eql(200); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "01G Audit Admin Forbidden Course Create",
       "request": {
         "method": "POST",
         "header": [
@@ -1456,6 +1490,40 @@
               "const res = pm.response.json();",
               "pm.test('course category list success', function () { pm.expect(res.code).to.eql(200); });",
               "pm.test('has course categories', function () { pm.expect(Array.isArray(res.data)).to.eql(true); pm.expect(res.data.length).to.be.greaterThan(0); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "33D Admin Batch Update Role Course Category Scope",
+      "request": {
+        "method": "PUT",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{adminAccessToken}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{adminBaseUrl}}/admin/role/course-category-scope/batch",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"items\": [\n    {\n      \"roleId\": {{opsRoleId}},\n      \"categoryIds\": [1]\n    }\n  ]\n}"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+              "const res = pm.response.json();",
+              "pm.test('batch update scope success', function () { pm.expect(res.code).to.eql(200); });"
             ]
           }
         }

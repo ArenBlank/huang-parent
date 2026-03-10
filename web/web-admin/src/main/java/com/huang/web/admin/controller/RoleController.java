@@ -5,6 +5,7 @@ import com.huang.common.result.Result;
 import com.huang.web.admin.constant.AdminRoleCode;
 import com.huang.web.admin.custom.aop.OperationLog;
 import com.huang.web.admin.custom.annotation.RequireAdminRole;
+import com.huang.web.admin.dto.role.RoleCourseCategoryScopeBatchUpdateDTO;
 import com.huang.web.admin.dto.role.RoleCourseCategoryScopeUpdateDTO;
 import com.huang.model.entity.Role;
 import com.huang.web.admin.dto.role.RoleStatusUpdateDTO;
@@ -85,6 +86,14 @@ public class RoleController {
     public Result<String> updateCourseCategoryScope(@PathVariable Long roleId,
                                                     @Valid @RequestBody RoleCourseCategoryScopeUpdateDTO dto) {
         boolean ok = adminRoleScopeBizService.updateCourseCategoryScope(roleId, dto.getCategoryIds());
+        return ok ? Result.ok("鏇存柊鎴愬姛") : Result.fail("瑙掕壊涓嶅瓨鍦?");
+    }
+
+    @Operation(summary = "鎵归噺鏇存柊瑙掕壊璇剧▼鍒嗙被鑼冨洿")
+    @OperationLog(module = "role_scope", action = "batch_update", detail = "admin batch update role course category scope")
+    @PutMapping("/course-category-scope/batch")
+    public Result<String> updateCourseCategoryScopeBatch(@Valid @RequestBody RoleCourseCategoryScopeBatchUpdateDTO dto) {
+        boolean ok = adminRoleScopeBizService.updateCourseCategoryScopeBatch(dto.getItems());
         return ok ? Result.ok("鏇存柊鎴愬姛") : Result.fail("瑙掕壊涓嶅瓨鍦?");
     }
 }

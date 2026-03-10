@@ -3,6 +3,7 @@ package com.huang.web.admin.service.biz;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.huang.model.entity.Role;
 import com.huang.model.entity.RoleCourseCategoryScope;
+import com.huang.web.admin.dto.role.RoleCourseCategoryScopeItemDTO;
 import com.huang.web.admin.mapper.RoleCourseCategoryScopeMapper;
 import com.huang.web.admin.service.RoleService;
 import org.springframework.stereotype.Service;
@@ -53,6 +54,26 @@ public class AdminRoleScopeBizService {
             scope.setRoleId(roleId);
             scope.setCategoryId(categoryId);
             roleCourseCategoryScopeMapper.insert(scope);
+        }
+        return true;
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public boolean updateCourseCategoryScopeBatch(List<RoleCourseCategoryScopeItemDTO> items) {
+        if (items == null || items.isEmpty()) {
+            return true;
+        }
+        for (RoleCourseCategoryScopeItemDTO item : items) {
+            if (item == null || item.getRoleId() == null) {
+                return false;
+            }
+            Role role = roleService.getById(item.getRoleId());
+            if (role == null) {
+                return false;
+            }
+        }
+        for (RoleCourseCategoryScopeItemDTO item : items) {
+            updateCourseCategoryScope(item.getRoleId(), item.getCategoryIds());
         }
         return true;
     }
