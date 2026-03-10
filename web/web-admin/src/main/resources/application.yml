@@ -43,5 +43,9 @@ minio:
   secret-key: rootroot
   bucket-name: lease
 
+logging:
+  pattern:
+    level: "%5p [traceId:%X{traceId}]"
+
 springdoc:
   default-flat-param-object: true
