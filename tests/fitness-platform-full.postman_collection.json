@@ -1295,7 +1295,7 @@
                                      "header":  [
                                                     {
                                                         "key":  "Authorization",
-                                                        "value":  "Bearer {{opsAdminAccessToken}}"
+                                                        "value":  "Bearer {{adminAccessToken}}"
                                                     },
                                                     {
                                                         "key":  "Content-Type",
