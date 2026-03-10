@@ -35,3 +35,7 @@ INSERT IGNORE INTO user_role (user_id, role_id) SELECT 3, id FROM role WHERE rol
 INSERT IGNORE INTO user_role (user_id, role_id) SELECT 4, id FROM role WHERE role_code = 'MEMBER';
 INSERT IGNORE INTO user_role (user_id, role_id) SELECT 11, id FROM role WHERE role_code = 'OPS_ADMIN';
 INSERT IGNORE INTO user_role (user_id, role_id) SELECT 12, id FROM role WHERE role_code = 'AUDIT_ADMIN';
+
+-- ensure ops admin course category scope exists (category 1)
+INSERT IGNORE INTO role_course_category_scope (role_id, category_id)
+SELECT id, 1 FROM role WHERE role_code = 'OPS_ADMIN';

@@ -34,6 +34,18 @@ CREATE TABLE IF NOT EXISTS role (
   UNIQUE KEY uk_role_code (role_code)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE IF NOT EXISTS role_course_category_scope (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  role_id BIGINT NOT NULL,
+  category_id BIGINT NOT NULL,
+  create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  is_deleted TINYINT NOT NULL DEFAULT 0,
+  UNIQUE KEY uk_role_category_scope (role_id, category_id),
+  KEY idx_role_category_role (role_id),
+  KEY idx_role_category_category (category_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 CREATE TABLE IF NOT EXISTS user_role (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
   user_id BIGINT NOT NULL,
@@ -389,6 +401,9 @@ INSERT INTO role (role_name, role_code, status) VALUES
 ('学员', 'MEMBER', 1),
 ('运营管理员', 'OPS_ADMIN', 1),
 ('审核管理员', 'AUDIT_ADMIN', 1);
+
+INSERT IGNORE INTO role_course_category_scope (role_id, category_id)
+SELECT id, 1 FROM role WHERE role_code = 'OPS_ADMIN';
 
 INSERT INTO course_category (name, sort, status) VALUES
 ('燃脂', 1, 1),
