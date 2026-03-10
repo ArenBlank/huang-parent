@@ -1435,6 +1435,33 @@
       ]
     },
     {
+      "name": "33C Admin Course Category List",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{adminAccessToken}}"
+          }
+        ],
+        "url": "{{adminBaseUrl}}/admin/course-category/list?status=1"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+              "const res = pm.response.json();",
+              "pm.test('course category list success', function () { pm.expect(res.code).to.eql(200); });",
+              "pm.test('has course categories', function () { pm.expect(Array.isArray(res.data)).to.eql(true); pm.expect(res.data.length).to.be.greaterThan(0); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
       "name": "34 Admin Role Detail",
       "request": {
         "method": "GET",

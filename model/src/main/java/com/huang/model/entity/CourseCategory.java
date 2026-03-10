@@ -1,4 +1,4 @@
-package com.huang.model.entity;
+﻿package com.huang.model.entity;
 
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
@@ -6,30 +6,24 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.Data;
 
 /**
- * 课程分类表
- * @author system
- * @since 2026-02-25
+ * Course category entity (aligns with course_category table)
  */
-@Schema(description = "课程分类表")
+@Schema(description = "Course category")
 @TableName(value = "course_category")
 @Data
 public class CourseCategory extends BaseEntity {
 
     private static final long serialVersionUID = 1L;
 
-    @Schema(description = "分类名称")
-    @TableField(value = "category_name")
-    private String categoryName;
+    @Schema(description = "Category name")
+    @TableField(value = "name")
+    private String name;
 
-    @Schema(description = "父分类ID")
-    @TableField(value = "parent_id")
-    private Long parentId;
+    @Schema(description = "Sort order")
+    @TableField(value = "sort")
+    private Integer sort;
 
-    @Schema(description = "排序")
-    @TableField(value = "sort_order")
-    private Integer sortOrder;
-
-    @Schema(description = "状态：0-禁用，1-正常")
+    @Schema(description = "Status: 0-disabled, 1-enabled")
     @TableField(value = "status")
     private Integer status;
 }
