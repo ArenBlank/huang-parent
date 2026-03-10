@@ -39,5 +39,10 @@ minio:
   secret-key: rootroot
   bucket-name: lease
 
+payment:
+  sign:
+    mode: mock
+    secret: mock-secret
+
 springdoc:
   default-flat-param-object: true
