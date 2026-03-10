@@ -3,6 +3,7 @@ package com.huang.web.admin.controller;
 import com.huang.common.result.Result;
 import com.huang.web.admin.constant.AdminErrorCode;
 import com.huang.web.admin.constant.AdminRoleCode;
+import com.huang.web.admin.custom.annotation.RequireAdminPermission;
 import com.huang.web.admin.custom.annotation.RequireAdminRole;
 import com.huang.web.admin.custom.aop.OperationLog;
 import com.huang.web.admin.dto.course.CourseScheduleCreateDTO;
@@ -41,6 +42,7 @@ public class CourseManageController {
 
     @Operation(summary = "新增课程")
     @PostMapping
+    @RequireAdminPermission({"course:create"})
     @OperationLog(module = "course", action = "create", detail = "admin create course")
     public Result<?> create(@Valid @RequestBody CourseUpsertDTO dto) {
         return Result.ok(adminCourseOpsBizService.createCourse(dto));
@@ -48,6 +50,7 @@ public class CourseManageController {
 
     @Operation(summary = "更新课程")
     @PutMapping("/{id}")
+    @RequireAdminPermission({"course:update"})
     @OperationLog(module = "course", action = "update", detail = "admin update course")
     public Result<?> update(@PathVariable Long id, @Valid @RequestBody CourseUpsertDTO dto) {
         boolean ok = adminCourseOpsBizService.updateCourse(id, dto);
@@ -56,6 +59,7 @@ public class CourseManageController {
 
     @Operation(summary = "更新课程状态")
     @PutMapping("/{id}/status")
+    @RequireAdminPermission({"course:publish"})
     @OperationLog(module = "course", action = "publish", detail = "admin update course status")
     public Result<?> updateStatus(@PathVariable Long id, @RequestParam Integer status) {
         if (status == null || (status != 0 && status != 1)) {
@@ -74,6 +78,7 @@ public class CourseManageController {
 
     @Operation(summary = "新增排期")
     @PostMapping("/schedule")
+    @RequireAdminPermission({"course:schedule"})
     @OperationLog(module = "course_schedule", action = "create", detail = "admin create course schedule")
     public Result<?> createSchedule(@Valid @RequestBody CourseScheduleCreateDTO dto) {
         Long id = adminCourseOpsBizService.createSchedule(dto);
@@ -82,6 +87,7 @@ public class CourseManageController {
 
     @Operation(summary = "更新排期状态")
     @PutMapping("/schedule/{id}/status")
+    @RequireAdminPermission({"course:schedule"})
     @OperationLog(module = "course_schedule", action = "update_status", detail = "admin update course schedule status")
     public Result<?> updateScheduleStatus(@PathVariable Long id, @RequestParam Integer status) {
         if (status == null || (status != 0 && status != 1)) {

@@ -2,6 +2,7 @@ package com.huang.web.admin.controller;
 
 import com.huang.common.result.Result;
 import com.huang.web.admin.constant.AdminRoleCode;
+import com.huang.web.admin.custom.annotation.RequireAdminPermission;
 import com.huang.web.admin.custom.annotation.RequireAdminRole;
 import com.huang.web.admin.service.biz.AdminRefundAuditBizService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -28,6 +29,7 @@ public class RefundAuditController {
 
     @Operation(summary = "Refund audit list (supports status/time/user/order filters)")
     @GetMapping("/list")
+    @RequireAdminPermission({"refund:audit"})
     public Result<?> list(@RequestParam(required = false) String refundStatus,
                           @RequestParam(required = false) Long userId,
                           @RequestParam(required = false) String orderNo,

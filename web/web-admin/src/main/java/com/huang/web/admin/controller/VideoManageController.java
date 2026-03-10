@@ -3,6 +3,7 @@ package com.huang.web.admin.controller;
 import com.huang.common.result.Result;
 import com.huang.web.admin.constant.AdminErrorCode;
 import com.huang.web.admin.constant.AdminRoleCode;
+import com.huang.web.admin.custom.annotation.RequireAdminPermission;
 import com.huang.web.admin.custom.annotation.RequireAdminRole;
 import com.huang.web.admin.custom.aop.OperationLog;
 import com.huang.web.admin.dto.video.PlanItemVideoBindDTO;
@@ -42,6 +43,7 @@ public class VideoManageController {
 
     @Operation(summary = "新增视频素材")
     @PostMapping
+    @RequireAdminPermission({"video:asset"})
     @OperationLog(module = "video", action = "create", detail = "admin create video asset")
     public Result<?> create(@Valid @RequestBody VideoAssetUpsertDTO dto) {
         return Result.ok(videoContentBizService.create(dto));
@@ -49,6 +51,7 @@ public class VideoManageController {
 
     @Operation(summary = "上传视频到MinIO")
     @PostMapping("/upload")
+    @RequireAdminPermission({"video:upload"})
     @OperationLog(module = "video", action = "upload", detail = "admin upload video")
     public Result<?> upload(@RequestParam("file") MultipartFile file) {
         return Result.ok(videoContentBizService.uploadVideo(file));
@@ -56,6 +59,7 @@ public class VideoManageController {
 
     @Operation(summary = "更新视频素材")
     @PutMapping("/{id}")
+    @RequireAdminPermission({"video:asset"})
     @OperationLog(module = "video", action = "update", detail = "admin update video asset")
     public Result<?> update(@PathVariable Long id, @Valid @RequestBody VideoAssetUpsertDTO dto) {
         boolean ok = videoContentBizService.update(id, dto);
@@ -64,6 +68,7 @@ public class VideoManageController {
 
     @Operation(summary = "更新视频素材状态")
     @PutMapping("/{id}/status")
+    @RequireAdminPermission({"video:status"})
     @OperationLog(module = "video", action = "update_status", detail = "admin update video status")
     public Result<?> updateStatus(@PathVariable Long id, @RequestParam Integer status) {
         boolean ok = videoContentBizService.updateStatus(id, status);
@@ -72,6 +77,7 @@ public class VideoManageController {
 
     @Operation(summary = "训练计划项绑定视频")
     @PutMapping("/bind-plan-item")
+    @RequireAdminPermission({"video:bind"})
     @OperationLog(module = "video", action = "bind_plan_item", detail = "admin bind video to plan item")
     public Result<?> bindPlanItem(@Valid @RequestBody PlanItemVideoBindDTO dto) {
         boolean ok = videoContentBizService.bindToPlanItem(dto.getPlanItemId(), dto.getVideoId());
@@ -80,6 +86,7 @@ public class VideoManageController {
 
     @Operation(summary = "训练计划项解绑视频")
     @PutMapping("/unbind-plan-item/{planItemId}")
+    @RequireAdminPermission({"video:bind"})
     @OperationLog(module = "video", action = "unbind_plan_item", detail = "admin unbind video from plan item")
     public Result<?> unbindPlanItem(@PathVariable Long planItemId) {
         boolean ok = videoContentBizService.unbindFromPlanItem(planItemId);

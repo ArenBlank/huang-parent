@@ -3,6 +3,7 @@ package com.huang.web.admin.controller;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.huang.common.result.Result;
 import com.huang.web.admin.constant.AdminRoleCode;
+import com.huang.web.admin.custom.annotation.RequireAdminPermission;
 import com.huang.web.admin.custom.annotation.RequireAdminRole;
 import com.huang.model.entity.User;
 import com.huang.model.entity.UserRole;
@@ -57,6 +58,7 @@ public class UserController {
 
     @Operation(summary = "更新用户状态")
     @PutMapping("/status")
+    @RequireAdminPermission({"user:status"})
     public Result<String> updateStatus(@Valid @RequestBody UserStatusUpdateDTO dto) {
         User user = userService.getById(dto.getUserId());
         if (user == null) {
@@ -68,6 +70,7 @@ public class UserController {
 
     @Operation(summary = "给用户分配角色")
     @PostMapping("/assign-roles")
+    @RequireAdminPermission({"user:role"})
     public Result<String> assignRoles(@Valid @RequestBody UserRoleAssignDTO dto) {
         if (userService.getById(dto.getUserId()) == null) {
             return Result.fail("用户不存在");

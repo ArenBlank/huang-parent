@@ -3,6 +3,7 @@ package com.huang.web.admin.controller;
 import com.huang.common.result.Result;
 import com.huang.web.admin.constant.AdminErrorCode;
 import com.huang.web.admin.constant.AdminRoleCode;
+import com.huang.web.admin.custom.annotation.RequireAdminPermission;
 import com.huang.web.admin.custom.annotation.RequireAdminRole;
 import com.huang.web.admin.custom.aop.OperationLog;
 import com.huang.web.admin.dto.notice.NoticeUpsertDTO;
@@ -40,6 +41,7 @@ public class NoticeManageController {
 
     @Operation(summary = "新增公告")
     @PostMapping
+    @RequireAdminPermission({"notice:manage"})
     @OperationLog(module = "notice", action = "create", detail = "admin create notice")
     public Result<?> create(@Valid @RequestBody NoticeUpsertDTO dto) {
         return Result.ok(adminNoticeBizService.create(dto));
@@ -47,6 +49,7 @@ public class NoticeManageController {
 
     @Operation(summary = "更新公告")
     @PutMapping("/{id}")
+    @RequireAdminPermission({"notice:manage"})
     @OperationLog(module = "notice", action = "update", detail = "admin update notice")
     public Result<?> update(@PathVariable Long id, @Valid @RequestBody NoticeUpsertDTO dto) {
         boolean ok = adminNoticeBizService.update(id, dto);
@@ -55,6 +58,7 @@ public class NoticeManageController {
 
     @Operation(summary = "更新公告状态")
     @PutMapping("/{id}/status")
+    @RequireAdminPermission({"notice:manage"})
     @OperationLog(module = "notice", action = "update_status", detail = "admin update notice status")
     public Result<?> updateStatus(@PathVariable Long id, @RequestParam Integer status) {
         if (status == null || (status != 0 && status != 1)) {
@@ -66,6 +70,7 @@ public class NoticeManageController {
 
     @Operation(summary = "删除公告")
     @DeleteMapping("/{id}")
+    @RequireAdminPermission({"notice:manage"})
     @OperationLog(module = "notice", action = "delete", detail = "admin delete notice")
     public Result<?> delete(@PathVariable Long id) {
         boolean ok = adminNoticeBizService.delete(id);

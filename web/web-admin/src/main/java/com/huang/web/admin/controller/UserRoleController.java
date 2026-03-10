@@ -3,6 +3,7 @@ package com.huang.web.admin.controller;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.huang.common.result.Result;
 import com.huang.web.admin.constant.AdminRoleCode;
+import com.huang.web.admin.custom.annotation.RequireAdminPermission;
 import com.huang.web.admin.custom.annotation.RequireAdminRole;
 import com.huang.model.entity.UserRole;
 import com.huang.web.admin.dto.userrole.BatchRoleAssignDTO;
@@ -46,6 +47,7 @@ public class UserRoleController {
 
     @Operation(summary = "批量分配角色")
     @PostMapping("/batch-assign")
+    @RequireAdminPermission({"user:role"})
     public Result<String> batchAssign(@Valid @RequestBody BatchRoleAssignDTO dto) {
         String operation = dto.getOperation() == null ? "replace" : dto.getOperation().trim().toLowerCase();
         for (Long userId : dto.getUserIds()) {

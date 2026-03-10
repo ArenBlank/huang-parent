@@ -3,6 +3,7 @@ package com.huang.web.admin.controller;
 import com.huang.common.result.Result;
 import com.huang.web.admin.constant.AdminErrorCode;
 import com.huang.web.admin.constant.AdminRoleCode;
+import com.huang.web.admin.custom.annotation.RequireAdminPermission;
 import com.huang.web.admin.custom.annotation.RequireAdminRole;
 import com.huang.web.admin.custom.aop.OperationLog;
 import com.huang.web.admin.dto.config.SystemConfigUpsertDTO;
@@ -40,6 +41,7 @@ public class SystemConfigManageController {
 
     @Operation(summary = "新增配置")
     @PostMapping
+    @RequireAdminPermission({"system:config"})
     @OperationLog(module = "system_config", action = "create", detail = "admin create system config")
     public Result<?> create(@Valid @RequestBody SystemConfigUpsertDTO dto) {
         Long id = adminSystemConfigBizService.create(dto);
@@ -48,6 +50,7 @@ public class SystemConfigManageController {
 
     @Operation(summary = "更新配置")
     @PutMapping("/{id}")
+    @RequireAdminPermission({"system:config"})
     @OperationLog(module = "system_config", action = "update", detail = "admin update system config")
     public Result<?> update(@PathVariable Long id, @Valid @RequestBody SystemConfigUpsertDTO dto) {
         boolean ok = adminSystemConfigBizService.update(id, dto);
@@ -56,6 +59,7 @@ public class SystemConfigManageController {
 
     @Operation(summary = "删除配置")
     @DeleteMapping("/{id}")
+    @RequireAdminPermission({"system:config"})
     @OperationLog(module = "system_config", action = "delete", detail = "admin delete system config")
     public Result<?> delete(@PathVariable Long id) {
         boolean ok = adminSystemConfigBizService.delete(id);

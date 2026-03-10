@@ -3,6 +3,7 @@ package com.huang.web.admin.controller;
 import com.huang.common.result.Result;
 import com.huang.web.admin.constant.AdminErrorCode;
 import com.huang.web.admin.constant.AdminRoleCode;
+import com.huang.web.admin.custom.annotation.RequireAdminPermission;
 import com.huang.web.admin.custom.annotation.RequireAdminRole;
 import com.huang.web.admin.custom.aop.OperationLog;
 import com.huang.web.admin.dto.coach.CoachApplyAuditDTO;
@@ -32,6 +33,7 @@ public class CoachApplyManageController {
 
     @Operation(summary = "教练申请列表")
     @GetMapping("/list")
+    @RequireAdminPermission({"coach:apply:audit"})
     public Result<?> list(@RequestParam(required = false) Integer certStatus,
                           @RequestParam(required = false) String keyword) {
         return Result.ok(adminCoachApplyBizService.list(certStatus, keyword));
@@ -39,12 +41,14 @@ public class CoachApplyManageController {
 
     @Operation(summary = "教练申请详情")
     @GetMapping("/{profileId}")
+    @RequireAdminPermission({"coach:apply:audit"})
     public Result<?> detail(@PathVariable Long profileId) {
         return Result.ok(adminCoachApplyBizService.detail(profileId));
     }
 
     @Operation(summary = "审核教练申请")
     @PostMapping("/audit")
+    @RequireAdminPermission({"coach:apply:audit"})
     @OperationLog(module = "coach_apply", action = "audit", detail = "admin audit coach apply")
     public Result<?> audit(@Valid @RequestBody CoachApplyAuditDTO dto) {
         boolean ok = adminCoachApplyBizService.audit(dto);

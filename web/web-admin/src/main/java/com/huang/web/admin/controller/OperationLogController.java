@@ -2,6 +2,7 @@ package com.huang.web.admin.controller;
 
 import com.huang.common.result.Result;
 import com.huang.web.admin.constant.AdminRoleCode;
+import com.huang.web.admin.custom.annotation.RequireAdminPermission;
 import com.huang.web.admin.custom.annotation.RequireAdminRole;
 import com.huang.web.admin.service.biz.AdminOperationLogBizService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -25,6 +26,7 @@ public class OperationLogController {
 
     @Operation(summary = "操作日志列表")
     @GetMapping("/list")
+    @RequireAdminPermission({"operation:log:read"})
     public Result<?> list(@RequestParam(required = false) String module,
                           @RequestParam(required = false) String action,
                           @RequestParam(required = false) Integer success,

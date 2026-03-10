@@ -43,6 +43,28 @@ minio:
   secret-key: rootroot
   bucket-name: lease
 
+admin:
+  permission:
+    admin-all: true
+    role-map:
+      OPS_ADMIN:
+        - banner:manage
+        - notice:manage
+        - course:create
+        - course:publish
+        - course:schedule
+        - course:update
+        - video:upload
+        - video:asset
+        - video:bind
+        - video:status
+        - system:config
+      AUDIT_ADMIN:
+        - refund:audit
+        - pay:callback:audit
+        - coach:apply:audit
+        - operation:log:read
+
 logging:
   pattern:
     level: "%5p [traceId:%X{traceId}]"

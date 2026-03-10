@@ -2,6 +2,7 @@ package com.huang.web.admin.controller;
 
 import com.huang.common.result.Result;
 import com.huang.web.admin.constant.AdminRoleCode;
+import com.huang.web.admin.custom.annotation.RequireAdminPermission;
 import com.huang.web.admin.custom.annotation.RequireAdminRole;
 import com.huang.web.admin.service.biz.AdminPaymentCallbackAuditBizService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -28,6 +29,7 @@ public class PaymentCallbackAuditController {
 
     @Operation(summary = "Callback audit list (supports payNo/tradeNo/result/time filters)")
     @GetMapping("/list")
+    @RequireAdminPermission({"pay:callback:audit"})
     public Result<?> list(@RequestParam(required = false) String payNo,
                           @RequestParam(required = false) String tradeNo,
                           @RequestParam(required = false) String processResult,

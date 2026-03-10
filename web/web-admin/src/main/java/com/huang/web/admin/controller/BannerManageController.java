@@ -3,6 +3,7 @@ package com.huang.web.admin.controller;
 import com.huang.common.result.Result;
 import com.huang.web.admin.constant.AdminErrorCode;
 import com.huang.web.admin.constant.AdminRoleCode;
+import com.huang.web.admin.custom.annotation.RequireAdminPermission;
 import com.huang.web.admin.custom.annotation.RequireAdminRole;
 import com.huang.web.admin.custom.aop.OperationLog;
 import com.huang.web.admin.dto.banner.BannerUpsertDTO;
@@ -40,6 +41,7 @@ public class BannerManageController {
 
     @Operation(summary = "新增Banner")
     @PostMapping
+    @RequireAdminPermission({"banner:manage"})
     @OperationLog(module = "banner", action = "create", detail = "admin create banner")
     public Result<?> create(@Valid @RequestBody BannerUpsertDTO dto) {
         return Result.ok(adminBannerBizService.create(dto));
@@ -47,6 +49,7 @@ public class BannerManageController {
 
     @Operation(summary = "更新Banner")
     @PutMapping("/{id}")
+    @RequireAdminPermission({"banner:manage"})
     @OperationLog(module = "banner", action = "update", detail = "admin update banner")
     public Result<?> update(@PathVariable Long id, @Valid @RequestBody BannerUpsertDTO dto) {
         boolean ok = adminBannerBizService.update(id, dto);
@@ -55,6 +58,7 @@ public class BannerManageController {
 
     @Operation(summary = "更新Banner状态")
     @PutMapping("/{id}/status")
+    @RequireAdminPermission({"banner:manage"})
     @OperationLog(module = "banner", action = "update_status", detail = "admin update banner status")
     public Result<?> updateStatus(@PathVariable Long id, @RequestParam Integer status) {
         if (status == null || (status != 0 && status != 1)) {
@@ -66,6 +70,7 @@ public class BannerManageController {
 
     @Operation(summary = "删除Banner")
     @DeleteMapping("/{id}")
+    @RequireAdminPermission({"banner:manage"})
     @OperationLog(module = "banner", action = "delete", detail = "admin delete banner")
     public Result<?> delete(@PathVariable Long id) {
         boolean ok = adminBannerBizService.delete(id);
