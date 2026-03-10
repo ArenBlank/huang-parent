@@ -1,4 +1,4 @@
-﻿package com.huang.model.entity;
+package com.huang.model.entity;
 
 import com.baomidou.mybatisplus.annotation.TableField;
 import com.baomidou.mybatisplus.annotation.TableName;
