@@ -502,7 +502,7 @@
         "header": [
           {
             "key": "Authorization",
-            "value": "Bearer {{adminAccessToken}}"
+            "value": "Bearer {{opsAdminAccessToken}}"
           }
         ],
         "body": {
@@ -544,7 +544,7 @@
         "header": [
           {
             "key": "Authorization",
-            "value": "Bearer {{adminAccessToken}}"
+            "value": "Bearer {{opsAdminAccessToken}}"
           },
           {
             "key": "Content-Type",
@@ -580,7 +580,7 @@
         "header": [
           {
             "key": "Authorization",
-            "value": "Bearer {{adminAccessToken}}"
+            "value": "Bearer {{opsAdminAccessToken}}"
           },
           {
             "key": "Content-Type",
@@ -614,7 +614,7 @@
         "header": [
           {
             "key": "Authorization",
-            "value": "Bearer {{adminAccessToken}}"
+            "value": "Bearer {{opsAdminAccessToken}}"
           },
           {
             "key": "Content-Type",
@@ -654,7 +654,7 @@
         "header": [
           {
             "key": "Authorization",
-            "value": "Bearer {{adminAccessToken}}"
+            "value": "Bearer {{opsAdminAccessToken}}"
           }
         ],
         "url": "{{adminBaseUrl}}/admin/course/{{resolvedAdminCourseId}}/status?status=1"
@@ -691,7 +691,7 @@
         "header": [
           {
             "key": "Authorization",
-            "value": "Bearer {{adminAccessToken}}"
+            "value": "Bearer {{opsAdminAccessToken}}"
           },
           {
             "key": "Content-Type",
@@ -968,7 +968,7 @@
         "header": [
           {
             "key": "Authorization",
-            "value": "Bearer {{adminAccessToken}}"
+            "value": "Bearer {{auditAdminAccessToken}}"
           }
         ],
         "url": "{{adminBaseUrl}}/admin/refund/list?refundStatus=REFUNDED&userId={{refundAuditUserId}}&orderNo={{refundAuditOrderNo}}&startTime={{refundAuditStartTime}}&endTime={{refundAuditEndTime}}&limit=20"
@@ -995,7 +995,7 @@
         "header": [
           {
             "key": "Authorization",
-            "value": "Bearer {{adminAccessToken}}"
+            "value": "Bearer {{auditAdminAccessToken}}"
           }
         ],
         "url": "{{adminBaseUrl}}/admin/pay/callback/list?payNo={{callbackAuditPayNo}}&tradeNo={{callbackAuditTradeNo}}&processResult={{callbackAuditProcessResult}}&startTime={{callbackAuditStartTime}}&endTime={{callbackAuditEndTime}}&limit=20"
@@ -1053,7 +1053,7 @@
         "header": [
           {
             "key": "Authorization",
-            "value": "Bearer {{adminAccessToken}}"
+            "value": "Bearer {{auditAdminAccessToken}}"
           }
         ],
         "url": "{{adminBaseUrl}}/admin/operation-log/list?module=course&action=publish&success=1&limit=50"
@@ -1082,7 +1082,7 @@
         "header": [
           {
             "key": "Authorization",
-            "value": "Bearer {{adminAccessToken}}"
+            "value": "Bearer {{opsAdminAccessToken}}"
           },
           {
             "key": "Content-Type",
@@ -1151,7 +1151,7 @@
         "header": [
           {
             "key": "Authorization",
-            "value": "Bearer {{adminAccessToken}}"
+            "value": "Bearer {{opsAdminAccessToken}}"
           },
           {
             "key": "Content-Type",
@@ -1223,7 +1223,7 @@
         "header": [
           {
             "key": "Authorization",
-            "value": "Bearer {{adminAccessToken}}"
+            "value": "Bearer {{opsAdminAccessToken}}"
           },
           {
             "key": "Content-Type",
@@ -1688,7 +1688,7 @@
         "header": [
           {
             "key": "Authorization",
-            "value": "Bearer {{adminAccessToken}}"
+            "value": "Bearer {{opsAdminAccessToken}}"
           },
           {
             "key": "Content-Type",
@@ -1722,7 +1722,7 @@
         "header": [
           {
             "key": "Authorization",
-            "value": "Bearer {{adminAccessToken}}"
+            "value": "Bearer {{opsAdminAccessToken}}"
           }
         ],
         "url": "{{adminBaseUrl}}/admin/banner/{{bannerId}}/status?status=1"
@@ -1748,7 +1748,7 @@
         "header": [
           {
             "key": "Authorization",
-            "value": "Bearer {{adminAccessToken}}"
+            "value": "Bearer {{opsAdminAccessToken}}"
           }
         ],
         "url": "{{adminBaseUrl}}/admin/banner/{{bannerId}}"
@@ -1774,7 +1774,7 @@
         "header": [
           {
             "key": "Authorization",
-            "value": "Bearer {{adminAccessToken}}"
+            "value": "Bearer {{opsAdminAccessToken}}"
           },
           {
             "key": "Content-Type",
@@ -1808,7 +1808,7 @@
         "header": [
           {
             "key": "Authorization",
-            "value": "Bearer {{adminAccessToken}}"
+            "value": "Bearer {{opsAdminAccessToken}}"
           }
         ],
         "url": "{{adminBaseUrl}}/admin/notice/{{noticeId}}/status?status=1"
@@ -1834,7 +1834,7 @@
         "header": [
           {
             "key": "Authorization",
-            "value": "Bearer {{adminAccessToken}}"
+            "value": "Bearer {{opsAdminAccessToken}}"
           }
         ],
         "url": "{{adminBaseUrl}}/admin/notice/{{noticeId}}"
@@ -1860,7 +1860,7 @@
         "header": [
           {
             "key": "Authorization",
-            "value": "Bearer {{adminAccessToken}}"
+            "value": "Bearer {{opsAdminAccessToken}}"
           },
           {
             "key": "Content-Type",
@@ -1895,7 +1895,7 @@
         "header": [
           {
             "key": "Authorization",
-            "value": "Bearer {{adminAccessToken}}"
+            "value": "Bearer {{opsAdminAccessToken}}"
           }
         ],
         "url": "{{adminBaseUrl}}/admin/system-config/{{systemConfigId}}"
@@ -1947,7 +1947,7 @@
         "header": [
           {
             "key": "Authorization",
-            "value": "Bearer {{adminAccessToken}}"
+            "value": "Bearer {{opsAdminAccessToken}}"
           },
           {
             "key": "Content-Type",
@@ -1981,7 +1981,7 @@
         "header": [
           {
             "key": "Authorization",
-            "value": "Bearer {{adminAccessToken}}"
+            "value": "Bearer {{opsAdminAccessToken}}"
           }
         ],
         "url": "{{adminBaseUrl}}/admin/video/{{videoId}}/status?status=1"
@@ -2007,7 +2007,7 @@
         "header": [
           {
             "key": "Authorization",
-            "value": "Bearer {{adminAccessToken}}"
+            "value": "Bearer {{opsAdminAccessToken}}"
           }
         ],
         "url": "{{adminBaseUrl}}/admin/video/unbind-plan-item/{{planItemId}}"
@@ -2033,7 +2033,7 @@
         "header": [
           {
             "key": "Authorization",
-            "value": "Bearer {{adminAccessToken}}"
+            "value": "Bearer {{opsAdminAccessToken}}"
           },
           {
             "key": "Content-Type",
@@ -2067,7 +2067,7 @@
         "header": [
           {
             "key": "Authorization",
-            "value": "Bearer {{adminAccessToken}}"
+            "value": "Bearer {{opsAdminAccessToken}}"
           }
         ],
         "url": "{{adminBaseUrl}}/admin/course/schedule/{{courseScheduleId}}/status?status=1"
@@ -2157,7 +2157,7 @@
         "header": [
           {
             "key": "Authorization",
-            "value": "Bearer {{adminAccessToken}}"
+            "value": "Bearer {{auditAdminAccessToken}}"
           }
         ],
         "url": "{{adminBaseUrl}}/admin/coach-apply/list?certStatus=0"
@@ -2187,7 +2187,7 @@
         "header": [
           {
             "key": "Authorization",
-            "value": "Bearer {{adminAccessToken}}"
+            "value": "Bearer {{auditAdminAccessToken}}"
           }
         ],
         "url": "{{adminBaseUrl}}/admin/coach-apply/{{coachApplyProfileId}}"
@@ -2214,7 +2214,7 @@
         "header": [
           {
             "key": "Authorization",
-            "value": "Bearer {{adminAccessToken}}"
+            "value": "Bearer {{auditAdminAccessToken}}"
           },
           {
             "key": "Content-Type",
@@ -2533,7 +2533,7 @@
         "header": [
           {
             "key": "Authorization",
-            "value": "Bearer {{adminAccessToken}}"
+            "value": "Bearer {{auditAdminAccessToken}}"
           }
         ],
         "url": "{{adminBaseUrl}}/admin/operation-log/list?module=coach_apply&pageNo=1&pageSize=20"

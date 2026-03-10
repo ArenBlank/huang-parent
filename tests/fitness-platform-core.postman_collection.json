@@ -118,7 +118,52 @@
       ]
     },
     {
-      "name": "01C Ops Admin Forbidden UserRole Batch Assign",
+      "name": "01C Ops Admin Create Banner (Allowed)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{opsAdminAccessToken}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"title\": \"AutoTest Banner {{runId}}\",\n  \"imageUrl\": \"https://example.com/banner-{{runId}}.jpg\",\n  \"linkUrl\": \"/app/plan/1\",\n  \"sort\": 99,\n  \"status\": 1\n}"
+        },
+        "url": "{{adminBaseUrl}}/admin/banner"
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (!pm.collectionVariables.get('runId')) { pm.collectionVariables.set('runId', Date.now().toString()); }"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+              "const res = pm.response.json();",
+              "pm.test('ops admin create banner success', function () { pm.expect(res.code).to.eql(200); });",
+              "pm.test('ops bannerId exists', function () { pm.expect(res.data).to.be.a('number'); });",
+              "pm.collectionVariables.set('opsBannerId', String(res.data));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "01D Ops Admin Forbidden UserRole Batch Assign",
       "request": {
         "method": "POST",
         "header": [
@@ -146,6 +191,65 @@
               "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
               "const res = pm.response.json();",
               "pm.test('ops admin forbidden on user-role batch assign', function () { pm.expect(res.code).to.eql(309); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "01E Audit Admin Login",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"account\": \"{{auditAdminAccount}}\",\n  \"password\": \"{{auditAdminPassword}}\"\n}"
+        },
+        "url": "{{adminBaseUrl}}/admin/auth/login"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+              "const res = pm.response.json();",
+              "pm.test('audit admin login success', function () { pm.expect(res.code).to.eql(200); });",
+              "pm.test('audit admin accessToken exists', function () { pm.expect(res.data.accessToken).to.be.a('string').and.not.empty; });",
+              "pm.collectionVariables.set('auditAdminAccessToken', res.data.accessToken);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "01F Audit Admin Refund Audit List (Allowed)",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{auditAdminAccessToken}}"
+          }
+        ],
+        "url": "{{adminBaseUrl}}/admin/refund/list?refundStatus=REFUNDED&userId={{refundAuditUserId}}&orderNo={{refundAuditOrderNo}}&startTime={{refundAuditStartTime}}&endTime={{refundAuditEndTime}}&limit=20"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+              "const res = pm.response.json();",
+              "pm.test('audit refund audit list success', function () { pm.expect(res.code).to.eql(200); });",
+              "pm.test('audit refund list is array', function () { pm.expect(Array.isArray(res.data)).to.eql(true); });"
             ]
           }
         }

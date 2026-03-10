@@ -19,7 +19,7 @@ powershell -ExecutionPolicy Bypass -File tests/reset-test-data.ps1
 
 ## 2. 导入Postman
 1. 导入集合（二选一）：
-   - `tests/fitness-platform-core.postman_collection.json`（核心链路，33条，日常开发使用）
+   - `tests/fitness-platform-core.postman_collection.json`（核心链路，36条，日常开发使用）
    - `tests/fitness-platform-full.postman_collection.json`（扩展回归，79条，发版前使用）
 2. 导入环境：`tests/local.postman_environment.json`
 3. 选择环境 `fitness-local`
@@ -74,6 +74,7 @@ newman run tests/fitness-platform-full.postman_collection.json -e tests/local.po
 35. App 个人资料读取与更新
 36. Coach Apply 操作日志校验
 37. RBAC 受限管理员无权限访问校验（309）
+38. RBAC 运营/审核管理员允许访问校验
 
 ## 5. 档期占满说明
 - 集合已内置“无可用档期时自动跳过预约链路（05/06/07）”逻辑，避免出现脚本报错中断。
@@ -89,3 +90,4 @@ UPDATE coach_schedule SET booked_count = 0, status = 1 WHERE id IN (1,2);
     - `spring.servlet.multipart.max-request-size: 200MB`
 - 上传报文件不存在：
   - 检查 `videoFilePath` 是否有效（本机绝对路径或 `tests/assets/demo.mp4`）。
+
