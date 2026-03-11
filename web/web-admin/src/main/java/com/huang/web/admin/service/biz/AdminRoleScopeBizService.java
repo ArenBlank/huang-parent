@@ -41,8 +41,8 @@ public class AdminRoleScopeBizService {
         if (role == null) {
             return false;
         }
-        roleCourseCategoryScopeMapper.delete(new LambdaQueryWrapper<RoleCourseCategoryScope>()
-                .eq(RoleCourseCategoryScope::getRoleId, roleId));
+        // physical delete to avoid unique constraint conflicts with logical delete
+        roleCourseCategoryScopeMapper.deleteByRoleIdPhysical(roleId);
         if (categoryIds == null || categoryIds.isEmpty()) {
             return true;
         }
