@@ -1442,6 +1442,18 @@
                                                                    "pm.test(\u0027update scope success\u0027, function () { pm.expect(res.code).to.eql(200); });"
                                                                ]
                                                   }
+                                   },
+                                   {
+                                       "listen":  "prerequest",
+                                       "script":  {
+                                                      "type":  "text/javascript",
+                                                      "exec":  [
+                                                                   "const opsRoleId = pm.collectionVariables.get(\u0027opsRoleId\u0027);",
+                                                                   "if (!opsRoleId) {",
+                                                                   "  pm.collectionVariables.set(\u0027opsRoleId\u0027, \u00271\u0027);",
+                                                                   "}"
+                                                               ]
+                                                  }
                                    }
                                ]
                  },
@@ -1532,6 +1544,18 @@
                                                                    "pm.test(\u0027HTTP 200\u0027, function () { pm.response.to.have.status(200); });",
                                                                    "const res = pm.response.json();",
                                                                    "pm.test(\u0027batch update scope success\u0027, function () { pm.expect(res.code).to.eql(200); });"
+                                                               ]
+                                                  }
+                                   },
+                                   {
+                                       "listen":  "prerequest",
+                                       "script":  {
+                                                      "type":  "text/javascript",
+                                                      "exec":  [
+                                                                   "const opsRoleId = pm.collectionVariables.get(\u0027opsRoleId\u0027);",
+                                                                   "if (!opsRoleId) {",
+                                                                   "  pm.collectionVariables.set(\u0027opsRoleId\u0027, \u00271\u0027);",
+                                                                   "}"
                                                                ]
                                                   }
                                    }
