@@ -1406,6 +1406,94 @@
       ]
     },
     {
+      "name": "33E Admin Permission List",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{adminAccessToken}}"
+          }
+        ],
+        "url": "{{adminBaseUrl}}/admin/role-permission/permissions"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+              "const res = pm.response.json();",
+              "pm.test('biz code 200', function () { pm.expect(res.code).to.eql(200); });",
+              "pm.test('permission list is array', function () { pm.expect(Array.isArray(res.data)).to.be.true; });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "33F Admin Role Permission List",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{adminAccessToken}}"
+          }
+        ],
+        "url": "{{adminBaseUrl}}/admin/role-permission/role/{{opsRoleId}}/permissions"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+              "const res = pm.response.json();",
+              "pm.test('biz code 200', function () { pm.expect(res.code).to.eql(200); });",
+              "pm.test('role permission list is array', function () { pm.expect(Array.isArray(res.data)).to.be.true; });"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "33G Admin Assign Role Permissions (Add)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{adminAccessToken}}"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"roleId\": \"{{opsRoleId}}\",\n  \"permCodes\": [\n    \"course:create\"\n  ],\n  \"operation\": \"add\"\n}"
+        },
+        "url": "{{adminBaseUrl}}/admin/role-permission/assign"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+              "const res = pm.response.json();",
+              "pm.test('assign success', function () { pm.expect(res.code).to.eql(200); });"
+            ]
+          }
+        }
+      ]
+    },
+    {
       "name": "33A Admin Update Ops Course Category Scope",
       "request": {
         "method": "PUT",
