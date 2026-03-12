@@ -7,6 +7,8 @@ import com.huang.model.entity.*;
 import com.huang.web.app.dto.booking.BookingReviewDTO;
 import com.huang.web.app.dto.booking.CreateBookingDTO;
 import com.huang.web.app.mapper.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -22,6 +24,8 @@ import java.util.concurrent.TimeUnit;
 
 @Service
 public class BookingBizService {
+
+    private static final Logger log = LoggerFactory.getLogger(BookingBizService.class);
 
     private final CoachScheduleMapper coachScheduleMapper;
     private final CoachBookingMapper coachBookingMapper;
@@ -62,10 +66,16 @@ public class BookingBizService {
 
     @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> createBooking(Long userId, CreateBookingDTO dto) {
-        CoachSchedule schedule = coachScheduleMapper.selectById(dto.getScheduleId());
-        if (schedule == null || schedule.getStatus() == null || schedule.getStatus() != 1) {
-            return null;
-        }
+        long start = System.currentTimeMillis();
+        Long bookingId = null;
+        boolean success = false;
+        String reason = null;
+        try {
+            CoachSchedule schedule = coachScheduleMapper.selectById(dto.getScheduleId());
+            if (schedule == null || schedule.getStatus() == null || schedule.getStatus() != 1) {
+                reason = "schedule_invalid";
+                return null;
+            }
 
         // 工程亮点：用单条原子更新保护容量，避免并发下 booked_count 超过 capacity（超卖）。
         int updated = coachScheduleMapper.update(
@@ -76,9 +86,10 @@ public class BookingBizService {
                         .apply("booked_count < capacity")
                         .setSql("booked_count = booked_count + 1")
         );
-        if (updated == 0) {
-            return null;
-        }
+            if (updated == 0) {
+                reason = "schedule_full";
+                return null;
+            }
 
         OrderInfo orderInfo = new OrderInfo();
         orderInfo.setOrderNo(genNo("ORD"));
@@ -116,70 +127,93 @@ public class BookingBizService {
         booking.setPayStatus(BizStatusConstant.PayStatus.UNPAID);
         coachBookingMapper.insert(booking);
 
-        orderInfo.setBizId(booking.getId());
+        bookingId = booking.getId();
+        orderInfo.setBizId(bookingId);
         orderInfoMapper.updateById(orderInfo);
 
         Map<String, Object> result = new HashMap<>();
-        result.put("bookingId", booking.getId());
+        result.put("bookingId", bookingId);
         result.put("orderId", orderInfo.getId());
         result.put("orderNo", orderInfo.getOrderNo());
         result.put("payNo", paymentRecord.getPayNo());
         result.put("amount", orderInfo.getTotalAmount());
+        success = true;
         return result;
+        } finally {
+            long costMs = System.currentTimeMillis() - start;
+            log.info("BOOKING_CREATE userId={} scheduleId={} success={} bookingId={} reason={} costMs={}",
+                    userId,
+                    dto == null ? null : dto.getScheduleId(),
+                    success,
+                    bookingId,
+                    reason,
+                    costMs);
+        }
     }
 
     @Transactional(rollbackFor = Exception.class)
     public boolean markPaySuccess(Long bookingId, Long userId) {
+        long start = System.currentTimeMillis();
+        boolean success = false;
         String callbackKey = "pay:callback:booking:" + bookingId;
         try {
-            // 工程亮点：Redis 短期幂等键，先挡住大部分重复回调，降低 DB 冲突与重复写压力。
-            Boolean first = redisTemplate.opsForValue().setIfAbsent(callbackKey, "1", 10, TimeUnit.MINUTES);
-            if (Boolean.FALSE.equals(first)) {
+            try {
+                // ?????Redis ??????????????????? DB ?????????
+                Boolean first = redisTemplate.opsForValue().setIfAbsent(callbackKey, "1", 10, TimeUnit.MINUTES);
+                if (Boolean.FALSE.equals(first)) {
+                    success = true;
+                    return true;
+                }
+            } catch (Exception ignore) {
+                // Redis unavailable: fallback to DB idempotency key only.
+            }
+
+            CoachBooking booking = coachBookingMapper.selectById(bookingId);
+            if (booking == null || !booking.getUserId().equals(userId)) {
+                return false;
+            }
+            PaymentRecord paymentRecord = paymentRecordMapper.selectOne(
+                    new LambdaQueryWrapper<PaymentRecord>()
+                            .eq(PaymentRecord::getOrderId, booking.getOrderId())
+                            .last("LIMIT 1")
+            );
+            if (paymentRecord == null) {
+                return false;
+            }
+
+            String idempotencyKey = "CALLBACK_" + paymentRecord.getPayNo();
+            // ?????DB ?????????? Redis ??????????????????
+            if (idempotencyKey.equals(paymentRecord.getCallbackIdempotencyKey())
+                    || BizStatusConstant.PayStatus.PAID.equals(paymentRecord.getPayStatus())) {
+                success = true;
                 return true;
             }
-        } catch (Exception ignore) {
-            // Redis unavailable: fallback to DB idempotency key only.
-        }
 
-        CoachBooking booking = coachBookingMapper.selectById(bookingId);
-        if (booking == null || !booking.getUserId().equals(userId)) {
-            return false;
-        }
-        PaymentRecord paymentRecord = paymentRecordMapper.selectOne(
-                new LambdaQueryWrapper<PaymentRecord>()
-                        .eq(PaymentRecord::getOrderId, booking.getOrderId())
-                        .last("LIMIT 1")
-        );
-        if (paymentRecord == null) {
-            return false;
-        }
+            booking.setPayStatus(BizStatusConstant.PayStatus.PAID);
+            booking.setBookingStatus(BizStatusConstant.BookingStatus.PAID);
+            coachBookingMapper.updateById(booking);
 
-        String idempotencyKey = "CALLBACK_" + paymentRecord.getPayNo();
-        // 工程亮点：DB 幂等键二次兜底；即使 Redis 失效，也可保证回调“至多一次”生效。
-        if (idempotencyKey.equals(paymentRecord.getCallbackIdempotencyKey())
-                || BizStatusConstant.PayStatus.PAID.equals(paymentRecord.getPayStatus())) {
+            OrderInfo orderInfo = orderInfoMapper.selectById(booking.getOrderId());
+            if (orderInfo != null) {
+                orderInfo.setPayStatus(BizStatusConstant.PayStatus.PAID);
+                orderInfo.setOrderStatus(BizStatusConstant.OrderStatus.PAID);
+                orderInfoMapper.updateById(orderInfo);
+            }
+
+            paymentRecord.setPayStatus(BizStatusConstant.PayStatus.PAID);
+            paymentRecord.setPayTime(LocalDateTime.now());
+            paymentRecord.setCallbackIdempotencyKey(idempotencyKey);
+            paymentRecordMapper.updateById(paymentRecord);
+            success = true;
             return true;
+        } finally {
+            long costMs = System.currentTimeMillis() - start;
+            log.info("BOOKING_PAY_SUCCESS userId={} bookingId={} success={} costMs={}",
+                    userId, bookingId, success, costMs);
         }
-
-        booking.setPayStatus(BizStatusConstant.PayStatus.PAID);
-        booking.setBookingStatus(BizStatusConstant.BookingStatus.PAID);
-        coachBookingMapper.updateById(booking);
-
-        OrderInfo orderInfo = orderInfoMapper.selectById(booking.getOrderId());
-        if (orderInfo != null) {
-            orderInfo.setPayStatus(BizStatusConstant.PayStatus.PAID);
-            orderInfo.setOrderStatus(BizStatusConstant.OrderStatus.PAID);
-            orderInfoMapper.updateById(orderInfo);
-        }
-
-        paymentRecord.setPayStatus(BizStatusConstant.PayStatus.PAID);
-        paymentRecord.setPayTime(LocalDateTime.now());
-        paymentRecord.setCallbackIdempotencyKey(idempotencyKey);
-        paymentRecordMapper.updateById(paymentRecord);
-        return true;
     }
 
-    @Transactional(rollbackFor = Exception.class)
+@Transactional(rollbackFor = Exception.class)
     public boolean completeBooking(Long bookingId, Long userId) {
         CoachBooking booking = coachBookingMapper.selectById(bookingId);
         if (booking == null || !booking.getUserId().equals(userId)) {

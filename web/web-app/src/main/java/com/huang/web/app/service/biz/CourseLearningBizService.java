@@ -18,6 +18,8 @@ import com.huang.web.app.mapper.OrderInfoMapper;
 import com.huang.web.app.mapper.OrderItemMapper;
 import com.huang.web.app.mapper.PaymentRecordMapper;
 import com.huang.web.app.mapper.RefundRecordMapper;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -30,6 +32,8 @@ import java.util.UUID;
 
 @Service
 public class CourseLearningBizService {
+
+    private static final Logger log = LoggerFactory.getLogger(CourseLearningBizService.class);
 
     private final CourseMapper courseMapper;
     private final CourseScheduleMapper courseScheduleMapper;
@@ -76,14 +80,21 @@ public class CourseLearningBizService {
 
     @Transactional(rollbackFor = Exception.class)
     public Map<String, Object> enroll(Long userId, CourseEnrollDTO dto) {
-        CourseSchedule schedule = courseScheduleMapper.selectById(dto.getScheduleId());
-        if (schedule == null || schedule.getStatus() == null || schedule.getStatus() != 1) {
-            return null;
-        }
-        Course course = courseMapper.selectById(schedule.getCourseId());
-        if (course == null || course.getStatus() == null || course.getStatus() != 1) {
-            return null;
-        }
+        long start = System.currentTimeMillis();
+        Long enrollmentId = null;
+        boolean success = false;
+        String reason = null;
+        try {
+            CourseSchedule schedule = courseScheduleMapper.selectById(dto.getScheduleId());
+            if (schedule == null || schedule.getStatus() == null || schedule.getStatus() != 1) {
+                reason = "schedule_invalid";
+                return null;
+            }
+            Course course = courseMapper.selectById(schedule.getCourseId());
+            if (course == null || course.getStatus() == null || course.getStatus() != 1) {
+                reason = "course_invalid";
+                return null;
+            }
 
         int updated = courseScheduleMapper.update(
                 null,
@@ -93,9 +104,10 @@ public class CourseLearningBizService {
                         .apply("booked_count < capacity")
                         .setSql("booked_count = booked_count + 1")
         );
-        if (updated == 0) {
-            return null;
-        }
+            if (updated == 0) {
+                reason = "schedule_full";
+                return null;
+            }
 
         CourseEnrollment existed = courseEnrollmentMapper.selectOne(
                 new LambdaQueryWrapper<CourseEnrollment>()
@@ -104,9 +116,10 @@ public class CourseLearningBizService {
                         .eq(CourseEnrollment::getScheduleId, schedule.getId())
                         .last("LIMIT 1")
         );
-        if (existed != null) {
-            return null;
-        }
+            if (existed != null) {
+                reason = "already_enrolled";
+                return null;
+            }
 
         OrderInfo orderInfo = new OrderInfo();
         orderInfo.setOrderNo(genNo("CRS"));
@@ -144,57 +157,79 @@ public class CourseLearningBizService {
         enrollment.setEnrollTime(LocalDateTime.now());
         courseEnrollmentMapper.insert(enrollment);
 
-        orderInfo.setBizId(enrollment.getId());
+        enrollmentId = enrollment.getId();
+        orderInfo.setBizId(enrollmentId);
         orderInfoMapper.updateById(orderInfo);
 
         Map<String, Object> result = new HashMap<>();
-        result.put("enrollmentId", enrollment.getId());
+        result.put("enrollmentId", enrollmentId);
         result.put("orderId", orderInfo.getId());
         result.put("orderNo", orderInfo.getOrderNo());
         result.put("payNo", paymentRecord.getPayNo());
         result.put("amount", orderInfo.getTotalAmount());
+        success = true;
         return result;
+        } finally {
+            long costMs = System.currentTimeMillis() - start;
+            log.info("COURSE_ENROLL userId={} scheduleId={} success={} enrollmentId={} reason={} costMs={}",
+                    userId,
+                    dto == null ? null : dto.getScheduleId(),
+                    success,
+                    enrollmentId,
+                    reason,
+                    costMs);
+        }
     }
 
     @Transactional(rollbackFor = Exception.class)
     public boolean markPaySuccess(Long enrollmentId, Long userId) {
-        CourseEnrollment enrollment = courseEnrollmentMapper.selectById(enrollmentId);
-        if (enrollment == null || !enrollment.getUserId().equals(userId)) {
-            return false;
-        }
-        OrderInfo orderInfo = orderInfoMapper.selectById(enrollment.getOrderId());
-        if (orderInfo == null) {
-            return false;
-        }
-        PaymentRecord paymentRecord = paymentRecordMapper.selectOne(
-                new LambdaQueryWrapper<PaymentRecord>()
-                        .eq(PaymentRecord::getOrderId, orderInfo.getId())
-                        .last("LIMIT 1")
-        );
-        if (paymentRecord == null) {
-            return false;
-        }
+        long start = System.currentTimeMillis();
+        boolean success = false;
+        try {
+            CourseEnrollment enrollment = courseEnrollmentMapper.selectById(enrollmentId);
+            if (enrollment == null || !enrollment.getUserId().equals(userId)) {
+                return false;
+            }
+            OrderInfo orderInfo = orderInfoMapper.selectById(enrollment.getOrderId());
+            if (orderInfo == null) {
+                return false;
+            }
+            PaymentRecord paymentRecord = paymentRecordMapper.selectOne(
+                    new LambdaQueryWrapper<PaymentRecord>()
+                            .eq(PaymentRecord::getOrderId, orderInfo.getId())
+                            .last("LIMIT 1")
+            );
+            if (paymentRecord == null) {
+                return false;
+            }
 
-        String idempotencyKey = "COURSE_CALLBACK_" + paymentRecord.getPayNo();
-        if (idempotencyKey.equals(paymentRecord.getCallbackIdempotencyKey())
-                || BizStatusConstant.PayStatus.PAID.equals(paymentRecord.getPayStatus())) {
+            String idempotencyKey = "COURSE_CALLBACK_" + paymentRecord.getPayNo();
+            if (idempotencyKey.equals(paymentRecord.getCallbackIdempotencyKey())
+                    || BizStatusConstant.PayStatus.PAID.equals(paymentRecord.getPayStatus())) {
+                success = true;
+                return true;
+            }
+
+            orderInfo.setPayStatus(BizStatusConstant.PayStatus.PAID);
+            orderInfo.setOrderStatus(BizStatusConstant.OrderStatus.PAID);
+            orderInfoMapper.updateById(orderInfo);
+
+            paymentRecord.setPayStatus(BizStatusConstant.PayStatus.PAID);
+            paymentRecord.setPayTime(LocalDateTime.now());
+            paymentRecord.setCallbackIdempotencyKey(idempotencyKey);
+            paymentRecordMapper.updateById(paymentRecord);
+            enrollment.setStatus(BizStatusConstant.EnrollmentStatus.PAID);
+            courseEnrollmentMapper.updateById(enrollment);
+            success = true;
             return true;
+        } finally {
+            long costMs = System.currentTimeMillis() - start;
+            log.info("COURSE_PAY_SUCCESS userId={} enrollmentId={} success={} costMs={}",
+                    userId, enrollmentId, success, costMs);
         }
-
-        orderInfo.setPayStatus(BizStatusConstant.PayStatus.PAID);
-        orderInfo.setOrderStatus(BizStatusConstant.OrderStatus.PAID);
-        orderInfoMapper.updateById(orderInfo);
-
-        paymentRecord.setPayStatus(BizStatusConstant.PayStatus.PAID);
-        paymentRecord.setPayTime(LocalDateTime.now());
-        paymentRecord.setCallbackIdempotencyKey(idempotencyKey);
-        paymentRecordMapper.updateById(paymentRecord);
-        enrollment.setStatus(BizStatusConstant.EnrollmentStatus.PAID);
-        courseEnrollmentMapper.updateById(enrollment);
-        return true;
     }
 
-    @Transactional(rollbackFor = Exception.class)
+@Transactional(rollbackFor = Exception.class)
     public boolean cancelUnpaid(Long enrollmentId, Long userId) {
         CourseEnrollment enrollment = courseEnrollmentMapper.selectById(enrollmentId);
         if (enrollment == null || !enrollment.getUserId().equals(userId)) {
@@ -238,60 +273,69 @@ public class CourseLearningBizService {
 
     @Transactional(rollbackFor = Exception.class)
     public boolean refundPaid(Long enrollmentId, Long userId, String reason) {
-        if (reason == null || reason.trim().isEmpty() || reason.trim().length() > 200) {
-            return false;
-        }
-        CourseEnrollment enrollment = courseEnrollmentMapper.selectById(enrollmentId);
-        if (enrollment == null || !enrollment.getUserId().equals(userId)) {
-            return false;
-        }
-        OrderInfo orderInfo = orderInfoMapper.selectById(enrollment.getOrderId());
-        if (orderInfo == null) {
-            return false;
-        }
-        if (BizStatusConstant.OrderStatus.REFUNDED.equals(orderInfo.getOrderStatus())) {
+        long start = System.currentTimeMillis();
+        boolean success = false;
+        try {
+            if (reason == null || reason.trim().isEmpty() || reason.trim().length() > 200) {
+                return false;
+            }
+            CourseEnrollment enrollment = courseEnrollmentMapper.selectById(enrollmentId);
+            if (enrollment == null || !enrollment.getUserId().equals(userId)) {
+                return false;
+            }
+            OrderInfo orderInfo = orderInfoMapper.selectById(enrollment.getOrderId());
+            if (orderInfo == null) {
+                return false;
+            }
+            if (BizStatusConstant.OrderStatus.REFUNDED.equals(orderInfo.getOrderStatus())) {
+                return true;
+            }
+            if (!BizStatusConstant.PayStatus.PAID.equals(orderInfo.getPayStatus())) {
+                return false;
+            }
+
+            PaymentRecord paymentRecord = paymentRecordMapper.selectOne(
+                    new LambdaQueryWrapper<PaymentRecord>()
+                            .eq(PaymentRecord::getOrderId, orderInfo.getId())
+                            .last("LIMIT 1")
+            );
+            if (paymentRecord == null) {
+                return false;
+            }
+
+            orderInfo.setOrderStatus(BizStatusConstant.OrderStatus.REFUNDED);
+            orderInfo.setPayStatus(BizStatusConstant.PayStatus.REFUNDED);
+            orderInfoMapper.updateById(orderInfo);
+
+            paymentRecord.setPayStatus(BizStatusConstant.PayStatus.REFUNDED);
+            paymentRecordMapper.updateById(paymentRecord);
+
+            courseScheduleMapper.update(
+                    null,
+                    new LambdaUpdateWrapper<CourseSchedule>()
+                            .eq(CourseSchedule::getId, enrollment.getScheduleId())
+                            .gt(CourseSchedule::getBookedCount, 0)
+                            .setSql("booked_count = booked_count - 1")
+            );
+
+            RefundRecord refundRecord = new RefundRecord();
+            refundRecord.setOrderId(orderInfo.getId());
+            refundRecord.setRefundNo(genNo("RFD"));
+            refundRecord.setRefundAmount(orderInfo.getTotalAmount());
+            refundRecord.setRefundStatus(BizStatusConstant.RefundStatus.REFUNDED);
+            refundRecord.setRefundTime(LocalDateTime.now());
+            refundRecord.setReason(reason.trim());
+            refundRecordMapper.insert(refundRecord);
+
+            enrollment.setStatus(BizStatusConstant.EnrollmentStatus.REFUNDED);
+            courseEnrollmentMapper.updateById(enrollment);
+            success = true;
             return true;
+        } finally {
+            long costMs = System.currentTimeMillis() - start;
+            log.info("COURSE_REFUND userId={} enrollmentId={} success={} costMs={}",
+                    userId, enrollmentId, success, costMs);
         }
-        if (!BizStatusConstant.PayStatus.PAID.equals(orderInfo.getPayStatus())) {
-            return false;
-        }
-
-        PaymentRecord paymentRecord = paymentRecordMapper.selectOne(
-                new LambdaQueryWrapper<PaymentRecord>()
-                        .eq(PaymentRecord::getOrderId, orderInfo.getId())
-                        .last("LIMIT 1")
-        );
-        if (paymentRecord == null) {
-            return false;
-        }
-
-        orderInfo.setOrderStatus(BizStatusConstant.OrderStatus.REFUNDED);
-        orderInfo.setPayStatus(BizStatusConstant.PayStatus.REFUNDED);
-        orderInfoMapper.updateById(orderInfo);
-
-        paymentRecord.setPayStatus(BizStatusConstant.PayStatus.REFUNDED);
-        paymentRecordMapper.updateById(paymentRecord);
-
-        courseScheduleMapper.update(
-                null,
-                new LambdaUpdateWrapper<CourseSchedule>()
-                        .eq(CourseSchedule::getId, enrollment.getScheduleId())
-                        .gt(CourseSchedule::getBookedCount, 0)
-                        .setSql("booked_count = booked_count - 1")
-        );
-
-        RefundRecord refundRecord = new RefundRecord();
-        refundRecord.setOrderId(orderInfo.getId());
-        refundRecord.setRefundNo(genNo("RFD"));
-        refundRecord.setRefundAmount(orderInfo.getTotalAmount());
-        refundRecord.setRefundStatus(BizStatusConstant.RefundStatus.REFUNDED);
-        refundRecord.setRefundTime(LocalDateTime.now());
-        refundRecord.setReason(reason.trim());
-        refundRecordMapper.insert(refundRecord);
-
-        enrollment.setStatus(BizStatusConstant.EnrollmentStatus.REFUNDED);
-        courseEnrollmentMapper.updateById(enrollment);
-        return true;
     }
 
     public List<CourseEnrollment> myEnrollments(Long userId) {

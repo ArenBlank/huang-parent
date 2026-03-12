@@ -34,6 +34,30 @@ CREATE TABLE IF NOT EXISTS role (
   UNIQUE KEY uk_role_code (role_code)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE IF NOT EXISTS permission (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  perm_name VARCHAR(100) NOT NULL,
+  perm_code VARCHAR(100) NOT NULL,
+  module VARCHAR(100) DEFAULT NULL,
+  status TINYINT NOT NULL DEFAULT 1,
+  create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  is_deleted TINYINT NOT NULL DEFAULT 0,
+  UNIQUE KEY uk_perm_code (perm_code)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS role_permission (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  role_id BIGINT NOT NULL,
+  perm_id BIGINT NOT NULL,
+  create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  is_deleted TINYINT NOT NULL DEFAULT 0,
+  UNIQUE KEY uk_role_perm (role_id, perm_id),
+  KEY idx_role_perm_role (role_id),
+  KEY idx_role_perm_perm (perm_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 CREATE TABLE IF NOT EXISTS role_course_category_scope (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
   role_id BIGINT NOT NULL,
@@ -401,6 +425,43 @@ INSERT INTO role (role_name, role_code, status) VALUES
 ('学员', 'MEMBER', 1),
 ('运营管理员', 'OPS_ADMIN', 1),
 ('审核管理员', 'AUDIT_ADMIN', 1);
+
+INSERT INTO permission (perm_name, perm_code, module, status) VALUES
+('Banner Manage', 'banner:manage', 'content', 1),
+('Notice Manage', 'notice:manage', 'content', 1),
+('System Config', 'system:config', 'system', 1),
+('Video Asset', 'video:asset', 'video', 1),
+('Video Upload', 'video:upload', 'video', 1),
+('Video Status', 'video:status', 'video', 1),
+('Video Bind', 'video:bind', 'video', 1),
+('Course Create', 'course:create', 'course', 1),
+('Course Update', 'course:update', 'course', 1),
+('Course Publish', 'course:publish', 'course', 1),
+('Course Schedule', 'course:schedule', 'course', 1),
+('Coach Apply Audit', 'coach:apply:audit', 'coach', 1),
+('User Status', 'user:status', 'user', 1),
+('User Role', 'user:role', 'user', 1),
+('Refund Audit', 'refund:audit', 'payment', 1),
+('Pay Callback Audit', 'pay:callback:audit', 'payment', 1),
+('Operation Log Read', 'operation:log:read', 'system', 1);
+
+INSERT IGNORE INTO role_permission (role_id, perm_id)
+SELECT r.id, p.id FROM role r CROSS JOIN permission p WHERE r.role_code = 'ADMIN';
+
+INSERT IGNORE INTO role_permission (role_id, perm_id)
+SELECT r.id, p.id FROM role r
+JOIN permission p ON p.perm_code IN (
+  'banner:manage', 'notice:manage', 'system:config',
+  'video:asset', 'video:upload', 'video:status', 'video:bind',
+  'course:create', 'course:update', 'course:publish', 'course:schedule',
+  'operation:log:read'
+) WHERE r.role_code = 'OPS_ADMIN';
+
+INSERT IGNORE INTO role_permission (role_id, perm_id)
+SELECT r.id, p.id FROM role r
+JOIN permission p ON p.perm_code IN (
+  'coach:apply:audit', 'refund:audit', 'pay:callback:audit', 'operation:log:read'
+) WHERE r.role_code = 'AUDIT_ADMIN';
 
 INSERT IGNORE INTO role_course_category_scope (role_id, category_id)
 SELECT id, 1 FROM role WHERE role_code = 'OPS_ADMIN';

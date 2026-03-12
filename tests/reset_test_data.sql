@@ -36,6 +36,45 @@ INSERT IGNORE INTO user_role (user_id, role_id) SELECT 4, id FROM role WHERE rol
 INSERT IGNORE INTO user_role (user_id, role_id) SELECT 11, id FROM role WHERE role_code = 'OPS_ADMIN';
 INSERT IGNORE INTO user_role (user_id, role_id) SELECT 12, id FROM role WHERE role_code = 'AUDIT_ADMIN';
 
--- ensure ops admin course category scope exists (category 1)
+-- ensure permission data for regression (idempotent)
+INSERT IGNORE INTO permission (perm_name, perm_code, module, status) VALUES
+('Banner Manage', 'banner:manage', 'content', 1),
+('Notice Manage', 'notice:manage', 'content', 1),
+('System Config', 'system:config', 'system', 1),
+('Video Asset', 'video:asset', 'video', 1),
+('Video Upload', 'video:upload', 'video', 1),
+('Video Status', 'video:status', 'video', 1),
+('Video Bind', 'video:bind', 'video', 1),
+('Course Create', 'course:create', 'course', 1),
+('Course Update', 'course:update', 'course', 1),
+('Course Publish', 'course:publish', 'course', 1),
+('Course Schedule', 'course:schedule', 'course', 1),
+('Coach Apply Audit', 'coach:apply:audit', 'coach', 1),
+('User Status', 'user:status', 'user', 1),
+('User Role', 'user:role', 'user', 1),
+('Refund Audit', 'refund:audit', 'payment', 1),
+('Pay Callback Audit', 'pay:callback:audit', 'payment', 1),
+('Operation Log Read', 'operation:log:read', 'system', 1);
+
+INSERT IGNORE INTO role_permission (role_id, perm_id)
+SELECT r.id, p.id FROM role r CROSS JOIN permission p WHERE r.role_code = 'ADMIN';
+
+INSERT IGNORE INTO role_permission (role_id, perm_id)
+SELECT r.id, p.id FROM role r
+JOIN permission p ON p.perm_code IN (
+  'banner:manage', 'notice:manage', 'system:config',
+  'video:asset', 'video:upload', 'video:status', 'video:bind',
+  'course:create', 'course:update', 'course:publish', 'course:schedule',
+  'operation:log:read'
+) WHERE r.role_code = 'OPS_ADMIN';
+
+INSERT IGNORE INTO role_permission (role_id, perm_id)
+SELECT r.id, p.id FROM role r
+JOIN permission p ON p.perm_code IN (
+  'coach:apply:audit', 'refund:audit', 'pay:callback:audit', 'operation:log:read'
+) WHERE r.role_code = 'AUDIT_ADMIN';
+
+-- ensure role 1 course category scope exists (category 1) for regression
+DELETE FROM role_course_category_scope WHERE role_id = 1;
 INSERT IGNORE INTO role_course_category_scope (role_id, category_id)
-SELECT id, 1 FROM role WHERE role_code = 'OPS_ADMIN';
+VALUES (1, 1);

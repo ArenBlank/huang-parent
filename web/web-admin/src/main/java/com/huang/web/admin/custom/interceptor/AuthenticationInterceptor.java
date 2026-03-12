@@ -10,6 +10,7 @@ import com.huang.web.admin.custom.annotation.RequireAdminPermission;
 import com.huang.web.admin.custom.annotation.RequireAdminRole;
 import com.huang.web.admin.custom.config.AdminPermissionProperties;
 import com.huang.web.admin.service.biz.AdminOperationLogBizService;
+import com.huang.web.admin.service.core.AdminPermissionDbService;
 import com.huang.web.admin.service.core.AdminRoleCoreService;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.http.HttpServletRequest;
@@ -29,13 +30,16 @@ public class AuthenticationInterceptor implements HandlerInterceptor {
     private final AdminRoleCoreService adminRoleCoreService;
     private final AdminPermissionProperties adminPermissionProperties;
     private final AdminOperationLogBizService adminOperationLogBizService;
+    private final AdminPermissionDbService adminPermissionDbService;
 
     public AuthenticationInterceptor(AdminRoleCoreService adminRoleCoreService,
                                      AdminPermissionProperties adminPermissionProperties,
-                                     AdminOperationLogBizService adminOperationLogBizService) {
+                                     AdminOperationLogBizService adminOperationLogBizService,
+                                     AdminPermissionDbService adminPermissionDbService) {
         this.adminRoleCoreService = adminRoleCoreService;
         this.adminPermissionProperties = adminPermissionProperties;
         this.adminOperationLogBizService = adminOperationLogBizService;
+        this.adminPermissionDbService = adminPermissionDbService;
     }
 
     @Override
@@ -107,6 +111,7 @@ public class AuthenticationInterceptor implements HandlerInterceptor {
             return true;
         }
         Set<String> allowed = new HashSet<>();
+        allowed.addAll(adminPermissionDbService.permissionsForRoleCodes(roleCodes));
         for (String roleCode : roleCodes) {
             allowed.addAll(adminPermissionProperties.permissionsFor(roleCode));
         }

@@ -14,6 +14,8 @@ import com.huang.web.app.mapper.OrderInfoMapper;
 import com.huang.web.app.mapper.PaymentCallbackLogMapper;
 import com.huang.web.app.mapper.PaymentRecordMapper;
 import com.huang.web.app.service.pay.PaymentSignVerifier;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,6 +25,8 @@ import java.util.Locale;
 
 @Service
 public class PaymentCallbackBizService {
+
+    private static final Logger log = LoggerFactory.getLogger(PaymentCallbackBizService.class);
 
     private final PaymentRecordMapper paymentRecordMapper;
     private final OrderInfoMapper orderInfoMapper;
@@ -47,75 +51,94 @@ public class PaymentCallbackBizService {
 
     @Transactional(rollbackFor = Exception.class)
     public String handleCallback(PayCallbackDTO dto, String payload) {
-        PaymentCallbackLog log = baseLog(dto, payload);
+        long start = System.currentTimeMillis();
+        String result = "fail";
+        try {
+            PaymentCallbackLog log = baseLog(dto, payload);
 
-        boolean signValid = verifySign(dto);
-        log.setSignValid(signValid ? 1 : 0);
-        if (!signValid) {
-            log.setProcessResult("REJECTED");
-            log.setErrorMessage("INVALID_SIGN");
-            paymentCallbackLogMapper.insert(log);
-            return "fail";
-        }
-
-        PaymentRecord paymentRecord = paymentRecordMapper.selectOne(
-                new LambdaQueryWrapper<PaymentRecord>()
-                        .eq(PaymentRecord::getPayNo, dto.getPayNo())
-                        .last("LIMIT 1")
-        );
-        if (paymentRecord == null) {
-            log.setProcessResult("REJECTED");
-            log.setErrorMessage("PAY_NO_NOT_FOUND");
-            paymentCallbackLogMapper.insert(log);
-            return "fail";
-        }
-
-        log.setOrderId(paymentRecord.getOrderId());
-        if (!"SUCCESS".equalsIgnoreCase(dto.getStatus())) {
-            log.setProcessResult("IGNORED");
-            log.setErrorMessage("STATUS_NOT_SUCCESS");
-            paymentCallbackLogMapper.insert(log);
-            return "success";
-        }
-
-        if (dto.getAmount() != null && paymentRecord.getPayAmount() != null) {
-            if (dto.getAmount().compareTo(paymentRecord.getPayAmount()) != 0) {
+            boolean signValid = verifySign(dto);
+            log.setSignValid(signValid ? 1 : 0);
+            if (!signValid) {
                 log.setProcessResult("REJECTED");
-                log.setErrorMessage("AMOUNT_MISMATCH");
+                log.setErrorMessage("INVALID_SIGN");
                 paymentCallbackLogMapper.insert(log);
-                return "fail";
+                result = "fail";
+                return result;
             }
-        }
 
-        if (BizStatusConstant.PayStatus.PAID.equals(paymentRecord.getPayStatus())) {
-            log.setProcessResult("IDEMPOTENT");
+            PaymentRecord paymentRecord = paymentRecordMapper.selectOne(
+                    new LambdaQueryWrapper<PaymentRecord>()
+                            .eq(PaymentRecord::getPayNo, dto.getPayNo())
+                            .last("LIMIT 1")
+            );
+            if (paymentRecord == null) {
+                log.setProcessResult("REJECTED");
+                log.setErrorMessage("PAY_NO_NOT_FOUND");
+                paymentCallbackLogMapper.insert(log);
+                result = "fail";
+                return result;
+            }
+
+            log.setOrderId(paymentRecord.getOrderId());
+            if (!"SUCCESS".equalsIgnoreCase(dto.getStatus())) {
+                log.setProcessResult("IGNORED");
+                log.setErrorMessage("STATUS_NOT_SUCCESS");
+                paymentCallbackLogMapper.insert(log);
+                result = "success";
+                return result;
+            }
+
+            if (dto.getAmount() != null && paymentRecord.getPayAmount() != null) {
+                if (dto.getAmount().compareTo(paymentRecord.getPayAmount()) != 0) {
+                    log.setProcessResult("REJECTED");
+                    log.setErrorMessage("AMOUNT_MISMATCH");
+                    paymentCallbackLogMapper.insert(log);
+                    result = "fail";
+                    return result;
+                }
+            }
+
+            if (BizStatusConstant.PayStatus.PAID.equals(paymentRecord.getPayStatus())) {
+                log.setProcessResult("IDEMPOTENT");
+                paymentCallbackLogMapper.insert(log);
+                result = "success";
+                return result;
+            }
+
+            String idempotencyKey = "CALLBACK_ASYNC_" + dto.getTradeNo();
+            if (idempotencyKey.equals(paymentRecord.getCallbackIdempotencyKey())) {
+                log.setProcessResult("IDEMPOTENT");
+                paymentCallbackLogMapper.insert(log);
+                result = "success";
+                return result;
+            }
+
+            paymentRecord.setPayStatus(BizStatusConstant.PayStatus.PAID);
+            paymentRecord.setPayTime(LocalDateTime.now());
+            paymentRecord.setCallbackIdempotencyKey(idempotencyKey);
+            paymentRecordMapper.updateById(paymentRecord);
+
+            OrderInfo orderInfo = orderInfoMapper.selectById(paymentRecord.getOrderId());
+            if (orderInfo != null) {
+                orderInfo.setPayStatus(BizStatusConstant.PayStatus.PAID);
+                orderInfo.setOrderStatus(BizStatusConstant.OrderStatus.PAID);
+                orderInfoMapper.updateById(orderInfo);
+                updateBizStatus(orderInfo);
+            }
+
+            log.setProcessResult("PROCESSED");
             paymentCallbackLogMapper.insert(log);
-            return "success";
+            result = "success";
+            return result;
+        } finally {
+            long costMs = System.currentTimeMillis() - start;
+            log.info("PAY_CALLBACK payNo={} tradeNo={} status={} result={} costMs={}",
+                    dto == null ? null : dto.getPayNo(),
+                    dto == null ? null : dto.getTradeNo(),
+                    dto == null ? null : dto.getStatus(),
+                    result,
+                    costMs);
         }
-
-        String idempotencyKey = "CALLBACK_ASYNC_" + dto.getTradeNo();
-        if (idempotencyKey.equals(paymentRecord.getCallbackIdempotencyKey())) {
-            log.setProcessResult("IDEMPOTENT");
-            paymentCallbackLogMapper.insert(log);
-            return "success";
-        }
-
-        paymentRecord.setPayStatus(BizStatusConstant.PayStatus.PAID);
-        paymentRecord.setPayTime(LocalDateTime.now());
-        paymentRecord.setCallbackIdempotencyKey(idempotencyKey);
-        paymentRecordMapper.updateById(paymentRecord);
-
-        OrderInfo orderInfo = orderInfoMapper.selectById(paymentRecord.getOrderId());
-        if (orderInfo != null) {
-            orderInfo.setPayStatus(BizStatusConstant.PayStatus.PAID);
-            orderInfo.setOrderStatus(BizStatusConstant.OrderStatus.PAID);
-            orderInfoMapper.updateById(orderInfo);
-            updateBizStatus(orderInfo);
-        }
-
-        log.setProcessResult("PROCESSED");
-        paymentCallbackLogMapper.insert(log);
-        return "success";
     }
 
     public PayCallbackDTO buildMockCallback(String payNo, String tradeNo) {
