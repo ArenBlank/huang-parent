@@ -1,6 +1,14 @@
 -- Reset occupancy and pending records for local regression reruns
 USE fitness_platform;
 
+-- ensure core roles exist (idempotent, stable role IDs for regression)
+INSERT IGNORE INTO role (id, role_name, role_code, status) VALUES
+(1, '管理员', 'ADMIN', 1),
+(2, '教练', 'COACH', 1),
+(3, '学员', 'MEMBER', 1),
+(4, '运营管理员', 'OPS_ADMIN', 1),
+(5, '审核管理员', 'AUDIT_ADMIN', 1);
+
 -- reset schedule occupancy
 UPDATE coach_schedule SET booked_count = 0 WHERE is_deleted = 0;
 UPDATE course_schedule SET booked_count = 0 WHERE is_deleted = 0;
