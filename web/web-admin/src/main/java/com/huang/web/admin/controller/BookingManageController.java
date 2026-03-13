@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-@Tag(name = "Admin预约订单", description = "预约与订单管理")
+@Tag(name = "Admin预约订单", description = "预约与订单管�?)
 @RestController
 @RequestMapping("/admin/ops")
 @RequireAdminRole({AdminRoleCode.ADMIN, AdminRoleCode.OPS_ADMIN})
@@ -32,7 +32,7 @@ public class BookingManageController {
         return Result.ok(adminOpsBizService.bookingList(status));
     }
 
-    @Operation(summary = "管理员完成授课")
+    @Operation(summary = "管理员完成授�?)
     @PostMapping("/booking/complete")
     @OperationLog(module = "booking", action = "complete", detail = "admin complete booking")
     public Result<?> complete(@RequestParam Long bookingId) {
@@ -45,11 +45,20 @@ public class BookingManageController {
     public Result<?> orderList(@RequestParam(required = false) String payStatus) {
         return Result.ok(adminOpsBizService.orderList(payStatus));
     }
+    @Operation(summary = "订单详情(含明细条)")
+    @GetMapping("/order/detail")
+    public Result<?> orderDetail(@RequestParam Long orderId) {
+        var detail = adminOpsBizService.orderDetail(orderId);
+        return detail == null ? Result.fail(AdminErrorCode.ORDER_NOT_FOUND, "order not found") : Result.ok(detail);
+    }
 
-    @Operation(summary = "手动关闭超时未支付预约")
+    @Operation(summary = "手动关闭超时未支付预�?)
     @PostMapping("/booking/close-timeout")
     @OperationLog(module = "booking", action = "close_timeout", detail = "admin close timeout bookings")
     public Result<?> closeTimeout(@RequestParam(defaultValue = "30") Integer timeoutMinutes) {
         return Result.ok(adminOpsBizService.closeTimeoutUnpaidBookings(timeoutMinutes));
     }
 }
+
+
+

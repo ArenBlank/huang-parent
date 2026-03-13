@@ -6,12 +6,14 @@ import com.huang.common.constant.BizStatusConstant;
 import com.huang.model.entity.CoachBooking;
 import com.huang.model.entity.CoachSchedule;
 import com.huang.model.entity.OrderInfo;
+import com.huang.model.entity.OrderItem;
 import com.huang.model.entity.PaymentRecord;
 import com.huang.model.entity.TrainingRecord;
 import com.huang.model.entity.User;
 import com.huang.web.admin.mapper.CoachBookingMapper;
 import com.huang.web.admin.mapper.CoachScheduleMapper;
 import com.huang.web.admin.mapper.OrderInfoMapper;
+import com.huang.web.admin.mapper.OrderItemMapper;
 import com.huang.web.admin.mapper.PaymentRecordMapper;
 import com.huang.web.admin.mapper.TrainingRecordMapper;
 import com.huang.web.admin.mapper.UserMapper;
@@ -32,15 +34,18 @@ public class AdminOpsBizService {
     private final UserMapper userMapper;
     private final CoachScheduleMapper coachScheduleMapper;
     private final PaymentRecordMapper paymentRecordMapper;
+    private final OrderItemMapper orderItemMapper;
 
     public AdminOpsBizService(CoachBookingMapper coachBookingMapper,
                               OrderInfoMapper orderInfoMapper,
+                              OrderItemMapper orderItemMapper,
                               TrainingRecordMapper trainingRecordMapper,
                               UserMapper userMapper,
                               CoachScheduleMapper coachScheduleMapper,
                               PaymentRecordMapper paymentRecordMapper) {
         this.coachBookingMapper = coachBookingMapper;
         this.orderInfoMapper = orderInfoMapper;
+        this.orderItemMapper = orderItemMapper;
         this.trainingRecordMapper = trainingRecordMapper;
         this.userMapper = userMapper;
         this.coachScheduleMapper = coachScheduleMapper;
@@ -74,6 +79,22 @@ public class AdminOpsBizService {
             wrapper.eq(OrderInfo::getPayStatus, payStatus);
         }
         return orderInfoMapper.selectList(wrapper);
+    }
+
+    public Map<String, Object> orderDetail(Long orderId) {
+        OrderInfo order = orderInfoMapper.selectById(orderId);
+        if (order == null) {
+            return null;
+        }
+        List<OrderItem> items = orderItemMapper.selectList(
+                new LambdaQueryWrapper<OrderItem>()
+                        .eq(OrderItem::getOrderId, orderId)
+                        .orderByAsc(OrderItem::getId)
+        );
+        Map<String, Object> result = new HashMap<>();
+        result.put("order", order);
+        result.put("items", items);
+        return result;
     }
 
     public Map<String, Object> dashboardSummary() {
