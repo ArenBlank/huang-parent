@@ -953,6 +953,39 @@
       ]
     },
     {
+      "name": "15A Course Callback Invalid Sign",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"payNo\": \"{{coursePayNo}}\",\n  \"tradeNo\": \"MOCKTRADE_BAD_{{$timestamp}}\",\n  \"status\": \"SUCCESS\",\n  \"amount\": 0,\n  \"sign\": \"BAD_SIGN\"\n}"
+        },
+        "url": "{{appBaseUrl}}/app/pay/callback"
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (pm.collectionVariables.get('canRunCourseFlow') !== '1') {",
+              "  pm.test('skip invalid sign when no course flow', function () { pm.expect(true).to.eql(true); });",
+              "} else {",
+              "  pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+              "  pm.test('invalid sign rejected', function () { pm.expect(pm.response.text()).to.eql('fail'); });",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
       "name": "16 Course Refund",
       "request": {
         "method": "POST",
