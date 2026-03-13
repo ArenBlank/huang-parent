@@ -47,7 +47,8 @@
               "const res = pm.response.json();",
               "pm.test('biz code 200', function () { pm.expect(res.code).to.eql(200); });",
               "pm.test('accessToken exists', function () { pm.expect(res.data.accessToken).to.be.a('string').and.not.empty; });",
-              "pm.collectionVariables.set('appAccessToken', res.data.accessToken);"
+              "pm.collectionVariables.set('appAccessToken', res.data.accessToken);",
+              "pm.test('traceId header exists', function () { pm.expect(pm.response.headers.get('X-Trace-Id')).to.be.ok; });"
             ]
           }
         }
@@ -417,7 +418,7 @@
             "type": "text/javascript",
             "exec": [
               "if (pm.collectionVariables.get('canRunBookingFlow') !== '1') {",
-              "  postman.setNextRequest('08 Close Timeout Bookings');",
+              "  pm.execution.setNextRequest('08 Close Timeout Bookings');",
               "}"
             ]
           }
@@ -435,7 +436,7 @@
               "  pm.collectionVariables.set('canRunBookingFlow', '0');",
               "  pm.collectionVariables.unset('bookingId');",
               "  pm.test('booking create not available, skip pay chain', function () { pm.expect([200, 201]).to.include(res.code); });",
-              "  postman.setNextRequest('08 Close Timeout Bookings');",
+              "  pm.execution.setNextRequest('08 Close Timeout Bookings');",
               "} else {",
               "  pm.test('create booking success', function () { pm.expect(res.code).to.eql(200); });",
               "  pm.test('bookingId exists', function () { pm.expect(res.data && res.data.bookingId).to.be.a('number'); });",
@@ -474,7 +475,7 @@
             "type": "text/javascript",
             "exec": [
               "if (!pm.collectionVariables.get('bookingId')) {",
-              "  postman.setNextRequest('08 Close Timeout Bookings');",
+              "  pm.execution.setNextRequest('08 Close Timeout Bookings');",
               "}"
             ]
           }
@@ -519,7 +520,7 @@
             "type": "text/javascript",
             "exec": [
               "if (!pm.collectionVariables.get('bookingId')) {",
-              "  postman.setNextRequest('08 Close Timeout Bookings');",
+              "  pm.execution.setNextRequest('08 Close Timeout Bookings');",
               "}"
             ]
           }
@@ -882,7 +883,7 @@
             "type": "text/javascript",
             "exec": [
               "if (pm.collectionVariables.get('canRunCourseFlow') !== '1') {",
-              "  postman.setNextRequest('17 My Course Enrollments');",
+              "  pm.execution.setNextRequest('17 My Course Enrollments');",
               "}"
             ]
           }
@@ -934,7 +935,7 @@
             "type": "text/javascript",
             "exec": [
               "if (!pm.collectionVariables.get('courseEnrollmentId')) {",
-              "  postman.setNextRequest('17 My Course Enrollments');",
+              "  pm.execution.setNextRequest('17 My Course Enrollments');",
               "}"
             ]
           }
@@ -1008,10 +1009,10 @@
             "type": "text/javascript",
             "exec": [
               "if (pm.collectionVariables.get('canRunCourseFlow') !== '1') {",
-              "  postman.setNextRequest('16 Course Refund');",
+              "  pm.execution.setNextRequest('16 Course Refund');",
               "}",
               "if ((pm.environment.get('paymentSignMode') || '').toLowerCase() !== 'hmac') {",
-              "  postman.setNextRequest('16 Course Refund');",
+              "  pm.execution.setNextRequest('16 Course Refund');",
               "}",
               "const payNo = pm.collectionVariables.get('coursePayNo');",
               "const tradeNo = 'HMAC' + Date.now();",
@@ -1070,7 +1071,7 @@
             "type": "text/javascript",
             "exec": [
               "if (!pm.collectionVariables.get('courseEnrollmentId')) {",
-              "  postman.setNextRequest('17 My Course Enrollments');",
+              "  pm.execution.setNextRequest('17 My Course Enrollments');",
               "}"
             ]
           }
