@@ -28,11 +28,15 @@ public class HmacPaymentSignVerifier implements PaymentSignVerifier {
     }
 
     @Override
-    public String generateMockSign(String payNo) {
+    public String generateSign(PayCallbackDTO dto) {
+        if (dto == null) {
+            return "";
+        }
         if (secret == null || secret.isBlank()) {
             return "";
         }
-        return sign(payNo);
+        String payload = buildPayload(dto);
+        return sign(payload);
     }
 
     private String buildPayload(PayCallbackDTO dto) {

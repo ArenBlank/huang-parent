@@ -6,6 +6,5 @@ public interface PaymentSignVerifier {
 
     boolean verify(PayCallbackDTO dto);
 
-    String generateMockSign(String payNo);
+    String generateSign(PayCallbackDTO dto);
 }
-

@@ -155,7 +155,7 @@ public class PaymentCallbackBizService {
         dto.setTradeNo((tradeNo == null || tradeNo.isBlank()) ? ("MOCKTRADE" + System.currentTimeMillis()) : tradeNo);
         dto.setStatus("SUCCESS");
         dto.setAmount(paymentRecord.getPayAmount() == null ? BigDecimal.ZERO : paymentRecord.getPayAmount());
-        dto.setSign(paymentSignVerifier.generateMockSign(payNo));
+        dto.setSign(paymentSignVerifier.generateSign(dto));
         return dto;
     }
 

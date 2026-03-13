@@ -84,7 +84,7 @@ jobs:
       - name: Start admin and app
         run: |
           nohup mvn -B -ntp -f web/web-admin/pom.xml -DskipTests spring-boot:run -Dspring-boot.run.arguments="--spring.data.redis.password=" > admin.log 2>&1 &
-          nohup mvn -B -ntp -f web/web-app/pom.xml -DskipTests spring-boot:run -Dspring-boot.run.arguments="--spring.data.redis.password=" > app.log 2>&1 &
+          nohup mvn -B -ntp -f web/web-app/pom.xml -DskipTests spring-boot:run -Dspring-boot.run.arguments="--spring.data.redis.password= --payment.sign.mode=hmac --payment.sign.secret=ci-pay-secret" > app.log 2>&1 &
 
       - name: Wait services up
         run: |
@@ -113,6 +113,8 @@ jobs:
             -e tests/local.postman_environment.json \
             --working-dir "$GITHUB_WORKSPACE" \
             --env-var "videoFilePath=tests/assets/demo.mp4" \
+            --env-var "paymentSignMode=hmac" \
+            --env-var "paymentSignSecret=ci-pay-secret" \
             --reporters cli
 
       - name: Cleanup test data

@@ -12,11 +12,14 @@ public class MockPaymentSignVerifier implements PaymentSignVerifier {
 
     @Override
     public boolean verify(PayCallbackDTO dto) {
-        return generateMockSign(dto.getPayNo()).equals(dto.getSign());
+        return generateSign(dto).equals(dto.getSign());
     }
 
     @Override
-    public String generateMockSign(String payNo) {
-        return MOCK_SIGN_PREFIX + payNo;
+    public String generateSign(PayCallbackDTO dto) {
+        if (dto == null || dto.getPayNo() == null) {
+            return "";
+        }
+        return MOCK_SIGN_PREFIX + dto.getPayNo();
     }
 }

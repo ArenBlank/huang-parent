@@ -986,6 +986,64 @@
       ]
     },
     {
+      "name": "15B Course Callback Valid Sign (HMAC)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"payNo\": \"{{coursePayNo}}\",\n  \"tradeNo\": \"{{hmacTradeNo}}\",\n  \"status\": \"SUCCESS\",\n  \"sign\": \"{{hmacSign}}\"\n}"
+        },
+        "url": "{{appBaseUrl}}/app/pay/callback"
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (pm.collectionVariables.get('canRunCourseFlow') !== '1') {",
+              "  postman.setNextRequest('16 Course Refund');",
+              "}",
+              "if ((pm.environment.get('paymentSignMode') || '').toLowerCase() !== 'hmac') {",
+              "  postman.setNextRequest('16 Course Refund');",
+              "}",
+              "const payNo = pm.collectionVariables.get('coursePayNo');",
+              "const tradeNo = 'HMAC' + Date.now();",
+              "const status = 'SUCCESS';",
+              "const amount = '';",
+              "const payload = `${payNo}|${tradeNo}|${status}|${amount}`;",
+              "const secret = pm.environment.get('paymentSignSecret') || '';",
+              "const sign = CryptoJS.HmacSHA256(payload, secret).toString(CryptoJS.enc.Hex);",
+              "pm.collectionVariables.set('hmacTradeNo', tradeNo);",
+              "pm.collectionVariables.set('hmacSign', sign);"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "if (pm.collectionVariables.get('canRunCourseFlow') !== '1') {",
+              "  pm.test('skip hmac callback when no course flow', function () { pm.expect(true).to.eql(true); });",
+              "} else if ((pm.environment.get('paymentSignMode') || '').toLowerCase() !== 'hmac') {",
+              "  pm.test('skip hmac callback when not hmac mode', function () { pm.expect(true).to.eql(true); });",
+              "} else {",
+              "  pm.test('HTTP 200', function () { pm.response.to.have.status(200); });",
+              "  pm.test('hmac sign accepted', function () { pm.expect(pm.response.text()).to.eql('success'); });",
+              "}"
+            ]
+          }
+        }
+      ]
+    },
+    {
       "name": "16 Course Refund",
       "request": {
         "method": "POST",
