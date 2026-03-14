@@ -52,6 +52,20 @@ public class AdminPermissionMatrixValidator implements ApplicationRunner {
         }
     }
 
+    public AdminPermissionMatrixView buildView() {
+        Set<String> required = collectRequiredPermissions();
+        Set<String> configPerms = permissionProperties.allPermissions();
+        Set<String> dbPerms = loadDbPermissions();
+
+        Set<String> known = new HashSet<>(configPerms);
+        known.addAll(dbPerms);
+
+        Set<String> missing = new HashSet<>(required);
+        missing.removeAll(known);
+
+        return new AdminPermissionMatrixView(required, configPerms, dbPerms, missing);
+    }
+
     private Set<String> collectRequiredPermissions() {
         Set<String> required = new HashSet<>();
         for (HandlerMethod method : handlerMapping.getHandlerMethods().values()) {

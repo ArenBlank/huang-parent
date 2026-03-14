@@ -4015,6 +4015,47 @@
                                                   }
                                    }
                                ]
+                 },
+                 {
+                     "name":  "76 Admin Permission Matrix",
+                     "request":  {
+                                     "method":  "GET",
+                                     "header":  [
+                                                    {
+                                                        "key":  "Authorization",
+                                                        "value":  "Bearer {{auditAdminAccessToken}}"
+                                                    },
+                                                    {
+                                                        "key":  "Accept",
+                                                        "value":  "application/json"
+                                                    }
+                                                ],
+                                     "url":  {
+                                                 "raw":  "{{adminBaseUrl}}/admin/permission/matrix",
+                                                 "host":  [
+                                                              "{{adminBaseUrl}}"
+                                                          ],
+                                                 "path":  [
+                                                              "admin",
+                                                              "permission",
+                                                              "matrix"
+                                                          ]
+                                             }
+                                 },
+                     "event":  [
+                                   {
+                                       "listen":  "test",
+                                       "script":  {
+                                                      "type":  "text/javascript",
+                                                      "exec":  [
+                                                                   "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
+                                                                   "const json = pm.response.json();",
+                                                                   "pm.test(\"permission matrix success\", function () { pm.expect(json.code).to.eql(200); });",
+                                                                   "pm.test(\"matrix has required\", function () { pm.expect(json.data.required).to.exist; });"
+                                                               ]
+                                                  }
+                                   }
+                               ]
                  }
              ],
     "variable":  [
