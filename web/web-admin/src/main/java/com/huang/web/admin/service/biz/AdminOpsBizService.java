@@ -129,7 +129,30 @@ public class AdminOpsBizService {
         result.put("refundStatus", refund != null ? refund.getRefundStatus() : null);
         result.put("refundTime", refund != null ? refund.getRefundTime() : null);
         result.put("refundReason", refund != null ? refund.getReason() : null);
+        Map<String, Object> financeSummary = new HashMap<>();
+        financeSummary.put("paidAmount", paidAmount);
+        financeSummary.put("refundAmount", refundAmount);
+        financeSummary.put("netPaid", paidAmount.subtract(refundAmount));
+        financeSummary.put("payStatus", payment != null ? payment.getPayStatus() : order.getPayStatus());
+        financeSummary.put("refundStatus", refund != null ? refund.getRefundStatus() : null);
+        financeSummary.put("statusText", buildFinanceStatusText(payment, refund));
+        result.put("financeSummary", financeSummary);
         return result;
+    }
+
+    private String buildFinanceStatusText(PaymentRecord payment, RefundRecord refund) {
+        String refundStatus = refund == null ? null : refund.getRefundStatus();
+        if ("REFUNDED".equalsIgnoreCase(refundStatus)) {
+            return "refunded";
+        }
+        String payStatus = payment == null ? null : payment.getPayStatus();
+        if ("PAID".equalsIgnoreCase(payStatus)) {
+            return "paid";
+        }
+        if ("UNPAID".equalsIgnoreCase(payStatus)) {
+            return "unpaid";
+        }
+        return "unknown";
     }
 
     public Map<String, Object> dashboardSummary() {
