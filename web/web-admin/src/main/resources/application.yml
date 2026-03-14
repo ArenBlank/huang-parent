@@ -75,7 +75,7 @@ admin:
 
 logging:
   pattern:
-    level: "%5p [traceId:%X{traceId}]"
+    level: "%5p [traceId:%X{traceId} userId:%X{userId}]"
 
 springdoc:
   default-flat-param-object: true

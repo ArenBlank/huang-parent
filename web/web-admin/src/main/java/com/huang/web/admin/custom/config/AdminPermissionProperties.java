@@ -49,4 +49,14 @@ public class AdminPermissionProperties {
     public Set<Long> courseCategoriesFor(String roleCode) {
         return courseCategoryScope.getOrDefault(roleCode, new HashSet<>());
     }
+
+    public Set<String> allPermissions() {
+        Set<String> all = new HashSet<>();
+        for (Set<String> perms : roleMap.values()) {
+            if (perms != null) {
+                all.addAll(perms);
+            }
+        }
+        return all;
+    }
 }
