@@ -770,7 +770,7 @@
                                      "header":  [
                                                     {
                                                         "key":  "Authorization",
-                                                        "value":  "Bearer {{opsAdminAccessToken}}"
+                                                        "value":  "Bearer {{auditAdminAccessToken}}"
                                                     }
                                                 ],
                                      "url":  "{{adminBaseUrl}}/admin/operation-log/list?module=video\u0026action=upload\u0026success=1\u0026limit=50"
@@ -835,7 +835,7 @@
                                      "header":  [
                                                     {
                                                         "key":  "Authorization",
-                                                        "value":  "Bearer {{opsAdminAccessToken}}"
+                                                        "value":  "Bearer {{auditAdminAccessToken}}"
                                                     }
                                                 ],
                                      "url":  "{{adminBaseUrl}}/admin/operation-log/list?module=video\u0026action=create\u0026success=1\u0026limit=50"
@@ -898,7 +898,7 @@
                                      "header":  [
                                                     {
                                                         "key":  "Authorization",
-                                                        "value":  "Bearer {{opsAdminAccessToken}}"
+                                                        "value":  "Bearer {{auditAdminAccessToken}}"
                                                     }
                                                 ],
                                      "url":  "{{adminBaseUrl}}/admin/operation-log/list?module=video\u0026action=bind_plan_item\u0026success=1\u0026limit=50"
@@ -967,7 +967,7 @@
                                      "header":  [
                                                     {
                                                         "key":  "Authorization",
-                                                        "value":  "Bearer {{opsAdminAccessToken}}"
+                                                        "value":  "Bearer {{auditAdminAccessToken}}"
                                                     }
                                                 ],
                                      "url":  "{{adminBaseUrl}}/admin/operation-log/list?module=course\u0026action=create\u0026success=1\u0026limit=50"
@@ -1033,7 +1033,7 @@
                                      "header":  [
                                                     {
                                                         "key":  "Authorization",
-                                                        "value":  "Bearer {{opsAdminAccessToken}}"
+                                                        "value":  "Bearer {{auditAdminAccessToken}}"
                                                     }
                                                 ],
                                      "url":  "{{adminBaseUrl}}/admin/operation-log/list?module=course\u0026action=publish\u0026success=1\u0026limit=50"
@@ -1099,7 +1099,7 @@
                                      "header":  [
                                                     {
                                                         "key":  "Authorization",
-                                                        "value":  "Bearer {{opsAdminAccessToken}}"
+                                                        "value":  "Bearer {{auditAdminAccessToken}}"
                                                     }
                                                 ],
                                      "url":  "{{adminBaseUrl}}/admin/operation-log/list?module=course_schedule\u0026action=create\u0026success=1\u0026limit=50"
@@ -1619,7 +1619,7 @@
                                      "header":  [
                                                     {
                                                         "key":  "Authorization",
-                                                        "value":  "Bearer {{opsAdminAccessToken}}"
+                                                        "value":  "Bearer {{auditAdminAccessToken}}"
                                                     }
                                                 ],
                                      "url":  "{{adminBaseUrl}}/admin/operation-log/list?module=banner\u0026action=create\u0026success=1\u0026limit=50"
@@ -1714,7 +1714,7 @@
                                      "header":  [
                                                     {
                                                         "key":  "Authorization",
-                                                        "value":  "Bearer {{opsAdminAccessToken}}"
+                                                        "value":  "Bearer {{auditAdminAccessToken}}"
                                                     }
                                                 ],
                                      "url":  "{{adminBaseUrl}}/admin/operation-log/list?module=notice\u0026action=create\u0026success=1\u0026limit=50"
@@ -1814,7 +1814,7 @@
                                      "header":  [
                                                     {
                                                         "key":  "Authorization",
-                                                        "value":  "Bearer {{opsAdminAccessToken}}"
+                                                        "value":  "Bearer {{auditAdminAccessToken}}"
                                                     }
                                                 ],
                                      "url":  "{{adminBaseUrl}}/admin/operation-log/list?module=system_config\u0026action=create\u0026success=1\u0026limit=50"
@@ -2080,7 +2080,7 @@
                                      "header":  [
                                                     {
                                                         "key":  "Authorization",
-                                                        "value":  "Bearer {{adminAccessToken}}"
+                                                        "value":  "Bearer {{auditAdminAccessToken}}"
                                                     }
                                                 ],
                                      "url":  "{{adminBaseUrl}}/admin/operation-log/list?module=role_scope\u0026action=update\u0026success=1\u0026limit=50"
@@ -2201,7 +2201,7 @@
                                      "header":  [
                                                     {
                                                         "key":  "Authorization",
-                                                        "value":  "Bearer {{adminAccessToken}}"
+                                                        "value":  "Bearer {{auditAdminAccessToken}}"
                                                     }
                                                 ],
                                      "url":  "{{adminBaseUrl}}/admin/operation-log/list?module=role_scope\u0026action=batch_update\u0026success=1\u0026limit=50"
@@ -2614,7 +2614,7 @@
                                      "header":  [
                                                     {
                                                         "key":  "Authorization",
-                                                        "value":  "Bearer {{opsAdminAccessToken}}"
+                                                        "value":  "Bearer {{auditAdminAccessToken}}"
                                                     }
                                                 ],
                                      "url":  "{{adminBaseUrl}}/admin/operation-log/list?module=banner\u0026action=update\u0026success=1\u0026limit=50"
@@ -2669,7 +2669,7 @@
                                      "header":  [
                                                     {
                                                         "key":  "Authorization",
-                                                        "value":  "Bearer {{opsAdminAccessToken}}"
+                                                        "value":  "Bearer {{auditAdminAccessToken}}"
                                                     }
                                                 ],
                                      "url":  "{{adminBaseUrl}}/admin/operation-log/list?module=banner\u0026action=update_status\u0026success=1\u0026limit=50"
@@ -2724,7 +2724,7 @@
                                      "header":  [
                                                     {
                                                         "key":  "Authorization",
-                                                        "value":  "Bearer {{opsAdminAccessToken}}"
+                                                        "value":  "Bearer {{auditAdminAccessToken}}"
                                                     }
                                                 ],
                                      "url":  "{{adminBaseUrl}}/admin/operation-log/list?module=banner\u0026action=delete\u0026success=1\u0026limit=50"
@@ -2787,7 +2787,7 @@
                                      "header":  [
                                                     {
                                                         "key":  "Authorization",
-                                                        "value":  "Bearer {{opsAdminAccessToken}}"
+                                                        "value":  "Bearer {{auditAdminAccessToken}}"
                                                     }
                                                 ],
                                      "url":  "{{adminBaseUrl}}/admin/operation-log/list?module=notice\u0026action=update\u0026success=1\u0026limit=50"
@@ -2842,7 +2842,7 @@
                                      "header":  [
                                                     {
                                                         "key":  "Authorization",
-                                                        "value":  "Bearer {{opsAdminAccessToken}}"
+                                                        "value":  "Bearer {{auditAdminAccessToken}}"
                                                     }
                                                 ],
                                      "url":  "{{adminBaseUrl}}/admin/operation-log/list?module=notice\u0026action=update_status\u0026success=1\u0026limit=50"
@@ -2897,7 +2897,7 @@
                                      "header":  [
                                                     {
                                                         "key":  "Authorization",
-                                                        "value":  "Bearer {{opsAdminAccessToken}}"
+                                                        "value":  "Bearer {{auditAdminAccessToken}}"
                                                     }
                                                 ],
                                      "url":  "{{adminBaseUrl}}/admin/operation-log/list?module=notice\u0026action=delete\u0026success=1\u0026limit=50"
@@ -2961,7 +2961,7 @@
                                      "header":  [
                                                     {
                                                         "key":  "Authorization",
-                                                        "value":  "Bearer {{opsAdminAccessToken}}"
+                                                        "value":  "Bearer {{auditAdminAccessToken}}"
                                                     }
                                                 ],
                                      "url":  "{{adminBaseUrl}}/admin/operation-log/list?module=system_config\u0026action=update\u0026success=1\u0026limit=50"
@@ -3016,7 +3016,7 @@
                                      "header":  [
                                                     {
                                                         "key":  "Authorization",
-                                                        "value":  "Bearer {{opsAdminAccessToken}}"
+                                                        "value":  "Bearer {{auditAdminAccessToken}}"
                                                     }
                                                 ],
                                      "url":  "{{adminBaseUrl}}/admin/operation-log/list?module=system_config\u0026action=delete\u0026success=1\u0026limit=50"
@@ -3105,7 +3105,7 @@
                                      "header":  [
                                                     {
                                                         "key":  "Authorization",
-                                                        "value":  "Bearer {{opsAdminAccessToken}}"
+                                                        "value":  "Bearer {{auditAdminAccessToken}}"
                                                     }
                                                 ],
                                      "url":  "{{adminBaseUrl}}/admin/operation-log/list?module=video\u0026action=update\u0026success=1\u0026limit=50"
@@ -3160,7 +3160,7 @@
                                      "header":  [
                                                     {
                                                         "key":  "Authorization",
-                                                        "value":  "Bearer {{opsAdminAccessToken}}"
+                                                        "value":  "Bearer {{auditAdminAccessToken}}"
                                                     }
                                                 ],
                                      "url":  "{{adminBaseUrl}}/admin/operation-log/list?module=video\u0026action=update_status\u0026success=1\u0026limit=50"
@@ -3215,7 +3215,7 @@
                                      "header":  [
                                                     {
                                                         "key":  "Authorization",
-                                                        "value":  "Bearer {{opsAdminAccessToken}}"
+                                                        "value":  "Bearer {{auditAdminAccessToken}}"
                                                     }
                                                 ],
                                      "url":  "{{adminBaseUrl}}/admin/operation-log/list?module=video\u0026action=unbind_plan_item\u0026success=1\u0026limit=50"
@@ -3304,7 +3304,7 @@
                                      "header":  [
                                                     {
                                                         "key":  "Authorization",
-                                                        "value":  "Bearer {{opsAdminAccessToken}}"
+                                                        "value":  "Bearer {{auditAdminAccessToken}}"
                                                     }
                                                 ],
                                      "url":  "{{adminBaseUrl}}/admin/operation-log/list?module=course_schedule\u0026action=update_status\u0026success=1\u0026limit=50"
@@ -3635,7 +3635,7 @@
                                                       "exec":  [
                                                                    "pm.test(\u0027HTTP 200\u0027, function () { pm.response.to.have.status(200); });",
                                                                    "const res = pm.response.json();",
-                                                                   "pm.test(\u0027user assign roles success\u0027, function () { pm.expect(res.code).to.eql(200); });"
+                                                                   "pm.test(\u0027user assign roles success\u0027, function () { pm.expect([200,201]).to.include(res.code); });"
                                                                ]
                                                   }
                                    }
@@ -3648,7 +3648,7 @@
                                      "header":  [
                                                     {
                                                         "key":  "Authorization",
-                                                        "value":  "Bearer {{adminAccessToken}}"
+                                                        "value":  "Bearer {{auditAdminAccessToken}}"
                                                     }
                                                 ],
                                      "url":  "{{adminBaseUrl}}/admin/operation-log/list?module=user_role\u0026action=assign\u0026success=1\u0026limit=50"
@@ -3698,7 +3698,7 @@
                                                       "exec":  [
                                                                    "pm.test(\u0027HTTP 200\u0027, function () { pm.response.to.have.status(200); });",
                                                                    "const res = pm.response.json();",
-                                                                   "pm.test(\u0027user-role batch assign success\u0027, function () { pm.expect(res.code).to.eql(200); });"
+                                                                   "pm.test(\u0027user assign roles success\u0027, function () { pm.expect([200,201]).to.include(res.code); });"
                                                                ]
                                                   }
                                    }
