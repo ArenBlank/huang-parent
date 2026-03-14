@@ -25,6 +25,10 @@ public class PermissionMatrixController {
     @GetMapping("/matrix")
     @RequireAdminPermission({"operation:log:read"})
     public Result<AdminPermissionMatrixView> matrix() {
-        return Result.ok(matrixValidator.buildView());
+        AdminPermissionMatrixView view = matrixValidator.buildView();
+        if (view.getMissing() != null && !view.getMissing().isEmpty()) {
+            view.setWarning("missing permissions in matrix: " + view.getMissing().size());
+        }
+        return Result.ok(view);
     }
 }

@@ -8,6 +8,7 @@ public class AdminPermissionMatrixView {
     private final Set<String> config;
     private final Set<String> database;
     private final Set<String> missing;
+    private String warning;
 
     public AdminPermissionMatrixView(Set<String> required,
                                      Set<String> config,
@@ -33,5 +34,13 @@ public class AdminPermissionMatrixView {
 
     public Set<String> getMissing() {
         return missing;
+    }
+
+    public String getWarning() {
+        return warning;
+    }
+
+    public void setWarning(String warning) {
+        this.warning = warning;
     }
 }
