@@ -1,4 +1,4 @@
-package com.huang.web.admin.service.biz;
+﻿package com.huang.web.admin.service.biz;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
@@ -138,6 +138,8 @@ public class AdminOpsBizService {
         financeSummary.put("statusText", buildFinanceStatusText(payment, refund, order));
         financeSummary.put("statusHint", buildFinanceStatusHint(payment, refund, order));
         financeSummary.put("statusExplain", buildFinanceStatusExplain(payment, refund, order));
+        financeSummary.put("stage", buildFinanceStage(payment, refund, order));
+        financeSummary.put("displayText", buildFinanceDisplayText(payment, refund, order));
         result.put("financeSummary", financeSummary);
         return result;
     }
@@ -179,24 +181,61 @@ public class AdminOpsBizService {
         }
         return "order_unknown";
     }
-
     private String buildFinanceStatusExplain(PaymentRecord payment, RefundRecord refund, OrderInfo order) {
         String refundStatus = refund == null ? null : refund.getRefundStatus();
         if ("REFUNDED".equalsIgnoreCase(refundStatus)) {
-            return "已退款";
+            return "Refund completed";
         }
         String payStatus = payment == null ? null : payment.getPayStatus();
         if ("PAID".equalsIgnoreCase(payStatus)) {
-            return "已支付";
+            return "Payment received";
         }
         String orderStatus = order == null ? null : order.getOrderStatus();
         if ("CLOSED".equalsIgnoreCase(orderStatus)) {
-            return "订单已关闭";
+            return "Order closed";
         }
         if ("UNPAID".equalsIgnoreCase(payStatus)) {
-            return "待支付";
+            return "Awaiting payment";
         }
-        return "状态未知";
+        return "Unknown status";
+    }
+
+    private String buildFinanceStage(PaymentRecord payment, RefundRecord refund, OrderInfo order) {
+        String refundStatus = refund == null ? null : refund.getRefundStatus();
+        if ("REFUNDED".equalsIgnoreCase(refundStatus)) {
+            return "REFUND";
+        }
+        String payStatus = payment == null ? null : payment.getPayStatus();
+        if ("PAID".equalsIgnoreCase(payStatus)) {
+            return "SERVICE";
+        }
+        if ("UNPAID".equalsIgnoreCase(payStatus)) {
+            return "PAYMENT";
+        }
+        String orderStatus = order == null ? null : order.getOrderStatus();
+        if ("CLOSED".equalsIgnoreCase(orderStatus)) {
+            return "CLOSED";
+        }
+        return "UNKNOWN";
+    }
+
+    private String buildFinanceDisplayText(PaymentRecord payment, RefundRecord refund, OrderInfo order) {
+        String refundStatus = refund == null ? null : refund.getRefundStatus();
+        if ("REFUNDED".equalsIgnoreCase(refundStatus)) {
+            return "Refunded";
+        }
+        String payStatus = payment == null ? null : payment.getPayStatus();
+        if ("PAID".equalsIgnoreCase(payStatus)) {
+            return "Paid (awaiting service)";
+        }
+        String orderStatus = order == null ? null : order.getOrderStatus();
+        if ("CLOSED".equalsIgnoreCase(orderStatus)) {
+            return "Closed";
+        }
+        if ("UNPAID".equalsIgnoreCase(payStatus)) {
+            return "Unpaid";
+        }
+        return "Unknown";
     }
 
     public Map<String, Object> dashboardSummary() {
@@ -253,3 +292,5 @@ public class AdminOpsBizService {
         return closed;
     }
 }
+
+
