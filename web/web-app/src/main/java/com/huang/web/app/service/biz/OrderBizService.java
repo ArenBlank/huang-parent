@@ -70,6 +70,12 @@ public class OrderBizService {
         result.put("paidAmount", paidAmount);
         result.put("refundAmount", refundAmount);
         result.put("netPaid", paidAmount.subtract(refundAmount));
+        result.put("payStatus", payment != null ? payment.getPayStatus() : order.getPayStatus());
+        result.put("payChannel", payment != null ? payment.getPayChannel() : null);
+        result.put("payTime", payment != null ? payment.getPayTime() : null);
+        result.put("refundStatus", refund != null ? refund.getRefundStatus() : null);
+        result.put("refundTime", refund != null ? refund.getRefundTime() : null);
+        result.put("refundReason", refund != null ? refund.getReason() : null);
         return result;
     }
 }
