@@ -14,6 +14,7 @@ import org.springframework.stereotype.Service;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.math.BigDecimal;
 
 @Service
 public class OrderBizService {
@@ -55,11 +56,20 @@ public class OrderBizService {
                         .orderByDesc(RefundRecord::getId)
                         .last("LIMIT 1")
         );
+        BigDecimal paidAmount = payment != null && payment.getPayAmount() != null
+                ? payment.getPayAmount()
+                : BigDecimal.ZERO;
+        BigDecimal refundAmount = refund != null && refund.getRefundAmount() != null
+                ? refund.getRefundAmount()
+                : BigDecimal.ZERO;
         Map<String, Object> result = new HashMap<>();
         result.put("order", order);
         result.put("items", items);
         result.put("payment", payment);
         result.put("refund", refund);
+        result.put("paidAmount", paidAmount);
+        result.put("refundAmount", refundAmount);
+        result.put("netPaid", paidAmount.subtract(refundAmount));
         return result;
     }
 }

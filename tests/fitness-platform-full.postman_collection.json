@@ -2851,7 +2851,10 @@
                                                                    "const res = pm.response.json();",
                                                                    "pm.test(\u0027admin order detail success\u0027, function () { pm.expect(res.code).to.eql(200); });",
                                                                    "pm.test(\u0027order exists\u0027, function () { pm.expect(res.data \u0026\u0026 res.data.order).to.be.an(\u0027object\u0027); });",
-                                                                   "pm.test(\u0027items exists\u0027, function () { pm.expect(Array.isArray(res.data \u0026\u0026 res.data.items)).to.eql(true); });"
+                                                                   "pm.test(\u0027items exists\u0027, function () { pm.expect(Array.isArray(res.data \u0026\u0026 res.data.items)).to.eql(true); });",
+                                                                   "pm.test(\u0027paidAmount exists\u0027, function () { pm.expect(res.data \u0026\u0026 res.data.paidAmount).to.not.equal(undefined); });",
+                                                                   "pm.test(\u0027refundAmount exists\u0027, function () { pm.expect(res.data \u0026\u0026 res.data.refundAmount).to.not.equal(undefined); });",
+                                                                   "pm.test(\u0027netPaid exists\u0027, function () { pm.expect(res.data \u0026\u0026 res.data.netPaid).to.not.equal(undefined); });"
                                                                ]
                                                   }
                                    }
@@ -2916,7 +2919,10 @@
                                                                    "const res = pm.response.json();",
                                                                    "pm.test(\u0027app order detail success\u0027, function () { pm.expect(res.code).to.eql(200); });",
                                                                    "pm.test(\u0027order exists\u0027, function () { pm.expect(res.data \u0026\u0026 res.data.order).to.be.an(\u0027object\u0027); });",
-                                                                   "pm.test(\u0027items exists\u0027, function () { pm.expect(Array.isArray(res.data \u0026\u0026 res.data.items)).to.eql(true); });"
+                                                                   "pm.test(\u0027items exists\u0027, function () { pm.expect(Array.isArray(res.data \u0026\u0026 res.data.items)).to.eql(true); });",
+                                                                   "pm.test(\u0027paidAmount exists\u0027, function () { pm.expect(res.data \u0026\u0026 res.data.paidAmount).to.not.equal(undefined); });",
+                                                                   "pm.test(\u0027refundAmount exists\u0027, function () { pm.expect(res.data \u0026\u0026 res.data.refundAmount).to.not.equal(undefined); });",
+                                                                   "pm.test(\u0027netPaid exists\u0027, function () { pm.expect(res.data \u0026\u0026 res.data.netPaid).to.not.equal(undefined); });"
                                                                ]
                                                   }
                                    }
