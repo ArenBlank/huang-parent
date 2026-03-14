@@ -34,6 +34,7 @@ public class CourseManageController {
     }
 
     @Operation(summary = "课程列表")
+    @RequireAdminPermission({"course:read"})
     @GetMapping("/list")
     public Result<?> list(@RequestParam(required = false) Integer status,
                           @RequestParam(required = false) Long categoryId) {

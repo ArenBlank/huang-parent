@@ -3,6 +3,8 @@ package com.huang.web.admin.controller;
 import com.huang.common.result.Result;
 import com.huang.model.entity.Permission;
 import com.huang.web.admin.constant.AdminRoleCode;
+import com.huang.web.admin.custom.aop.OperationLog;
+import com.huang.web.admin.custom.annotation.RequireAdminPermission;
 import com.huang.web.admin.custom.annotation.RequireAdminRole;
 import com.huang.web.admin.dto.role.RolePermissionAssignDTO;
 import com.huang.web.admin.service.biz.AdminRolePermissionBizService;
@@ -27,18 +29,22 @@ public class RolePermissionController {
 
     @Operation(summary = "List permissions")
     @GetMapping("/permissions")
+    @RequireAdminPermission({"role:permission"})
     public Result<List<Permission>> listPermissions() {
         return Result.ok(adminRolePermissionBizService.listPermissions());
     }
 
     @Operation(summary = "List role permissions")
     @GetMapping("/role/{roleId}/permissions")
+    @RequireAdminPermission({"role:permission"})
     public Result<List<Permission>> listRolePermissions(@PathVariable Long roleId) {
         return Result.ok(adminRolePermissionBizService.listPermissionsByRole(roleId));
     }
 
     @Operation(summary = "Assign role permissions (replace/add/remove)")
     @PostMapping("/assign")
+    @RequireAdminPermission({"role:permission"})
+    @OperationLog(module = "role_permission", action = "assign", detail = "admin assign role permissions")
     public Result<String> assign(@Valid @RequestBody RolePermissionAssignDTO dto) {
         boolean ok = adminRolePermissionBizService.assign(dto);
         return ok ? Result.ok("success") : Result.fail("assign failed");

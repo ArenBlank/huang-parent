@@ -1,6 +1,9 @@
 package com.huang.web.admin.controller;
 
 import com.huang.common.result.Result;
+import com.huang.web.admin.constant.AdminRoleCode;
+import com.huang.web.admin.custom.annotation.RequireAdminPermission;
+import com.huang.web.admin.custom.annotation.RequireAdminRole;
 import com.huang.web.admin.service.biz.AdminOpsBizService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -11,6 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 @Tag(name = "Admin看板", description = "运营看板数据")
 @RestController
 @RequestMapping("/admin/dashboard")
+@RequireAdminRole({AdminRoleCode.ADMIN, AdminRoleCode.OPS_ADMIN})
 public class DashboardController {
 
     private final AdminOpsBizService adminOpsBizService;
@@ -21,8 +25,8 @@ public class DashboardController {
 
     @Operation(summary = "看板汇总")
     @GetMapping("/summary")
+    @RequireAdminPermission({"dashboard:read"})
     public Result<?> summary() {
         return Result.ok(adminOpsBizService.dashboardSummary());
     }
 }
-

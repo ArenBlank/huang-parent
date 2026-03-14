@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.huang.common.result.Result;
 import com.huang.web.admin.constant.AdminRoleCode;
 import com.huang.web.admin.custom.aop.OperationLog;
+import com.huang.web.admin.custom.annotation.RequireAdminPermission;
 import com.huang.web.admin.custom.annotation.RequireAdminRole;
 import com.huang.web.admin.dto.role.RoleCourseCategoryScopeBatchUpdateDTO;
 import com.huang.web.admin.dto.role.RoleCourseCategoryScopeUpdateDTO;
@@ -34,6 +35,7 @@ public class RoleController {
     }
 
     @Operation(summary = "角色列表")
+    @RequireAdminPermission({"role:read"})
     @GetMapping("/list")
     public Result<List<Role>> list(@RequestParam(required = false) Integer status) {
         LambdaQueryWrapper<Role> wrapper = new LambdaQueryWrapper<>();
@@ -45,6 +47,7 @@ public class RoleController {
     }
 
     @Operation(summary = "角色详情")
+    @RequireAdminPermission({"role:read"})
     @GetMapping("/detail/{roleId}")
     public Result<Role> detail(@PathVariable Long roleId) {
         Role role = roleService.getById(roleId);
@@ -52,6 +55,8 @@ public class RoleController {
     }
 
     @Operation(summary = "更新角色状态")
+    @RequireAdminPermission({"role:status"})
+    @OperationLog(module = "role", action = "update_status", detail = "admin update role status")
     @PutMapping("/status")
     public Result<String> updateStatus(@Valid @RequestBody RoleStatusUpdateDTO dto) {
         Role role = roleService.getById(dto.getRoleId());
@@ -63,6 +68,7 @@ public class RoleController {
     }
 
     @Operation(summary = "可用角色列表")
+    @RequireAdminPermission({"role:read"})
     @GetMapping("/available")
     public Result<List<Role>> available() {
         return Result.ok(roleService.list(new LambdaQueryWrapper<Role>()
@@ -71,6 +77,7 @@ public class RoleController {
     }
 
     @Operation(summary = "瑙掕壊璇剧▼鍒嗙被鑼冨洿鏌ヨ")
+    @RequireAdminPermission({"role:scope:read"})
     @GetMapping("/{roleId}/course-category-scope")
     public Result<List<Long>> courseCategoryScope(@PathVariable Long roleId) {
         Role role = roleService.getById(roleId);
@@ -82,6 +89,7 @@ public class RoleController {
 
     @Operation(summary = "鏇存柊瑙掕壊璇剧▼鍒嗙被鑼冨洿")
     @OperationLog(module = "role_scope", action = "update", detail = "admin update role course category scope")
+    @RequireAdminPermission({"role:scope:update"})
     @PutMapping("/{roleId}/course-category-scope")
     public Result<String> updateCourseCategoryScope(@PathVariable Long roleId,
                                                     @Valid @RequestBody RoleCourseCategoryScopeUpdateDTO dto) {
@@ -91,6 +99,7 @@ public class RoleController {
 
     @Operation(summary = "鎵归噺鏇存柊瑙掕壊璇剧▼鍒嗙被鑼冨洿")
     @OperationLog(module = "role_scope", action = "batch_update", detail = "admin batch update role course category scope")
+    @RequireAdminPermission({"role:scope:update"})
     @PutMapping("/course-category-scope/batch")
     public Result<String> updateCourseCategoryScopeBatch(@Valid @RequestBody RoleCourseCategoryScopeBatchUpdateDTO dto) {
         boolean ok = adminRoleScopeBizService.updateCourseCategoryScopeBatch(dto.getItems());

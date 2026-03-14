@@ -48,8 +48,13 @@ admin:
     admin-all: true
     role-map:
       OPS_ADMIN:
+        - dashboard:read
+        - booking:read
+        - booking:manage
+        - order:read
         - banner:manage
         - notice:manage
+        - course:read
         - course:create
         - course:publish
         - course:schedule

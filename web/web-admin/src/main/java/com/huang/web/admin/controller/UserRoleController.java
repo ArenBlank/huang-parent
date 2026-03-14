@@ -3,6 +3,7 @@ package com.huang.web.admin.controller;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.huang.common.result.Result;
 import com.huang.web.admin.constant.AdminRoleCode;
+import com.huang.web.admin.custom.aop.OperationLog;
 import com.huang.web.admin.custom.annotation.RequireAdminPermission;
 import com.huang.web.admin.custom.annotation.RequireAdminRole;
 import com.huang.model.entity.UserRole;
@@ -29,18 +30,21 @@ public class UserRoleController {
 
     @Operation(summary = "用户角色关系列表")
     @GetMapping("/list")
+    @RequireAdminPermission({"user:role"})
     public Result<List<UserRole>> list() {
         return Result.ok(userRoleService.list(new LambdaQueryWrapper<UserRole>().orderByDesc(UserRole::getId)));
     }
 
     @Operation(summary = "查询用户角色")
     @GetMapping("/user/{userId}/roles")
+    @RequireAdminPermission({"user:role"})
     public Result<List<UserRole>> userRoles(@PathVariable Long userId) {
         return Result.ok(userRoleService.list(new LambdaQueryWrapper<UserRole>().eq(UserRole::getUserId, userId)));
     }
 
     @Operation(summary = "查询角色用户")
     @GetMapping("/role/{roleId}/users")
+    @RequireAdminPermission({"user:role"})
     public Result<List<UserRole>> roleUsers(@PathVariable Long roleId) {
         return Result.ok(userRoleService.list(new LambdaQueryWrapper<UserRole>().eq(UserRole::getRoleId, roleId)));
     }
@@ -48,6 +52,7 @@ public class UserRoleController {
     @Operation(summary = "批量分配角色")
     @PostMapping("/batch-assign")
     @RequireAdminPermission({"user:role"})
+    @OperationLog(module = "user_role", action = "batch_assign", detail = "admin batch assign roles")
     public Result<String> batchAssign(@Valid @RequestBody BatchRoleAssignDTO dto) {
         String operation = dto.getOperation() == null ? "replace" : dto.getOperation().trim().toLowerCase();
         for (Long userId : dto.getUserIds()) {
@@ -84,6 +89,8 @@ public class UserRoleController {
 
     @Operation(summary = "删除用户角色关联")
     @DeleteMapping("/{userId}/role/{roleId}")
+    @RequireAdminPermission({"user:role"})
+    @OperationLog(module = "user_role", action = "remove", detail = "admin remove user role")
     public Result<String> remove(@PathVariable Long userId, @PathVariable Long roleId) {
         boolean ok = userRoleService.remove(new LambdaQueryWrapper<UserRole>()
                 .eq(UserRole::getUserId, userId)
