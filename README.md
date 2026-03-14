@@ -15,3 +15,6 @@
 - 审计日志闭环：管理端关键操作写入 operation log，并由回归用例验证
 - TraceId 链路追踪：每请求生成/透传 traceId，日志包含 traceId + userId + 耗时
 - 回归数据重置：一键清理测试脏数据，保证可重复回归
+
+## 演示路径（建议面试展示）
+- 权限矩阵诊断：`GET /admin/permission/matrix`（审计管理员权限）
