@@ -137,6 +137,7 @@ public class AdminOpsBizService {
         financeSummary.put("refundStatus", refund != null ? refund.getRefundStatus() : null);
         financeSummary.put("statusText", buildFinanceStatusText(payment, refund, order));
         financeSummary.put("statusHint", buildFinanceStatusHint(payment, refund, order));
+        financeSummary.put("statusExplain", buildFinanceStatusExplain(payment, refund, order));
         result.put("financeSummary", financeSummary);
         return result;
     }
@@ -177,6 +178,25 @@ public class AdminOpsBizService {
             return "order_unpaid";
         }
         return "order_unknown";
+    }
+
+    private String buildFinanceStatusExplain(PaymentRecord payment, RefundRecord refund, OrderInfo order) {
+        String refundStatus = refund == null ? null : refund.getRefundStatus();
+        if ("REFUNDED".equalsIgnoreCase(refundStatus)) {
+            return "已退款";
+        }
+        String payStatus = payment == null ? null : payment.getPayStatus();
+        if ("PAID".equalsIgnoreCase(payStatus)) {
+            return "已支付";
+        }
+        String orderStatus = order == null ? null : order.getOrderStatus();
+        if ("CLOSED".equalsIgnoreCase(orderStatus)) {
+            return "订单已关闭";
+        }
+        if ("UNPAID".equalsIgnoreCase(payStatus)) {
+            return "待支付";
+        }
+        return "状态未知";
     }
 
     public Map<String, Object> dashboardSummary() {
