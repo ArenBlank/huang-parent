@@ -764,6 +764,35 @@
                                ]
                  },
                  {
+                     "name":  "09A Verify Video Upload Operation Log",
+                     "request":  {
+                                     "method":  "GET",
+                                     "header":  [
+                                                    {
+                                                        "key":  "Authorization",
+                                                        "value":  "Bearer {{opsAdminAccessToken}}"
+                                                    }
+                                                ],
+                                     "url":  "{{adminBaseUrl}}/admin/operation-log/list?module=video\u0026action=upload\u0026success=1\u0026limit=50"
+                                 },
+                     "event":  [
+                                   {
+                                       "listen":  "test",
+                                       "script":  {
+                                                      "type":  "text/javascript",
+                                                      "exec":  [
+                                                                   "pm.test(\u0027HTTP 200\u0027, function () { pm.response.to.have.status(200); });",
+                                                                   "const res = pm.response.json();",
+                                                                   "pm.test(\u0027operation log list success\u0027, function () { pm.expect(res.code).to.eql(200); });",
+                                                                   "pm.test(\u0027operation log has rows\u0027, function () { pm.expect(Array.isArray(res.data)).to.eql(true); pm.expect(res.data.length).to.be.greaterThan(0); });",
+                                                                   "const hasTarget = (res.data || []).some(x =\u003e x.module === \u0027video\u0027 \u0026\u0026 x.action === \u0027upload\u0027 \u0026\u0026 x.success === 1);",
+                                                                   "pm.test(\u0027operation log exists\u0027, function () { pm.expect(hasTarget).to.eql(true); });"
+                                                               ]
+                                                  }
+                                   }
+                               ]
+                 },
+                 {
                      "name":  "10 Create Video Asset",
                      "request":  {
                                      "method":  "POST",
@@ -800,6 +829,35 @@
                                ]
                  },
                  {
+                     "name":  "10A Verify Video Create Operation Log",
+                     "request":  {
+                                     "method":  "GET",
+                                     "header":  [
+                                                    {
+                                                        "key":  "Authorization",
+                                                        "value":  "Bearer {{opsAdminAccessToken}}"
+                                                    }
+                                                ],
+                                     "url":  "{{adminBaseUrl}}/admin/operation-log/list?module=video\u0026action=create\u0026success=1\u0026limit=50"
+                                 },
+                     "event":  [
+                                   {
+                                       "listen":  "test",
+                                       "script":  {
+                                                      "type":  "text/javascript",
+                                                      "exec":  [
+                                                                   "pm.test(\u0027HTTP 200\u0027, function () { pm.response.to.have.status(200); });",
+                                                                   "const res = pm.response.json();",
+                                                                   "pm.test(\u0027operation log list success\u0027, function () { pm.expect(res.code).to.eql(200); });",
+                                                                   "pm.test(\u0027operation log has rows\u0027, function () { pm.expect(Array.isArray(res.data)).to.eql(true); pm.expect(res.data.length).to.be.greaterThan(0); });",
+                                                                   "const hasTarget = (res.data || []).some(x =\u003e x.module === \u0027video\u0027 \u0026\u0026 x.action === \u0027create\u0027 \u0026\u0026 x.success === 1);",
+                                                                   "pm.test(\u0027operation log exists\u0027, function () { pm.expect(hasTarget).to.eql(true); });"
+                                                               ]
+                                                  }
+                                   }
+                               ]
+                 },
+                 {
                      "name":  "11 Bind Plan Item Video",
                      "request":  {
                                      "method":  "PUT",
@@ -828,6 +886,35 @@
                                                                    "pm.test(\u0027HTTP 200\u0027, function () { pm.response.to.have.status(200); });",
                                                                    "const res = pm.response.json();",
                                                                    "pm.test(\u0027bind success\u0027, function () { pm.expect(res.code).to.eql(200); });"
+                                                               ]
+                                                  }
+                                   }
+                               ]
+                 },
+                 {
+                     "name":  "11A2 Verify Video Bind Operation Log",
+                     "request":  {
+                                     "method":  "GET",
+                                     "header":  [
+                                                    {
+                                                        "key":  "Authorization",
+                                                        "value":  "Bearer {{opsAdminAccessToken}}"
+                                                    }
+                                                ],
+                                     "url":  "{{adminBaseUrl}}/admin/operation-log/list?module=video\u0026action=bind_plan_item\u0026success=1\u0026limit=50"
+                                 },
+                     "event":  [
+                                   {
+                                       "listen":  "test",
+                                       "script":  {
+                                                      "type":  "text/javascript",
+                                                      "exec":  [
+                                                                   "pm.test(\u0027HTTP 200\u0027, function () { pm.response.to.have.status(200); });",
+                                                                   "const res = pm.response.json();",
+                                                                   "pm.test(\u0027operation log list success\u0027, function () { pm.expect(res.code).to.eql(200); });",
+                                                                   "pm.test(\u0027operation log has rows\u0027, function () { pm.expect(Array.isArray(res.data)).to.eql(true); pm.expect(res.data.length).to.be.greaterThan(0); });",
+                                                                   "const hasTarget = (res.data || []).some(x =\u003e x.module === \u0027video\u0027 \u0026\u0026 x.action === \u0027bind_plan_item\u0027 \u0026\u0026 x.success === 1);",
+                                                                   "pm.test(\u0027operation log exists\u0027, function () { pm.expect(hasTarget).to.eql(true); });"
                                                                ]
                                                   }
                                    }
@@ -874,6 +961,35 @@
                                ]
                  },
                  {
+                     "name":  "11A1 Verify Course Create Operation Log",
+                     "request":  {
+                                     "method":  "GET",
+                                     "header":  [
+                                                    {
+                                                        "key":  "Authorization",
+                                                        "value":  "Bearer {{opsAdminAccessToken}}"
+                                                    }
+                                                ],
+                                     "url":  "{{adminBaseUrl}}/admin/operation-log/list?module=course\u0026action=create\u0026success=1\u0026limit=50"
+                                 },
+                     "event":  [
+                                   {
+                                       "listen":  "test",
+                                       "script":  {
+                                                      "type":  "text/javascript",
+                                                      "exec":  [
+                                                                   "pm.test(\u0027HTTP 200\u0027, function () { pm.response.to.have.status(200); });",
+                                                                   "const res = pm.response.json();",
+                                                                   "pm.test(\u0027operation log list success\u0027, function () { pm.expect(res.code).to.eql(200); });",
+                                                                   "pm.test(\u0027operation log has rows\u0027, function () { pm.expect(Array.isArray(res.data)).to.eql(true); pm.expect(res.data.length).to.be.greaterThan(0); });",
+                                                                   "const hasTarget = (res.data || []).some(x =\u003e x.module === \u0027course\u0027 \u0026\u0026 x.action === \u0027create\u0027 \u0026\u0026 x.success === 1);",
+                                                                   "pm.test(\u0027operation log exists\u0027, function () { pm.expect(hasTarget).to.eql(true); });"
+                                                               ]
+                                                  }
+                                   }
+                               ]
+                 },
+                 {
                      "name":  "11B Admin Publish Course",
                      "request":  {
                                      "method":  "PUT",
@@ -911,6 +1027,35 @@
                                ]
                  },
                  {
+                     "name":  "11B1 Verify Course Publish Operation Log",
+                     "request":  {
+                                     "method":  "GET",
+                                     "header":  [
+                                                    {
+                                                        "key":  "Authorization",
+                                                        "value":  "Bearer {{opsAdminAccessToken}}"
+                                                    }
+                                                ],
+                                     "url":  "{{adminBaseUrl}}/admin/operation-log/list?module=course\u0026action=publish\u0026success=1\u0026limit=50"
+                                 },
+                     "event":  [
+                                   {
+                                       "listen":  "test",
+                                       "script":  {
+                                                      "type":  "text/javascript",
+                                                      "exec":  [
+                                                                   "pm.test(\u0027HTTP 200\u0027, function () { pm.response.to.have.status(200); });",
+                                                                   "const res = pm.response.json();",
+                                                                   "pm.test(\u0027operation log list success\u0027, function () { pm.expect(res.code).to.eql(200); });",
+                                                                   "pm.test(\u0027operation log has rows\u0027, function () { pm.expect(Array.isArray(res.data)).to.eql(true); pm.expect(res.data.length).to.be.greaterThan(0); });",
+                                                                   "const hasTarget = (res.data || []).some(x =\u003e x.module === \u0027course\u0027 \u0026\u0026 x.action === \u0027publish\u0027 \u0026\u0026 x.success === 1);",
+                                                                   "pm.test(\u0027operation log exists\u0027, function () { pm.expect(hasTarget).to.eql(true); });"
+                                                               ]
+                                                  }
+                                   }
+                               ]
+                 },
+                 {
                      "name":  "11C Admin Create Course Schedule",
                      "request":  {
                                      "method":  "POST",
@@ -942,6 +1087,35 @@
                                                                    "pm.test(\u0027courseScheduleId exists\u0027, function () { pm.expect(res.data).to.be.a(\u0027number\u0027); });",
                                                                    "pm.collectionVariables.set(\u0027courseScheduleId\u0027, res.data);",
                                                                    "pm.collectionVariables.set(\u0027canRunCourseFlow\u0027, \u00271\u0027);"
+                                                               ]
+                                                  }
+                                   }
+                               ]
+                 },
+                 {
+                     "name":  "11C1 Verify Course Schedule Create Operation Log",
+                     "request":  {
+                                     "method":  "GET",
+                                     "header":  [
+                                                    {
+                                                        "key":  "Authorization",
+                                                        "value":  "Bearer {{opsAdminAccessToken}}"
+                                                    }
+                                                ],
+                                     "url":  "{{adminBaseUrl}}/admin/operation-log/list?module=course_schedule\u0026action=create\u0026success=1\u0026limit=50"
+                                 },
+                     "event":  [
+                                   {
+                                       "listen":  "test",
+                                       "script":  {
+                                                      "type":  "text/javascript",
+                                                      "exec":  [
+                                                                   "pm.test(\u0027HTTP 200\u0027, function () { pm.response.to.have.status(200); });",
+                                                                   "const res = pm.response.json();",
+                                                                   "pm.test(\u0027operation log list success\u0027, function () { pm.expect(res.code).to.eql(200); });",
+                                                                   "pm.test(\u0027operation log has rows\u0027, function () { pm.expect(Array.isArray(res.data)).to.eql(true); pm.expect(res.data.length).to.be.greaterThan(0); });",
+                                                                   "const hasTarget = (res.data || []).some(x =\u003e x.module === \u0027course_schedule\u0027 \u0026\u0026 x.action === \u0027create\u0027 \u0026\u0026 x.success === 1);",
+                                                                   "pm.test(\u0027operation log exists\u0027, function () { pm.expect(hasTarget).to.eql(true); });"
                                                                ]
                                                   }
                                    }
@@ -1439,6 +1613,35 @@
                                ]
                  },
                  {
+                     "name":  "22A Verify Banner Create Operation Log",
+                     "request":  {
+                                     "method":  "GET",
+                                     "header":  [
+                                                    {
+                                                        "key":  "Authorization",
+                                                        "value":  "Bearer {{opsAdminAccessToken}}"
+                                                    }
+                                                ],
+                                     "url":  "{{adminBaseUrl}}/admin/operation-log/list?module=banner\u0026action=create\u0026success=1\u0026limit=50"
+                                 },
+                     "event":  [
+                                   {
+                                       "listen":  "test",
+                                       "script":  {
+                                                      "type":  "text/javascript",
+                                                      "exec":  [
+                                                                   "pm.test(\u0027HTTP 200\u0027, function () { pm.response.to.have.status(200); });",
+                                                                   "const res = pm.response.json();",
+                                                                   "pm.test(\u0027operation log list success\u0027, function () { pm.expect(res.code).to.eql(200); });",
+                                                                   "pm.test(\u0027operation log has rows\u0027, function () { pm.expect(Array.isArray(res.data)).to.eql(true); pm.expect(res.data.length).to.be.greaterThan(0); });",
+                                                                   "const hasTarget = (res.data || []).some(x =\u003e x.module === \u0027banner\u0027 \u0026\u0026 x.action === \u0027create\u0027 \u0026\u0026 x.success === 1);",
+                                                                   "pm.test(\u0027operation log exists\u0027, function () { pm.expect(hasTarget).to.eql(true); });"
+                                                               ]
+                                                  }
+                                   }
+                               ]
+                 },
+                 {
                      "name":  "23 App Banner List",
                      "request":  {
                                      "method":  "GET",
@@ -1499,6 +1702,35 @@
                                                                    "  const reqBody = JSON.parse(pm.variables.replaceIn(pm.request.body.raw));",
                                                                    "  if (reqBody \u0026\u0026 reqBody.title) { pm.collectionVariables.set(\u0027noticeTitle\u0027, reqBody.title); }",
                                                                    "} catch (e) {}"
+                                                               ]
+                                                  }
+                                   }
+                               ]
+                 },
+                 {
+                     "name":  "24A Verify Notice Create Operation Log",
+                     "request":  {
+                                     "method":  "GET",
+                                     "header":  [
+                                                    {
+                                                        "key":  "Authorization",
+                                                        "value":  "Bearer {{opsAdminAccessToken}}"
+                                                    }
+                                                ],
+                                     "url":  "{{adminBaseUrl}}/admin/operation-log/list?module=notice\u0026action=create\u0026success=1\u0026limit=50"
+                                 },
+                     "event":  [
+                                   {
+                                       "listen":  "test",
+                                       "script":  {
+                                                      "type":  "text/javascript",
+                                                      "exec":  [
+                                                                   "pm.test(\u0027HTTP 200\u0027, function () { pm.response.to.have.status(200); });",
+                                                                   "const res = pm.response.json();",
+                                                                   "pm.test(\u0027operation log list success\u0027, function () { pm.expect(res.code).to.eql(200); });",
+                                                                   "pm.test(\u0027operation log has rows\u0027, function () { pm.expect(Array.isArray(res.data)).to.eql(true); pm.expect(res.data.length).to.be.greaterThan(0); });",
+                                                                   "const hasTarget = (res.data || []).some(x =\u003e x.module === \u0027notice\u0027 \u0026\u0026 x.action === \u0027create\u0027 \u0026\u0026 x.success === 1);",
+                                                                   "pm.test(\u0027operation log exists\u0027, function () { pm.expect(hasTarget).to.eql(true); });"
                                                                ]
                                                   }
                                    }
@@ -1570,6 +1802,35 @@
                                                                    "pm.collectionVariables.set(\u0027sysConfigKey\u0027, \u0027autotest.site.name.\u0027 + pm.collectionVariables.get(\u0027runId\u0027));",
                                                                    "pm.collectionVariables.set(\u0027sysConfigValue\u0027, \u0027fitness-platform-\u0027 + pm.collectionVariables.get(\u0027runId\u0027));",
                                                                    "pm.collectionVariables.set(\u0027systemConfigId\u0027, String(res.data));"
+                                                               ]
+                                                  }
+                                   }
+                               ]
+                 },
+                 {
+                     "name":  "26A Verify System Config Create Operation Log",
+                     "request":  {
+                                     "method":  "GET",
+                                     "header":  [
+                                                    {
+                                                        "key":  "Authorization",
+                                                        "value":  "Bearer {{opsAdminAccessToken}}"
+                                                    }
+                                                ],
+                                     "url":  "{{adminBaseUrl}}/admin/operation-log/list?module=system_config\u0026action=create\u0026success=1\u0026limit=50"
+                                 },
+                     "event":  [
+                                   {
+                                       "listen":  "test",
+                                       "script":  {
+                                                      "type":  "text/javascript",
+                                                      "exec":  [
+                                                                   "pm.test(\u0027HTTP 200\u0027, function () { pm.response.to.have.status(200); });",
+                                                                   "const res = pm.response.json();",
+                                                                   "pm.test(\u0027operation log list success\u0027, function () { pm.expect(res.code).to.eql(200); });",
+                                                                   "pm.test(\u0027operation log has rows\u0027, function () { pm.expect(Array.isArray(res.data)).to.eql(true); pm.expect(res.data.length).to.be.greaterThan(0); });",
+                                                                   "const hasTarget = (res.data || []).some(x =\u003e x.module === \u0027system_config\u0027 \u0026\u0026 x.action === \u0027create\u0027 \u0026\u0026 x.success === 1);",
+                                                                   "pm.test(\u0027operation log exists\u0027, function () { pm.expect(hasTarget).to.eql(true); });"
                                                                ]
                                                   }
                                    }
@@ -2347,6 +2608,35 @@
                                ]
                  },
                  {
+                     "name":  "47A Verify Banner Update Operation Log",
+                     "request":  {
+                                     "method":  "GET",
+                                     "header":  [
+                                                    {
+                                                        "key":  "Authorization",
+                                                        "value":  "Bearer {{opsAdminAccessToken}}"
+                                                    }
+                                                ],
+                                     "url":  "{{adminBaseUrl}}/admin/operation-log/list?module=banner\u0026action=update\u0026success=1\u0026limit=50"
+                                 },
+                     "event":  [
+                                   {
+                                       "listen":  "test",
+                                       "script":  {
+                                                      "type":  "text/javascript",
+                                                      "exec":  [
+                                                                   "pm.test(\u0027HTTP 200\u0027, function () { pm.response.to.have.status(200); });",
+                                                                   "const res = pm.response.json();",
+                                                                   "pm.test(\u0027operation log list success\u0027, function () { pm.expect(res.code).to.eql(200); });",
+                                                                   "pm.test(\u0027operation log has rows\u0027, function () { pm.expect(Array.isArray(res.data)).to.eql(true); pm.expect(res.data.length).to.be.greaterThan(0); });",
+                                                                   "const hasTarget = (res.data || []).some(x =\u003e x.module === \u0027banner\u0027 \u0026\u0026 x.action === \u0027update\u0027 \u0026\u0026 x.success === 1);",
+                                                                   "pm.test(\u0027operation log exists\u0027, function () { pm.expect(hasTarget).to.eql(true); });"
+                                                               ]
+                                                  }
+                                   }
+                               ]
+                 },
+                 {
                      "name":  "48 Admin Update Banner Status",
                      "request":  {
                                      "method":  "PUT",
@@ -2373,6 +2663,35 @@
                                ]
                  },
                  {
+                     "name":  "48A Verify Banner Status Operation Log",
+                     "request":  {
+                                     "method":  "GET",
+                                     "header":  [
+                                                    {
+                                                        "key":  "Authorization",
+                                                        "value":  "Bearer {{opsAdminAccessToken}}"
+                                                    }
+                                                ],
+                                     "url":  "{{adminBaseUrl}}/admin/operation-log/list?module=banner\u0026action=update_status\u0026success=1\u0026limit=50"
+                                 },
+                     "event":  [
+                                   {
+                                       "listen":  "test",
+                                       "script":  {
+                                                      "type":  "text/javascript",
+                                                      "exec":  [
+                                                                   "pm.test(\u0027HTTP 200\u0027, function () { pm.response.to.have.status(200); });",
+                                                                   "const res = pm.response.json();",
+                                                                   "pm.test(\u0027operation log list success\u0027, function () { pm.expect(res.code).to.eql(200); });",
+                                                                   "pm.test(\u0027operation log has rows\u0027, function () { pm.expect(Array.isArray(res.data)).to.eql(true); pm.expect(res.data.length).to.be.greaterThan(0); });",
+                                                                   "const hasTarget = (res.data || []).some(x =\u003e x.module === \u0027banner\u0027 \u0026\u0026 x.action === \u0027update_status\u0027 \u0026\u0026 x.success === 1);",
+                                                                   "pm.test(\u0027operation log exists\u0027, function () { pm.expect(hasTarget).to.eql(true); });"
+                                                               ]
+                                                  }
+                                   }
+                               ]
+                 },
+                 {
                      "name":  "49 Admin Delete Banner",
                      "request":  {
                                      "method":  "DELETE",
@@ -2393,6 +2712,35 @@
                                                                    "pm.test(\u0027HTTP 200\u0027, function(){ pm.response.to.have.status(200); });",
                                                                    "const res=pm.response.json();",
                                                                    "pm.test(\u0027admin delete banner success\u0027, function(){ pm.expect(res.code).to.eql(200); });"
+                                                               ]
+                                                  }
+                                   }
+                               ]
+                 },
+                 {
+                     "name":  "49A Verify Banner Delete Operation Log",
+                     "request":  {
+                                     "method":  "GET",
+                                     "header":  [
+                                                    {
+                                                        "key":  "Authorization",
+                                                        "value":  "Bearer {{opsAdminAccessToken}}"
+                                                    }
+                                                ],
+                                     "url":  "{{adminBaseUrl}}/admin/operation-log/list?module=banner\u0026action=delete\u0026success=1\u0026limit=50"
+                                 },
+                     "event":  [
+                                   {
+                                       "listen":  "test",
+                                       "script":  {
+                                                      "type":  "text/javascript",
+                                                      "exec":  [
+                                                                   "pm.test(\u0027HTTP 200\u0027, function () { pm.response.to.have.status(200); });",
+                                                                   "const res = pm.response.json();",
+                                                                   "pm.test(\u0027operation log list success\u0027, function () { pm.expect(res.code).to.eql(200); });",
+                                                                   "pm.test(\u0027operation log has rows\u0027, function () { pm.expect(Array.isArray(res.data)).to.eql(true); pm.expect(res.data.length).to.be.greaterThan(0); });",
+                                                                   "const hasTarget = (res.data || []).some(x =\u003e x.module === \u0027banner\u0027 \u0026\u0026 x.action === \u0027delete\u0027 \u0026\u0026 x.success === 1);",
+                                                                   "pm.test(\u0027operation log exists\u0027, function () { pm.expect(hasTarget).to.eql(true); });"
                                                                ]
                                                   }
                                    }
@@ -2433,6 +2781,35 @@
                                ]
                  },
                  {
+                     "name":  "50A Verify Notice Update Operation Log",
+                     "request":  {
+                                     "method":  "GET",
+                                     "header":  [
+                                                    {
+                                                        "key":  "Authorization",
+                                                        "value":  "Bearer {{opsAdminAccessToken}}"
+                                                    }
+                                                ],
+                                     "url":  "{{adminBaseUrl}}/admin/operation-log/list?module=notice\u0026action=update\u0026success=1\u0026limit=50"
+                                 },
+                     "event":  [
+                                   {
+                                       "listen":  "test",
+                                       "script":  {
+                                                      "type":  "text/javascript",
+                                                      "exec":  [
+                                                                   "pm.test(\u0027HTTP 200\u0027, function () { pm.response.to.have.status(200); });",
+                                                                   "const res = pm.response.json();",
+                                                                   "pm.test(\u0027operation log list success\u0027, function () { pm.expect(res.code).to.eql(200); });",
+                                                                   "pm.test(\u0027operation log has rows\u0027, function () { pm.expect(Array.isArray(res.data)).to.eql(true); pm.expect(res.data.length).to.be.greaterThan(0); });",
+                                                                   "const hasTarget = (res.data || []).some(x =\u003e x.module === \u0027notice\u0027 \u0026\u0026 x.action === \u0027update\u0027 \u0026\u0026 x.success === 1);",
+                                                                   "pm.test(\u0027operation log exists\u0027, function () { pm.expect(hasTarget).to.eql(true); });"
+                                                               ]
+                                                  }
+                                   }
+                               ]
+                 },
+                 {
                      "name":  "51 Admin Update Notice Status",
                      "request":  {
                                      "method":  "PUT",
@@ -2459,6 +2836,35 @@
                                ]
                  },
                  {
+                     "name":  "51A Verify Notice Status Operation Log",
+                     "request":  {
+                                     "method":  "GET",
+                                     "header":  [
+                                                    {
+                                                        "key":  "Authorization",
+                                                        "value":  "Bearer {{opsAdminAccessToken}}"
+                                                    }
+                                                ],
+                                     "url":  "{{adminBaseUrl}}/admin/operation-log/list?module=notice\u0026action=update_status\u0026success=1\u0026limit=50"
+                                 },
+                     "event":  [
+                                   {
+                                       "listen":  "test",
+                                       "script":  {
+                                                      "type":  "text/javascript",
+                                                      "exec":  [
+                                                                   "pm.test(\u0027HTTP 200\u0027, function () { pm.response.to.have.status(200); });",
+                                                                   "const res = pm.response.json();",
+                                                                   "pm.test(\u0027operation log list success\u0027, function () { pm.expect(res.code).to.eql(200); });",
+                                                                   "pm.test(\u0027operation log has rows\u0027, function () { pm.expect(Array.isArray(res.data)).to.eql(true); pm.expect(res.data.length).to.be.greaterThan(0); });",
+                                                                   "const hasTarget = (res.data || []).some(x =\u003e x.module === \u0027notice\u0027 \u0026\u0026 x.action === \u0027update_status\u0027 \u0026\u0026 x.success === 1);",
+                                                                   "pm.test(\u0027operation log exists\u0027, function () { pm.expect(hasTarget).to.eql(true); });"
+                                                               ]
+                                                  }
+                                   }
+                               ]
+                 },
+                 {
                      "name":  "52 Admin Delete Notice",
                      "request":  {
                                      "method":  "DELETE",
@@ -2479,6 +2885,35 @@
                                                                    "pm.test(\u0027HTTP 200\u0027, function(){ pm.response.to.have.status(200); });",
                                                                    "const res=pm.response.json();",
                                                                    "pm.test(\u0027admin delete notice success\u0027, function(){ pm.expect(res.code).to.eql(200); });"
+                                                               ]
+                                                  }
+                                   }
+                               ]
+                 },
+                 {
+                     "name":  "52A Verify Notice Delete Operation Log",
+                     "request":  {
+                                     "method":  "GET",
+                                     "header":  [
+                                                    {
+                                                        "key":  "Authorization",
+                                                        "value":  "Bearer {{opsAdminAccessToken}}"
+                                                    }
+                                                ],
+                                     "url":  "{{adminBaseUrl}}/admin/operation-log/list?module=notice\u0026action=delete\u0026success=1\u0026limit=50"
+                                 },
+                     "event":  [
+                                   {
+                                       "listen":  "test",
+                                       "script":  {
+                                                      "type":  "text/javascript",
+                                                      "exec":  [
+                                                                   "pm.test(\u0027HTTP 200\u0027, function () { pm.response.to.have.status(200); });",
+                                                                   "const res = pm.response.json();",
+                                                                   "pm.test(\u0027operation log list success\u0027, function () { pm.expect(res.code).to.eql(200); });",
+                                                                   "pm.test(\u0027operation log has rows\u0027, function () { pm.expect(Array.isArray(res.data)).to.eql(true); pm.expect(res.data.length).to.be.greaterThan(0); });",
+                                                                   "const hasTarget = (res.data || []).some(x =\u003e x.module === \u0027notice\u0027 \u0026\u0026 x.action === \u0027delete\u0027 \u0026\u0026 x.success === 1);",
+                                                                   "pm.test(\u0027operation log exists\u0027, function () { pm.expect(hasTarget).to.eql(true); });"
                                                                ]
                                                   }
                                    }
@@ -2520,6 +2955,35 @@
                                ]
                  },
                  {
+                     "name":  "53A Verify System Config Update Operation Log",
+                     "request":  {
+                                     "method":  "GET",
+                                     "header":  [
+                                                    {
+                                                        "key":  "Authorization",
+                                                        "value":  "Bearer {{opsAdminAccessToken}}"
+                                                    }
+                                                ],
+                                     "url":  "{{adminBaseUrl}}/admin/operation-log/list?module=system_config\u0026action=update\u0026success=1\u0026limit=50"
+                                 },
+                     "event":  [
+                                   {
+                                       "listen":  "test",
+                                       "script":  {
+                                                      "type":  "text/javascript",
+                                                      "exec":  [
+                                                                   "pm.test(\u0027HTTP 200\u0027, function () { pm.response.to.have.status(200); });",
+                                                                   "const res = pm.response.json();",
+                                                                   "pm.test(\u0027operation log list success\u0027, function () { pm.expect(res.code).to.eql(200); });",
+                                                                   "pm.test(\u0027operation log has rows\u0027, function () { pm.expect(Array.isArray(res.data)).to.eql(true); pm.expect(res.data.length).to.be.greaterThan(0); });",
+                                                                   "const hasTarget = (res.data || []).some(x =\u003e x.module === \u0027system_config\u0027 \u0026\u0026 x.action === \u0027update\u0027 \u0026\u0026 x.success === 1);",
+                                                                   "pm.test(\u0027operation log exists\u0027, function () { pm.expect(hasTarget).to.eql(true); });"
+                                                               ]
+                                                  }
+                                   }
+                               ]
+                 },
+                 {
                      "name":  "54 Admin Delete System Config",
                      "request":  {
                                      "method":  "DELETE",
@@ -2540,6 +3004,35 @@
                                                                    "pm.test(\u0027HTTP 200\u0027, function(){ pm.response.to.have.status(200); });",
                                                                    "const res=pm.response.json();",
                                                                    "pm.test(\u0027admin delete system config success\u0027, function(){ pm.expect(res.code).to.eql(200); });"
+                                                               ]
+                                                  }
+                                   }
+                               ]
+                 },
+                 {
+                     "name":  "54A Verify System Config Delete Operation Log",
+                     "request":  {
+                                     "method":  "GET",
+                                     "header":  [
+                                                    {
+                                                        "key":  "Authorization",
+                                                        "value":  "Bearer {{opsAdminAccessToken}}"
+                                                    }
+                                                ],
+                                     "url":  "{{adminBaseUrl}}/admin/operation-log/list?module=system_config\u0026action=delete\u0026success=1\u0026limit=50"
+                                 },
+                     "event":  [
+                                   {
+                                       "listen":  "test",
+                                       "script":  {
+                                                      "type":  "text/javascript",
+                                                      "exec":  [
+                                                                   "pm.test(\u0027HTTP 200\u0027, function () { pm.response.to.have.status(200); });",
+                                                                   "const res = pm.response.json();",
+                                                                   "pm.test(\u0027operation log list success\u0027, function () { pm.expect(res.code).to.eql(200); });",
+                                                                   "pm.test(\u0027operation log has rows\u0027, function () { pm.expect(Array.isArray(res.data)).to.eql(true); pm.expect(res.data.length).to.be.greaterThan(0); });",
+                                                                   "const hasTarget = (res.data || []).some(x =\u003e x.module === \u0027system_config\u0027 \u0026\u0026 x.action === \u0027delete\u0027 \u0026\u0026 x.success === 1);",
+                                                                   "pm.test(\u0027operation log exists\u0027, function () { pm.expect(hasTarget).to.eql(true); });"
                                                                ]
                                                   }
                                    }
@@ -2606,6 +3099,35 @@
                                ]
                  },
                  {
+                     "name":  "56A Verify Video Update Operation Log",
+                     "request":  {
+                                     "method":  "GET",
+                                     "header":  [
+                                                    {
+                                                        "key":  "Authorization",
+                                                        "value":  "Bearer {{opsAdminAccessToken}}"
+                                                    }
+                                                ],
+                                     "url":  "{{adminBaseUrl}}/admin/operation-log/list?module=video\u0026action=update\u0026success=1\u0026limit=50"
+                                 },
+                     "event":  [
+                                   {
+                                       "listen":  "test",
+                                       "script":  {
+                                                      "type":  "text/javascript",
+                                                      "exec":  [
+                                                                   "pm.test(\u0027HTTP 200\u0027, function () { pm.response.to.have.status(200); });",
+                                                                   "const res = pm.response.json();",
+                                                                   "pm.test(\u0027operation log list success\u0027, function () { pm.expect(res.code).to.eql(200); });",
+                                                                   "pm.test(\u0027operation log has rows\u0027, function () { pm.expect(Array.isArray(res.data)).to.eql(true); pm.expect(res.data.length).to.be.greaterThan(0); });",
+                                                                   "const hasTarget = (res.data || []).some(x =\u003e x.module === \u0027video\u0027 \u0026\u0026 x.action === \u0027update\u0027 \u0026\u0026 x.success === 1);",
+                                                                   "pm.test(\u0027operation log exists\u0027, function () { pm.expect(hasTarget).to.eql(true); });"
+                                                               ]
+                                                  }
+                                   }
+                               ]
+                 },
+                 {
                      "name":  "57 Admin Update Video Status",
                      "request":  {
                                      "method":  "PUT",
@@ -2632,6 +3154,35 @@
                                ]
                  },
                  {
+                     "name":  "57A Verify Video Status Operation Log",
+                     "request":  {
+                                     "method":  "GET",
+                                     "header":  [
+                                                    {
+                                                        "key":  "Authorization",
+                                                        "value":  "Bearer {{opsAdminAccessToken}}"
+                                                    }
+                                                ],
+                                     "url":  "{{adminBaseUrl}}/admin/operation-log/list?module=video\u0026action=update_status\u0026success=1\u0026limit=50"
+                                 },
+                     "event":  [
+                                   {
+                                       "listen":  "test",
+                                       "script":  {
+                                                      "type":  "text/javascript",
+                                                      "exec":  [
+                                                                   "pm.test(\u0027HTTP 200\u0027, function () { pm.response.to.have.status(200); });",
+                                                                   "const res = pm.response.json();",
+                                                                   "pm.test(\u0027operation log list success\u0027, function () { pm.expect(res.code).to.eql(200); });",
+                                                                   "pm.test(\u0027operation log has rows\u0027, function () { pm.expect(Array.isArray(res.data)).to.eql(true); pm.expect(res.data.length).to.be.greaterThan(0); });",
+                                                                   "const hasTarget = (res.data || []).some(x =\u003e x.module === \u0027video\u0027 \u0026\u0026 x.action === \u0027update_status\u0027 \u0026\u0026 x.success === 1);",
+                                                                   "pm.test(\u0027operation log exists\u0027, function () { pm.expect(hasTarget).to.eql(true); });"
+                                                               ]
+                                                  }
+                                   }
+                               ]
+                 },
+                 {
                      "name":  "58 Admin Unbind Plan Item Video",
                      "request":  {
                                      "method":  "PUT",
@@ -2652,6 +3203,35 @@
                                                                    "pm.test(\u0027HTTP 200\u0027, function(){ pm.response.to.have.status(200); });",
                                                                    "const res=pm.response.json();",
                                                                    "pm.test(\u0027admin unbind plan item video success\u0027, function(){ pm.expect(res.code).to.eql(200); });"
+                                                               ]
+                                                  }
+                                   }
+                               ]
+                 },
+                 {
+                     "name":  "58A Verify Video Unbind Operation Log",
+                     "request":  {
+                                     "method":  "GET",
+                                     "header":  [
+                                                    {
+                                                        "key":  "Authorization",
+                                                        "value":  "Bearer {{opsAdminAccessToken}}"
+                                                    }
+                                                ],
+                                     "url":  "{{adminBaseUrl}}/admin/operation-log/list?module=video\u0026action=unbind_plan_item\u0026success=1\u0026limit=50"
+                                 },
+                     "event":  [
+                                   {
+                                       "listen":  "test",
+                                       "script":  {
+                                                      "type":  "text/javascript",
+                                                      "exec":  [
+                                                                   "pm.test(\u0027HTTP 200\u0027, function () { pm.response.to.have.status(200); });",
+                                                                   "const res = pm.response.json();",
+                                                                   "pm.test(\u0027operation log list success\u0027, function () { pm.expect(res.code).to.eql(200); });",
+                                                                   "pm.test(\u0027operation log has rows\u0027, function () { pm.expect(Array.isArray(res.data)).to.eql(true); pm.expect(res.data.length).to.be.greaterThan(0); });",
+                                                                   "const hasTarget = (res.data || []).some(x =\u003e x.module === \u0027video\u0027 \u0026\u0026 x.action === \u0027unbind_plan_item\u0027 \u0026\u0026 x.success === 1);",
+                                                                   "pm.test(\u0027operation log exists\u0027, function () { pm.expect(hasTarget).to.eql(true); });"
                                                                ]
                                                   }
                                    }
@@ -2712,6 +3292,35 @@
                                                                    "pm.test(\u0027HTTP 200\u0027, function(){ pm.response.to.have.status(200); });",
                                                                    "const res=pm.response.json();",
                                                                    "pm.test(\u0027admin update course schedule status success\u0027, function(){ pm.expect(res.code).to.eql(200); });"
+                                                               ]
+                                                  }
+                                   }
+                               ]
+                 },
+                 {
+                     "name":  "60A Verify Course Schedule Status Operation Log",
+                     "request":  {
+                                     "method":  "GET",
+                                     "header":  [
+                                                    {
+                                                        "key":  "Authorization",
+                                                        "value":  "Bearer {{opsAdminAccessToken}}"
+                                                    }
+                                                ],
+                                     "url":  "{{adminBaseUrl}}/admin/operation-log/list?module=course_schedule\u0026action=update_status\u0026success=1\u0026limit=50"
+                                 },
+                     "event":  [
+                                   {
+                                       "listen":  "test",
+                                       "script":  {
+                                                      "type":  "text/javascript",
+                                                      "exec":  [
+                                                                   "pm.test(\u0027HTTP 200\u0027, function () { pm.response.to.have.status(200); });",
+                                                                   "const res = pm.response.json();",
+                                                                   "pm.test(\u0027operation log list success\u0027, function () { pm.expect(res.code).to.eql(200); });",
+                                                                   "pm.test(\u0027operation log has rows\u0027, function () { pm.expect(Array.isArray(res.data)).to.eql(true); pm.expect(res.data.length).to.be.greaterThan(0); });",
+                                                                   "const hasTarget = (res.data || []).some(x =\u003e x.module === \u0027course_schedule\u0027 \u0026\u0026 x.action === \u0027update_status\u0027 \u0026\u0026 x.success === 1);",
+                                                                   "pm.test(\u0027operation log exists\u0027, function () { pm.expect(hasTarget).to.eql(true); });"
                                                                ]
                                                   }
                                    }
