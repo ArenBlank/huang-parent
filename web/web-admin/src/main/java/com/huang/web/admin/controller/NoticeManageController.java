@@ -34,6 +34,7 @@ public class NoticeManageController {
     }
 
     @Operation(summary = "公告列表")
+    @RequireAdminPermission({"notice:manage"})
     @GetMapping("/list")
     public Result<?> list(@RequestParam(required = false) Integer status) {
         return Result.ok(adminNoticeBizService.list(status));

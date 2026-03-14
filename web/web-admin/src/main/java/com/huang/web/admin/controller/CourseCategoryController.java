@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.huang.common.result.Result;
 import com.huang.model.entity.CourseCategory;
 import com.huang.web.admin.constant.AdminRoleCode;
+import com.huang.web.admin.custom.annotation.RequireAdminPermission;
 import com.huang.web.admin.custom.annotation.RequireAdminRole;
 import com.huang.web.admin.service.CourseCategoryService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -28,6 +29,7 @@ public class CourseCategoryController {
     }
 
     @Operation(summary = "课程分类列表")
+    @RequireAdminPermission({"course:read"})
     @GetMapping("/list")
     public Result<List<CourseCategory>> list(@RequestParam(required = false) Integer status) {
         LambdaQueryWrapper<CourseCategory> wrapper = new LambdaQueryWrapper<>();

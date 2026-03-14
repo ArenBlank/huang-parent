@@ -34,6 +34,7 @@ public class BannerManageController {
     }
 
     @Operation(summary = "Banner列表")
+    @RequireAdminPermission({"banner:manage"})
     @GetMapping("/list")
     public Result<?> list(@RequestParam(required = false) Integer status) {
         return Result.ok(adminBannerBizService.list(status));

@@ -34,6 +34,7 @@ public class SystemConfigManageController {
     }
 
     @Operation(summary = "配置列表")
+    @RequireAdminPermission({"system:config"})
     @GetMapping("/list")
     public Result<?> list(@RequestParam(required = false) String keyLike) {
         return Result.ok(adminSystemConfigBizService.list(keyLike));

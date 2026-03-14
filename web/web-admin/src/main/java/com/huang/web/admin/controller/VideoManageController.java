@@ -35,6 +35,7 @@ public class VideoManageController {
     }
 
     @Operation(summary = "视频素材列表")
+    @RequireAdminPermission({"video:asset"})
     @GetMapping("/list")
     public Result<?> list(@RequestParam(required = false) Integer status,
                           @RequestParam(required = false) String keyword) {
