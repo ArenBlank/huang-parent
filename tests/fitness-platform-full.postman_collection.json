@@ -4051,7 +4051,8 @@
                                                                    "pm.test(\"HTTP 200\", function () { pm.response.to.have.status(200); });",
                                                                    "const json = pm.response.json();",
                                                                    "pm.test(\"permission matrix success\", function () { pm.expect(json.code).to.eql(200); });",
-                                                                   "pm.test(\"matrix has required\", function () { pm.expect(json.data.required).to.exist; });"
+                                                                   "pm.test(\"matrix has required\", function () { pm.expect(json.data.required).to.exist; });",
+                                                                   "pm.test(\"matrix warning optional\", function () { pm.expect(json.data.warning === null || json.data.warning === undefined || typeof json.data.warning === \"string\").to.be.true; });"
                                                                ]
                                                   }
                                    }
