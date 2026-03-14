@@ -47,6 +47,10 @@ payment:
   sign:
     mode: mock
     secret: mock-secret
+  compensate:
+    enabled: true
+    delay-ms: 120000
+    batch: 50
 
 springdoc:
   default-flat-param-object: true

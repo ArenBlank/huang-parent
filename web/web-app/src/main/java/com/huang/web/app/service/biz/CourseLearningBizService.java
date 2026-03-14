@@ -96,6 +96,18 @@ public class CourseLearningBizService {
                 return null;
             }
 
+            CourseEnrollment existed = courseEnrollmentMapper.selectOne(
+                    new LambdaQueryWrapper<CourseEnrollment>()
+                            .eq(CourseEnrollment::getUserId, userId)
+                            .eq(CourseEnrollment::getCourseId, course.getId())
+                            .eq(CourseEnrollment::getScheduleId, schedule.getId())
+                            .last("LIMIT 1")
+            );
+            if (existed != null) {
+                reason = "already_enrolled";
+                return null;
+            }
+
         int updated = courseScheduleMapper.update(
                 null,
                 new LambdaUpdateWrapper<CourseSchedule>()
@@ -106,18 +118,6 @@ public class CourseLearningBizService {
         );
             if (updated == 0) {
                 reason = "schedule_full";
-                return null;
-            }
-
-        CourseEnrollment existed = courseEnrollmentMapper.selectOne(
-                new LambdaQueryWrapper<CourseEnrollment>()
-                        .eq(CourseEnrollment::getUserId, userId)
-                        .eq(CourseEnrollment::getCourseId, course.getId())
-                        .eq(CourseEnrollment::getScheduleId, schedule.getId())
-                        .last("LIMIT 1")
-        );
-            if (existed != null) {
-                reason = "already_enrolled";
                 return null;
             }
 
