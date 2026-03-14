@@ -119,6 +119,84 @@
                                ]
                  },
                  {
+                     "name":  "01B1 Ops Admin Allowed Dashboard Summary",
+                     "request":  {
+                                     "method":  "GET",
+                                     "header":  [
+                                                    {
+                                                        "key":  "Authorization",
+                                                        "value":  "Bearer {{opsAdminAccessToken}}"
+                                                    }
+                                                ],
+                                     "url":  "{{adminBaseUrl}}/admin/dashboard/summary"
+                                 },
+                     "event":  [
+                                   {
+                                       "listen":  "test",
+                                       "script":  {
+                                                      "type":  "text/javascript",
+                                                      "exec":  [
+                                                                   "pm.test(\u0027HTTP 200\u0027, function () { pm.response.to.have.status(200); });",
+                                                                   "const res = pm.response.json();",
+                                                                   "pm.test(\u0027ops admin allowed dashboard New-AuthRequest\u0027, function () { pm.expect(res.code).to.eql(200); });"
+                                                               ]
+                                                  }
+                                   }
+                               ]
+                 },
+                 {
+                     "name":  "01B2 Ops Admin Allowed Booking List",
+                     "request":  {
+                                     "method":  "GET",
+                                     "header":  [
+                                                    {
+                                                        "key":  "Authorization",
+                                                        "value":  "Bearer {{opsAdminAccessToken}}"
+                                                    }
+                                                ],
+                                     "url":  "{{adminBaseUrl}}/admin/ops/booking/list"
+                                 },
+                     "event":  [
+                                   {
+                                       "listen":  "test",
+                                       "script":  {
+                                                      "type":  "text/javascript",
+                                                      "exec":  [
+                                                                   "pm.test(\u0027HTTP 200\u0027, function () { pm.response.to.have.status(200); });",
+                                                                   "const res = pm.response.json();",
+                                                                   "pm.test(\u0027ops admin allowed booking list\u0027, function () { pm.expect(res.code).to.eql(200); });"
+                                                               ]
+                                                  }
+                                   }
+                               ]
+                 },
+                 {
+                     "name":  "01B3 Ops Admin Allowed Order List",
+                     "request":  {
+                                     "method":  "GET",
+                                     "header":  [
+                                                    {
+                                                        "key":  "Authorization",
+                                                        "value":  "Bearer {{opsAdminAccessToken}}"
+                                                    }
+                                                ],
+                                     "url":  "{{adminBaseUrl}}/admin/ops/order/list"
+                                 },
+                     "event":  [
+                                   {
+                                       "listen":  "test",
+                                       "script":  {
+                                                      "type":  "text/javascript",
+                                                      "exec":  [
+                                                                   "pm.test(\u0027HTTP 200\u0027, function () { pm.response.to.have.status(200); });",
+                                                                   "const res = pm.response.json();",
+                                                                   "pm.test(\u0027ops admin allowed order list\u0027, function () { pm.expect(res.code).to.eql(200); });"
+                                                               ]
+                                                  }
+                                   }
+                               ]
+                 },
+                 {
                      "name":  "01C Audit Admin Login",
                      "request":  {
                                      "method":  "POST",
@@ -145,6 +223,84 @@
                                                                    "pm.test(\u0027audit admin login success\u0027, function () { pm.expect(res.code).to.eql(200); });",
                                                                    "pm.test(\u0027audit admin accessToken exists\u0027, function () { pm.expect(res.data.accessToken).to.be.a(\u0027string\u0027).and.not.empty; });",
                                                                    "pm.collectionVariables.set(\u0027auditAdminAccessToken\u0027, res.data.accessToken);"
+                                                               ]
+                                                  }
+                                   }
+                               ]
+                 },
+                 {
+                     "name":  "01C1 Audit Admin Forbidden Dashboard Summary",
+                     "request":  {
+                                     "method":  "GET",
+                                     "header":  [
+                                                    {
+                                                        "key":  "Authorization",
+                                                        "value":  "Bearer {{auditAdminAccessToken}}"
+                                                    }
+                                                ],
+                                     "url":  "{{adminBaseUrl}}/admin/dashboard/summary"
+                                 },
+                     "event":  [
+                                   {
+                                       "listen":  "test",
+                                       "script":  {
+                                                      "type":  "text/javascript",
+                                                      "exec":  [
+                                                                   "pm.test(\u0027HTTP 200\u0027, function () { pm.response.to.have.status(200); });",
+                                                                   "const res = pm.response.json();",
+                                                                   "pm.test(\u0027audit admin forbidden dashboard New-AuthRequest\u0027, function () { pm.expect(res.code).to.eql(309); });"
+                                                               ]
+                                                  }
+                                   }
+                               ]
+                 },
+                 {
+                     "name":  "01C2 Audit Admin Forbidden Booking List",
+                     "request":  {
+                                     "method":  "GET",
+                                     "header":  [
+                                                    {
+                                                        "key":  "Authorization",
+                                                        "value":  "Bearer {{auditAdminAccessToken}}"
+                                                    }
+                                                ],
+                                     "url":  "{{adminBaseUrl}}/admin/ops/booking/list"
+                                 },
+                     "event":  [
+                                   {
+                                       "listen":  "test",
+                                       "script":  {
+                                                      "type":  "text/javascript",
+                                                      "exec":  [
+                                                                   "pm.test(\u0027HTTP 200\u0027, function () { pm.response.to.have.status(200); });",
+                                                                   "const res = pm.response.json();",
+                                                                   "pm.test(\u0027audit admin forbidden booking list\u0027, function () { pm.expect(res.code).to.eql(309); });"
+                                                               ]
+                                                  }
+                                   }
+                               ]
+                 },
+                 {
+                     "name":  "01C3 Audit Admin Forbidden Order List",
+                     "request":  {
+                                     "method":  "GET",
+                                     "header":  [
+                                                    {
+                                                        "key":  "Authorization",
+                                                        "value":  "Bearer {{auditAdminAccessToken}}"
+                                                    }
+                                                ],
+                                     "url":  "{{adminBaseUrl}}/admin/ops/order/list"
+                                 },
+                     "event":  [
+                                   {
+                                       "listen":  "test",
+                                       "script":  {
+                                                      "type":  "text/javascript",
+                                                      "exec":  [
+                                                                   "pm.test(\u0027HTTP 200\u0027, function () { pm.response.to.have.status(200); });",
+                                                                   "const res = pm.response.json();",
+                                                                   "pm.test(\u0027audit admin forbidden order list\u0027, function () { pm.expect(res.code).to.eql(309); });"
                                                                ]
                                                   }
                                    }
