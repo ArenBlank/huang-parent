@@ -3,27 +3,31 @@ package com.huang.common.result;
 import lombok.Data;
 
 /**
- * 全局统一返回结果类
+ * Unified API response wrapper.
  */
 @Data
 public class Result<T> {
 
-    //返回码
+    // response code
     private Integer code;
 
-    //返回消息
+    // response message
     private String message;
 
-    //返回数据
+    // response data
     private T data;
+
+    // trace id for request correlation
+    private String traceId;
 
     public Result() {
     }
 
     private static <T> Result<T> build(T data) {
         Result<T> result = new Result<>();
-        if (data != null)
+        if (data != null) {
             result.setData(data);
+        }
         return result;
     }
 
@@ -33,7 +37,6 @@ public class Result<T> {
         result.setMessage(resultCodeEnum.getMessage());
         return result;
     }
-
 
     public static <T> Result<T> ok(T data) {
         return build(data, ResultCodeEnum.SUCCESS);
