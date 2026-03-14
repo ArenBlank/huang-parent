@@ -1,4 +1,4 @@
-﻿package com.huang.web.app.service.biz;
+package com.huang.web.app.service.biz;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.huang.model.entity.OrderInfo;

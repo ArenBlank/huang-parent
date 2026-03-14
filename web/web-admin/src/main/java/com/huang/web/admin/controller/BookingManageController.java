@@ -1,4 +1,4 @@
-﻿package com.huang.web.admin.controller;
+package com.huang.web.admin.controller;
 
 import com.huang.common.result.Result;
 import com.huang.web.admin.constant.AdminErrorCode;
