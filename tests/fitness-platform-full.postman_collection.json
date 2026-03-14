@@ -1594,6 +1594,35 @@
                                ]
                  },
                  {
+                     "name":  "33H Verify Role Permission Operation Log",
+                     "request":  {
+                                     "method":  "GET",
+                                     "header":  [
+                                                    {
+                                                        "key":  "Authorization",
+                                                        "value":  "Bearer {{auditAdminAccessToken}}"
+                                                    }
+                                                ],
+                                     "url":  "{{adminBaseUrl}}/admin/operation-log/list?module=role_permission\u0026action=assign\u0026success=1\u0026limit=50"
+                                 },
+                     "event":  [
+                                   {
+                                       "listen":  "test",
+                                       "script":  {
+                                                      "type":  "text/javascript",
+                                                      "exec":  [
+                                                                   "pm.test(\u0027HTTP 200\u0027, function () { pm.response.to.have.status(200); });",
+                                                                   "const res = pm.response.json();",
+                                                                   "pm.test(\u0027operation log list success\u0027, function () { pm.expect(res.code).to.eql(200); });",
+                                                                   "pm.test(\u0027operation log has rows\u0027, function () { pm.expect(Array.isArray(res.data)).to.eql(true); pm.expect(res.data.length).to.be.greaterThan(0); });",
+                                                                   "const hasTarget = (res.data || []).some(x =\u003e x.module === \u0027role_permission\u0027 \u0026\u0026 x.action === \u0027assign\u0027 \u0026\u0026 x.success === 1);",
+                                                                   "pm.test(\u0027operation log exists\u0027, function () { pm.expect(hasTarget).to.eql(true); });"
+                                                               ]
+                                                  }
+                                   }
+                               ]
+                 },
+                 {
                      "name":  "33A Admin Update Ops Course Category Scope",
                      "request":  {
                                      "method":  "PUT",
@@ -2664,6 +2693,35 @@
                                ]
                  },
                  {
+                     "name":  "66A Verify Role Update Operation Log",
+                     "request":  {
+                                     "method":  "GET",
+                                     "header":  [
+                                                    {
+                                                        "key":  "Authorization",
+                                                        "value":  "Bearer {{auditAdminAccessToken}}"
+                                                    }
+                                                ],
+                                     "url":  "{{adminBaseUrl}}/admin/operation-log/list?module=role\u0026action=update_status\u0026success=1\u0026limit=50"
+                                 },
+                     "event":  [
+                                   {
+                                       "listen":  "test",
+                                       "script":  {
+                                                      "type":  "text/javascript",
+                                                      "exec":  [
+                                                                   "pm.test(\u0027HTTP 200\u0027, function () { pm.response.to.have.status(200); });",
+                                                                   "const res = pm.response.json();",
+                                                                   "pm.test(\u0027operation log list success\u0027, function () { pm.expect(res.code).to.eql(200); });",
+                                                                   "pm.test(\u0027operation log has rows\u0027, function () { pm.expect(Array.isArray(res.data)).to.eql(true); pm.expect(res.data.length).to.be.greaterThan(0); });",
+                                                                   "const hasTarget = (res.data || []).some(x =\u003e x.module === \u0027role\u0027 \u0026\u0026 x.action === \u0027update_status\u0027 \u0026\u0026 x.success === 1);",
+                                                                   "pm.test(\u0027operation log exists\u0027, function () { pm.expect(hasTarget).to.eql(true); });"
+                                                               ]
+                                                  }
+                                   }
+                               ]
+                 },
+                 {
                      "name":  "67 Admin User Update Status",
                      "request":  {
                                      "method":  "PUT",
@@ -2692,6 +2750,35 @@
                                                                    "pm.test(\u0027HTTP 200\u0027, function () { pm.response.to.have.status(200); });",
                                                                    "const res = pm.response.json();",
                                                                    "pm.test(\u0027user status update success\u0027, function () { pm.expect(res.code).to.eql(200); });"
+                                                               ]
+                                                  }
+                                   }
+                               ]
+                 },
+                 {
+                     "name":  "67A Verify User Update Operation Log",
+                     "request":  {
+                                     "method":  "GET",
+                                     "header":  [
+                                                    {
+                                                        "key":  "Authorization",
+                                                        "value":  "Bearer {{auditAdminAccessToken}}"
+                                                    }
+                                                ],
+                                     "url":  "{{adminBaseUrl}}/admin/operation-log/list?module=user\u0026action=update_status\u0026success=1\u0026limit=50"
+                                 },
+                     "event":  [
+                                   {
+                                       "listen":  "test",
+                                       "script":  {
+                                                      "type":  "text/javascript",
+                                                      "exec":  [
+                                                                   "pm.test(\u0027HTTP 200\u0027, function () { pm.response.to.have.status(200); });",
+                                                                   "const res = pm.response.json();",
+                                                                   "pm.test(\u0027operation log list success\u0027, function () { pm.expect(res.code).to.eql(200); });",
+                                                                   "pm.test(\u0027operation log has rows\u0027, function () { pm.expect(Array.isArray(res.data)).to.eql(true); pm.expect(res.data.length).to.be.greaterThan(0); });",
+                                                                   "const hasTarget = (res.data || []).some(x =\u003e x.module === \u0027user\u0027 \u0026\u0026 x.action === \u0027update_status\u0027 \u0026\u0026 x.success === 1);",
+                                                                   "pm.test(\u0027operation log exists\u0027, function () { pm.expect(hasTarget).to.eql(true); });"
                                                                ]
                                                   }
                                    }
@@ -2760,6 +2847,35 @@
                                                                    "pm.test(\u0027HTTP 200\u0027, function () { pm.response.to.have.status(200); });",
                                                                    "const res = pm.response.json();",
                                                                    "pm.test(\u0027user-role batch assign success\u0027, function () { pm.expect(res.code).to.eql(200); });"
+                                                               ]
+                                                  }
+                                   }
+                               ]
+                 },
+                 {
+                     "name":  "69A Verify UserRole Batch Operation Log",
+                     "request":  {
+                                     "method":  "GET",
+                                     "header":  [
+                                                    {
+                                                        "key":  "Authorization",
+                                                        "value":  "Bearer {{auditAdminAccessToken}}"
+                                                    }
+                                                ],
+                                     "url":  "{{adminBaseUrl}}/admin/operation-log/list?module=user_role\u0026action=batch_assign\u0026success=1\u0026limit=50"
+                                 },
+                     "event":  [
+                                   {
+                                       "listen":  "test",
+                                       "script":  {
+                                                      "type":  "text/javascript",
+                                                      "exec":  [
+                                                                   "pm.test(\u0027HTTP 200\u0027, function () { pm.response.to.have.status(200); });",
+                                                                   "const res = pm.response.json();",
+                                                                   "pm.test(\u0027operation log list success\u0027, function () { pm.expect(res.code).to.eql(200); });",
+                                                                   "pm.test(\u0027operation log has rows\u0027, function () { pm.expect(Array.isArray(res.data)).to.eql(true); pm.expect(res.data.length).to.be.greaterThan(0); });",
+                                                                   "const hasTarget = (res.data || []).some(x =\u003e x.module === \u0027user_role\u0027 \u0026\u0026 x.action === \u0027batch_assign\u0027 \u0026\u0026 x.success === 1);",
+                                                                   "pm.test(\u0027operation log exists\u0027, function () { pm.expect(hasTarget).to.eql(true); });"
                                                                ]
                                                   }
                                    }
