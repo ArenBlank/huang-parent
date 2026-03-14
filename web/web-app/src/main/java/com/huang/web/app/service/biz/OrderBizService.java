@@ -3,8 +3,12 @@ package com.huang.web.app.service.biz;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.huang.model.entity.OrderInfo;
 import com.huang.model.entity.OrderItem;
+import com.huang.model.entity.PaymentRecord;
+import com.huang.model.entity.RefundRecord;
 import com.huang.web.app.mapper.OrderInfoMapper;
 import com.huang.web.app.mapper.OrderItemMapper;
+import com.huang.web.app.mapper.PaymentRecordMapper;
+import com.huang.web.app.mapper.RefundRecordMapper;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
@@ -16,11 +20,17 @@ public class OrderBizService {
 
     private final OrderInfoMapper orderInfoMapper;
     private final OrderItemMapper orderItemMapper;
+    private final PaymentRecordMapper paymentRecordMapper;
+    private final RefundRecordMapper refundRecordMapper;
 
     public OrderBizService(OrderInfoMapper orderInfoMapper,
-                           OrderItemMapper orderItemMapper) {
+                           OrderItemMapper orderItemMapper,
+                           PaymentRecordMapper paymentRecordMapper,
+                           RefundRecordMapper refundRecordMapper) {
         this.orderInfoMapper = orderInfoMapper;
         this.orderItemMapper = orderItemMapper;
+        this.paymentRecordMapper = paymentRecordMapper;
+        this.refundRecordMapper = refundRecordMapper;
     }
 
     public Map<String, Object> detail(Long userId, Long orderId) {
@@ -33,9 +43,23 @@ public class OrderBizService {
                         .eq(OrderItem::getOrderId, orderId)
                         .orderByAsc(OrderItem::getId)
         );
+        PaymentRecord payment = paymentRecordMapper.selectOne(
+                new LambdaQueryWrapper<PaymentRecord>()
+                        .eq(PaymentRecord::getOrderId, orderId)
+                        .orderByDesc(PaymentRecord::getId)
+                        .last("LIMIT 1")
+        );
+        RefundRecord refund = refundRecordMapper.selectOne(
+                new LambdaQueryWrapper<RefundRecord>()
+                        .eq(RefundRecord::getOrderId, orderId)
+                        .orderByDesc(RefundRecord::getId)
+                        .last("LIMIT 1")
+        );
         Map<String, Object> result = new HashMap<>();
         result.put("order", order);
         result.put("items", items);
+        result.put("payment", payment);
+        result.put("refund", refund);
         return result;
     }
 }

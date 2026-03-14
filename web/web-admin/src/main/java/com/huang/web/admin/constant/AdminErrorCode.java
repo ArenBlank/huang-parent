@@ -16,6 +16,7 @@ public final class AdminErrorCode {
     public static final int VIDEO_BIND_FAILED = 7502;
 
     public static final int BOOKING_COMPLETE_FAILED = 7601;
+    public static final int ORDER_NOT_FOUND = 7602;
 
     public static final int BANNER_NOT_FOUND = 7701;
     public static final int BANNER_STATUS_INVALID = 7702;

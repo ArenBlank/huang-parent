@@ -8,6 +8,7 @@ import com.huang.model.entity.CoachSchedule;
 import com.huang.model.entity.OrderInfo;
 import com.huang.model.entity.OrderItem;
 import com.huang.model.entity.PaymentRecord;
+import com.huang.model.entity.RefundRecord;
 import com.huang.model.entity.TrainingRecord;
 import com.huang.model.entity.User;
 import com.huang.web.admin.mapper.CoachBookingMapper;
@@ -15,6 +16,7 @@ import com.huang.web.admin.mapper.CoachScheduleMapper;
 import com.huang.web.admin.mapper.OrderInfoMapper;
 import com.huang.web.admin.mapper.OrderItemMapper;
 import com.huang.web.admin.mapper.PaymentRecordMapper;
+import com.huang.web.admin.mapper.RefundRecordMapper;
 import com.huang.web.admin.mapper.TrainingRecordMapper;
 import com.huang.web.admin.mapper.UserMapper;
 import org.springframework.stereotype.Service;
@@ -35,6 +37,7 @@ public class AdminOpsBizService {
     private final CoachScheduleMapper coachScheduleMapper;
     private final PaymentRecordMapper paymentRecordMapper;
     private final OrderItemMapper orderItemMapper;
+    private final RefundRecordMapper refundRecordMapper;
 
     public AdminOpsBizService(CoachBookingMapper coachBookingMapper,
                               OrderInfoMapper orderInfoMapper,
@@ -42,7 +45,8 @@ public class AdminOpsBizService {
                               TrainingRecordMapper trainingRecordMapper,
                               UserMapper userMapper,
                               CoachScheduleMapper coachScheduleMapper,
-                              PaymentRecordMapper paymentRecordMapper) {
+                              PaymentRecordMapper paymentRecordMapper,
+                              RefundRecordMapper refundRecordMapper) {
         this.coachBookingMapper = coachBookingMapper;
         this.orderInfoMapper = orderInfoMapper;
         this.orderItemMapper = orderItemMapper;
@@ -50,6 +54,7 @@ public class AdminOpsBizService {
         this.userMapper = userMapper;
         this.coachScheduleMapper = coachScheduleMapper;
         this.paymentRecordMapper = paymentRecordMapper;
+        this.refundRecordMapper = refundRecordMapper;
     }
 
     public List<CoachBooking> bookingList(String status) {
@@ -91,9 +96,23 @@ public class AdminOpsBizService {
                         .eq(OrderItem::getOrderId, orderId)
                         .orderByAsc(OrderItem::getId)
         );
+        PaymentRecord payment = paymentRecordMapper.selectOne(
+                new LambdaQueryWrapper<PaymentRecord>()
+                        .eq(PaymentRecord::getOrderId, orderId)
+                        .orderByDesc(PaymentRecord::getId)
+                        .last("LIMIT 1")
+        );
+        RefundRecord refund = refundRecordMapper.selectOne(
+                new LambdaQueryWrapper<RefundRecord>()
+                        .eq(RefundRecord::getOrderId, orderId)
+                        .orderByDesc(RefundRecord::getId)
+                        .last("LIMIT 1")
+        );
         Map<String, Object> result = new HashMap<>();
         result.put("order", order);
         result.put("items", items);
+        result.put("payment", payment);
+        result.put("refund", refund);
         return result;
     }
 

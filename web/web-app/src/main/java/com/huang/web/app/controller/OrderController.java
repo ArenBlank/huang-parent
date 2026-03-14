@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-@Tag(name = "App璁㈠崟", description = "璁㈠崟璇︽儏鏌ヨ")
+@Tag(name = "App Order", description = "Order detail query")
 @RestController
 @RequestMapping("/app/order")
 public class OrderController {
@@ -22,7 +22,7 @@ public class OrderController {
         this.orderBizService = orderBizService;
     }
 
-    @Operation(summary = "璁㈠崟璇︽儏(鍚槑缁嗘潯)")
+    @Operation(summary = "Order detail (with items)")
     @GetMapping("/detail")
     public Result<?> detail(@RequestParam Long orderId) {
         LoginUser loginUser = LoginUserHolder.getLoginUser();
