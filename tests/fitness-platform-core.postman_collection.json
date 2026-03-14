@@ -1078,7 +1078,8 @@
                                                                    "pm.test(\u0027refundTime exists\u0027, function () { pm.expect(res.data.hasOwnProperty(\u0027refundTime\u0027)).to.eql(true); });",
                                                                    "pm.test(\u0027refundReason exists\u0027, function () { pm.expect(res.data.hasOwnProperty(\u0027refundReason\u0027)).to.eql(true); });",
                                                                    "pm.test(\u0027financeSummary exists\u0027, function () { pm.expect(res.data \u0026\u0026 res.data.financeSummary).to.be.an(\u0027object\u0027); });",
-                                                                   "pm.test(\u0027financeSummary statusText exists\u0027, function () { pm.expect(res.data.financeSummary \u0026\u0026 res.data.financeSummary.statusText).to.be.a(\u0027string\u0027); });"
+                                                                   "pm.test(\u0027financeSummary statusText exists\u0027, function () { pm.expect(res.data.financeSummary \u0026\u0026 res.data.financeSummary.statusText).to.be.a(\u0027string\u0027); });",
+                                                                   "pm.test(\u0027financeSummary statusHint exists\u0027, function () { pm.expect(res.data.financeSummary \u0026\u0026 res.data.financeSummary.statusHint).to.be.a(\u0027string\u0027); });"
                                                                ]
                                                   }
                                    }
@@ -1154,7 +1155,8 @@
                                                                    "pm.test(\u0027refundTime exists\u0027, function () { pm.expect(res.data.hasOwnProperty(\u0027refundTime\u0027)).to.eql(true); });",
                                                                    "pm.test(\u0027refundReason exists\u0027, function () { pm.expect(res.data.hasOwnProperty(\u0027refundReason\u0027)).to.eql(true); });",
                                                                    "pm.test(\u0027financeSummary exists\u0027, function () { pm.expect(res.data \u0026\u0026 res.data.financeSummary).to.be.an(\u0027object\u0027); });",
-                                                                   "pm.test(\u0027financeSummary statusText exists\u0027, function () { pm.expect(res.data.financeSummary \u0026\u0026 res.data.financeSummary.statusText).to.be.a(\u0027string\u0027); });"
+                                                                   "pm.test(\u0027financeSummary statusText exists\u0027, function () { pm.expect(res.data.financeSummary \u0026\u0026 res.data.financeSummary.statusText).to.be.a(\u0027string\u0027); });",
+                                                                   "pm.test(\u0027financeSummary statusHint exists\u0027, function () { pm.expect(res.data.financeSummary \u0026\u0026 res.data.financeSummary.statusHint).to.be.a(\u0027string\u0027); });"
                                                                ]
                                                   }
                                    }

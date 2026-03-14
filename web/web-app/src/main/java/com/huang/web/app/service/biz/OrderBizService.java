@@ -82,12 +82,13 @@ public class OrderBizService {
         financeSummary.put("netPaid", paidAmount.subtract(refundAmount));
         financeSummary.put("payStatus", payment != null ? payment.getPayStatus() : order.getPayStatus());
         financeSummary.put("refundStatus", refund != null ? refund.getRefundStatus() : null);
-        financeSummary.put("statusText", buildFinanceStatusText(payment, refund));
+        financeSummary.put("statusText", buildFinanceStatusText(payment, refund, order));
+        financeSummary.put("statusHint", buildFinanceStatusHint(payment, refund, order));
         result.put("financeSummary", financeSummary);
         return result;
     }
 
-    private String buildFinanceStatusText(PaymentRecord payment, RefundRecord refund) {
+    private String buildFinanceStatusText(PaymentRecord payment, RefundRecord refund, OrderInfo order) {
         String refundStatus = refund == null ? null : refund.getRefundStatus();
         if ("REFUNDED".equalsIgnoreCase(refundStatus)) {
             return "refunded";
@@ -99,6 +100,29 @@ public class OrderBizService {
         if ("UNPAID".equalsIgnoreCase(payStatus)) {
             return "unpaid";
         }
+        String orderStatus = order == null ? null : order.getOrderStatus();
+        if ("CLOSED".equalsIgnoreCase(orderStatus)) {
+            return "closed";
+        }
         return "unknown";
+    }
+
+    private String buildFinanceStatusHint(PaymentRecord payment, RefundRecord refund, OrderInfo order) {
+        String refundStatus = refund == null ? null : refund.getRefundStatus();
+        if ("REFUNDED".equalsIgnoreCase(refundStatus)) {
+            return "order_refunded";
+        }
+        String payStatus = payment == null ? null : payment.getPayStatus();
+        if ("PAID".equalsIgnoreCase(payStatus)) {
+            return "order_paid";
+        }
+        if ("UNPAID".equalsIgnoreCase(payStatus)) {
+            String orderStatus = order == null ? null : order.getOrderStatus();
+            if ("CLOSED".equalsIgnoreCase(orderStatus)) {
+                return "order_closed";
+            }
+            return "order_unpaid";
+        }
+        return "order_unknown";
     }
 }
