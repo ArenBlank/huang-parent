@@ -86,8 +86,8 @@ public class AdminPermissionMatrixValidator implements ApplicationRunner {
             List<Permission> list = permissionMapper.selectList(null);
             if (list != null) {
                 for (Permission p : list) {
-                    if (p != null && p.getPermissionCode() != null) {
-                        perms.add(p.getPermissionCode());
+                    if (p != null && p.getPermCode() != null) {
+                        perms.add(p.getPermCode());
                     }
                 }
             }
