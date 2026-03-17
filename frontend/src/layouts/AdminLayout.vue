@@ -4,8 +4,8 @@
       <div class="brand">
         <div class="logo">FP</div>
         <div>
-          <div class="title">Fitness Platform</div>
-          <div class="subtitle">Admin Console</div>
+          <div class="title">健身平台</div>
+          <div class="subtitle">管理控制台</div>
         </div>
       </div>
       <el-menu
@@ -16,15 +16,22 @@
         active-text-color="#2dd4bf"
         router
       >
-        <el-menu-item index="/dashboard">Dashboard</el-menu-item>
-        <el-menu-item index="/courses">Courses</el-menu-item>
-        <el-menu-item index="/schedules">Schedules</el-menu-item>
-        <el-menu-item index="/orders">Orders</el-menu-item>
-        <el-menu-item index="/videos">Videos</el-menu-item>
-        <el-menu-item index="/permission-matrix">Permission Matrix</el-menu-item>
+        <el-menu-item index="/permission-center">权限中心</el-menu-item>
+        <el-menu-item index="/dashboard">运营概览</el-menu-item>
+        <el-menu-item index="/courses">课程</el-menu-item>
+        <el-menu-item index="/schedules">排期</el-menu-item>
+        <el-menu-item index="/orders">订单</el-menu-item>
+        <el-menu-item index="/videos">视频</el-menu-item>
+        <el-menu-item index="/content">运营内容</el-menu-item>
+        <el-menu-item index="/permission-matrix">权限矩阵</el-menu-item>
+        <el-menu-item index="/role-permission">角色权限分配</el-menu-item>
+        <el-menu-item index="/role-scope">角色分类范围</el-menu-item>
+        <el-menu-item index="/coach-apply">教练申请</el-menu-item>
+        <el-menu-item index="/user-roles">用户与角色</el-menu-item>
+        <el-menu-item index="/operation-logs">操作日志</el-menu-item>
       </el-menu>
       <div class="sidebar-footer">
-        <div class="tag">V3 Ready</div>
+        <div class="tag">V3 就绪</div>
       </div>
     </aside>
 
@@ -32,11 +39,11 @@
       <header class="topbar">
         <div class="topbar-left">
           <span class="page-title">{{ pageTitle }}</span>
-          <span class="page-sub">Stable, traceable, auditable</span>
+          <span class="page-sub">稳定 / 可追踪 / 可审计</span>
         </div>
         <div class="topbar-right">
           <div class="user">{{ userLabel }}</div>
-          <el-button type="danger" size="small" @click="handleLogout">Logout</el-button>
+          <el-button type="danger" size="small" @click="handleLogout">退出登录</el-button>
         </div>
       </header>
       <section class="page">
@@ -56,18 +63,25 @@ const router = useRouter()
 const authStore = useAuthStore()
 
 const activePath = computed(() => route.path)
-const userLabel = computed(() => authStore.user?.username || 'Admin')
+const userLabel = computed(() => authStore.user?.username || '管理员')
 
 const pageTitle = computed(() => {
   const map = {
-    '/dashboard': 'Dashboard',
-    '/courses': 'Course Management',
-    '/schedules': 'Course Schedules',
-    '/orders': 'Orders & Refunds',
-    '/videos': 'Video Assets',
-    '/permission-matrix': 'Permission Matrix'
+    '/dashboard': '运营概览',
+    '/courses': '课程管理',
+    '/schedules': '课程排期',
+    '/orders': '订单与退款',
+    '/videos': '视频资产',
+    '/content': '运营内容',
+    '/permission-center': '权限中心',
+    '/permission-matrix': '权限矩阵',
+    '/role-permission': '角色权限分配',
+    '/role-scope': '角色分类范围',
+    '/coach-apply': '教练申请',
+    '/user-roles': '用户与角色',
+    '/operation-logs': '操作日志'
   }
-  return map[route.path] || 'Console'
+  return map[route.path] || '控制台'
 })
 
 const handleLogout = () => {

@@ -16,7 +16,7 @@ export const useAuthStore = defineStore('auth', {
         password
       })
       if (data.code !== 200) {
-        throw new Error(data.message || 'Login failed')
+        throw new Error(data.message || '登录失败')
       }
       this.accessToken = data.data.accessToken
       this.user = {

@@ -2,12 +2,12 @@
   <div class="login-wrapper">
     <el-card class="login-card">
       <div class="login-header">
-      <div class="login-title">健身平台管理端</div>
-      <div class="login-sub">登录以管理运营</div>
+        <div class="login-title">健身平台 App</div>
+        <div class="login-sub">登录后查看计划与预约</div>
       </div>
       <el-form :model="form" label-position="top" @keyup.enter="submit">
         <el-form-item label="账号">
-          <el-input v-model="form.account" placeholder="root_admin / admin / ops_admin / audit_admin" />
+          <el-input v-model="form.account" placeholder="root / 手机号" />
         </el-form-item>
         <el-form-item label="密码">
           <el-input v-model="form.password" type="password" show-password placeholder="请输入密码" />
@@ -17,31 +17,27 @@
         </el-button>
       </el-form>
       <div class="quick-row">
-        <el-button size="small" @click="fillAccount('root_admin', 'root')">填充 root_admin</el-button>
-        <el-button size="small" @click="fillAccount('ops_admin', 'ops_admin_123')">填充 ops_admin</el-button>
-        <el-button size="small" @click="fillAccount('audit_admin', 'audit_admin_123')">填充 audit_admin</el-button>
+        <el-button size="small" @click="fillAccount('root', 'root')">填充 root</el-button>
       </div>
-      <div class="login-hint">建议账号：root_admin（root）/ ops_admin（ops_admin_123）/ audit_admin（audit_admin_123）</div>
+      <div class="login-hint">建议账号：root（root）。其它账号以数据库实际密码为准。</div>
     </el-card>
   </div>
 </template>
 
 <script setup>
-import { onMounted, reactive, ref } from 'vue'
+import { reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { useAuthStore } from '../stores/auth'
+import { useAppAuthStore } from '../stores/auth'
 
 const router = useRouter()
-const authStore = useAuthStore()
+const store = useAppAuthStore()
 const loading = ref(false)
 
 const form = reactive({
   account: '',
   password: ''
 })
-
-const STORAGE_KEY = 'admin_last_account'
 
 const fillAccount = (account, password) => {
   form.account = account
@@ -55,23 +51,24 @@ const submit = async () => {
   }
   try {
     loading.value = true
-    await authStore.login(form.account, form.password)
+    await store.login(form.account, form.password)
     ElMessage.success('登录成功')
-    localStorage.setItem(STORAGE_KEY, form.account)
-    router.push('/permission-center')
+    router.push('/home')
   } catch (err) {
-    ElMessage.error(err.message || '登录失败')
+    const message = err?.message || '登录失败'
+    if (message.includes('无法连接后端')) {
+      ElMessage.error('后端未启动，请先启动 app 服务（8081）')
+    } else if (message.includes('请求超时')) {
+      ElMessage.error('请求超时，请检查后端服务是否可用')
+    } else if (message.includes('账号') || message.includes('密码')) {
+      ElMessage.error('账号或密码错误')
+    } else {
+      ElMessage.error(message)
+    }
   } finally {
     loading.value = false
   }
 }
-
-onMounted(() => {
-  const cached = localStorage.getItem(STORAGE_KEY)
-  if (cached) {
-    form.account = cached
-  }
-})
 </script>
 
 <style scoped>
@@ -85,10 +82,9 @@ onMounted(() => {
 .login-card {
   width: min(420px, 92vw);
   border-radius: 20px;
-  background: rgba(8, 15, 18, 0.75);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  box-shadow: 0 25px 80px rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(12px);
+  background: #ffffffee;
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
 }
 
 .login-header {
@@ -103,7 +99,7 @@ onMounted(() => {
 
 .login-sub {
   font-size: 12px;
-  color: #93a8b5;
+  color: var(--muted);
 }
 
 .login-button {
@@ -111,16 +107,9 @@ onMounted(() => {
   margin-top: 8px;
 }
 
-.quick-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 12px;
-}
-
 .login-hint {
   margin-top: 16px;
   font-size: 12px;
-  color: #8aa0af;
+  color: var(--muted);
 }
 </style>

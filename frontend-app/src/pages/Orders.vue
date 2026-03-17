@@ -2,31 +2,27 @@
   <div class="card">
     <div class="toolbar">
       <div>
-        <h2>订单</h2>
-        <p>订单、支付与退款状态</p>
+        <h2 class="section-title">订单查询</h2>
+        <p class="section-sub">输入订单ID查看详情</p>
       </div>
-      <el-button type="primary" @click="loadOrders" :loading="loading">刷新</el-button>
     </div>
-    <el-table :data="orders" style="width: 100%" v-loading="loading" @row-click="loadDetail">
-      <el-table-column prop="id" label="ID" width="70" />
-      <el-table-column prop="orderNo" label="订单号" />
-      <el-table-column prop="totalAmount" label="金额" width="120" />
-      <el-table-column label="支付状态" width="120">
-        <template #default="{ row }">
-          {{ formatPayStatus(row.payStatus) }}
-        </template>
-      </el-table-column>
-      <el-table-column label="订单状态" width="140">
-        <template #default="{ row }">
-          {{ formatOrderStatus(row.orderStatus) }}
-        </template>
-      </el-table-column>
-    </el-table>
-  </div>
-
-  <div class="card" style="margin-top: 16px;">
-    <h3>订单详情</h3>
-    <el-empty v-if="!detail" description="请选择订单查看详情" />
+    <el-form :inline="true" label-position="top">
+      <el-form-item label="订单ID">
+        <el-input v-model.number="orderId" placeholder="例如 4（可从报名/预约详情点击带入）" />
+      </el-form-item>
+      <el-form-item>
+        <el-button type="primary" @click="loadDetail" :loading="loading">查询</el-button>
+      </el-form-item>
+      <el-form-item>
+        <el-button @click="loadLastOrder">最近订单</el-button>
+      </el-form-item>
+    </el-form>
+    <el-empty v-if="!detail" description="暂无订单详情，可先完成报名或预约">
+      <div class="empty-actions">
+        <el-button size="small" @click="go('/courses')">去报名课程</el-button>
+        <el-button size="small" @click="go('/booking')">去预约教练</el-button>
+      </div>
+    </el-empty>
     <div v-else>
       <div class="summary-grid">
         <div>
@@ -63,7 +59,7 @@
         </div>
         <div>
           <div class="label">支付时间</div>
-          <div class="value">{{ formatValue(normalized.payTime) }}</div>
+          <div class="value">{{ formatDateTime(normalized.payTime) }}</div>
         </div>
         <div>
           <div class="label">退款状态</div>
@@ -71,7 +67,7 @@
         </div>
         <div>
           <div class="label">退款时间</div>
-          <div class="value">{{ formatValue(normalized.refundTime) }}</div>
+          <div class="value">{{ formatDateTime(normalized.refundTime) }}</div>
         </div>
       </div>
 
@@ -110,11 +106,14 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { adminClient } from '../api/client'
+import { appClient } from '../api/client'
 
-const orders = ref([])
+const route = useRoute()
+const router = useRouter()
+const orderId = ref(4)
 const detail = ref(null)
 const loading = ref(false)
 const detailText = computed(() => (detail.value ? JSON.stringify(detail.value, null, 2) : ''))
@@ -139,31 +138,6 @@ const normalized = computed(() => {
     financeSummary: d.financeSummary || base.financeSummary || {}
   }
 })
-
-const loadOrders = async () => {
-  try {
-    loading.value = true
-    const { data } = await adminClient.get('/admin/ops/order/list')
-    if (data.code !== 200) throw new Error(data.message || '加载失败')
-    orders.value = data.data || []
-  } catch (err) {
-    ElMessage.error(err.message || '加载失败')
-  } finally {
-    loading.value = false
-  }
-}
-
-const loadDetail = async (row) => {
-  try {
-    const { data } = await adminClient.get('/admin/ops/order/detail', {
-      params: { orderId: row.id }
-    })
-    if (data.code !== 200) throw new Error(data.message || '获取详情失败')
-    detail.value = data.data
-  } catch (err) {
-    ElMessage.error(err.message || '获取详情失败')
-  }
-}
 
 const formatPayStatus = (status) => {
   const map = {
@@ -201,32 +175,71 @@ const formatValue = (value) => {
   return value
 }
 
+const formatDateTime = (value) => {
+  if (value === null || value === undefined || value === '') return '-'
+  const raw = String(value)
+  if (raw.includes('T')) {
+    const [date, time] = raw.split('T')
+    return `${date} ${time.slice(0, 8)}`
+  }
+  if (raw.length >= 16 && raw.includes('-')) return raw.slice(0, 16)
+  return raw
+}
+
 const formatAmount = (value) => {
   if (value === null || value === undefined || value === '') return '-'
   return value
 }
 
-onMounted(loadOrders)
+const loadDetail = async () => {
+  if (!orderId.value) {
+    ElMessage.warning('请输入订单ID')
+    return
+  }
+  try {
+    loading.value = true
+    const { data } = await appClient.get('/app/order/detail', { params: { orderId: orderId.value } })
+    if (data.code !== 200) throw new Error(data.message || '查询失败')
+    detail.value = data.data
+  } catch (err) {
+    ElMessage.error(err.message || '查询失败')
+  } finally {
+    loading.value = false
+  }
+}
+
+const loadLastOrder = () => {
+  const cached = localStorage.getItem('fp_last_order_id')
+  if (!cached) {
+    ElMessage.warning('暂无最近订单')
+    return
+  }
+  orderId.value = Number(cached)
+  loadDetail()
+}
+
+const loadFromRoute = () => {
+  const raw = route.query.orderId
+  if (!raw) return
+  const parsed = Number(raw)
+  if (!Number.isFinite(parsed) || parsed <= 0) return
+  orderId.value = parsed
+  loadDetail()
+}
+
+const go = (path) => {
+  router.push(path)
+}
+
+watch(
+  () => route.query.orderId,
+  () => loadFromRoute()
+)
+
+loadFromRoute()
 </script>
 
 <style scoped>
-.toolbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-}
-
-.toolbar h2 {
-  margin: 0 0 6px;
-}
-
-.toolbar p {
-  margin: 0;
-  color: #8aa0af;
-  font-size: 13px;
-}
-
 .payload {
   color: #365062;
   font-size: 12px;
@@ -237,17 +250,7 @@ onMounted(loadOrders)
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   gap: 12px;
-  margin: 12px 0;
-}
-
-.label {
-  font-size: 12px;
-  color: var(--muted);
-}
-
-.value {
-  font-weight: 600;
-  margin-top: 4px;
+  margin-bottom: 12px;
 }
 
 .section-title-sm {
@@ -278,4 +281,15 @@ onMounted(loadOrders)
   font-size: 12px;
   color: var(--muted);
 }
+
+.label {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.value {
+  font-weight: 600;
+  margin-top: 4px;
+}
+
 </style>

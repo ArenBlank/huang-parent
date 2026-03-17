@@ -1,0 +1,240 @@
+﻿<template>
+  <div class="card">
+    <div class="toolbar">
+      <div>
+        <h2>教练申请</h2>
+        <p>申请列表与审核</p>
+      </div>
+      <el-button type="primary" @click="loadApplies" :loading="loading">刷新</el-button>
+    </div>
+
+    <div class="summary-grid">
+      <div class="summary-card">
+        <div class="summary-label">申请总数</div>
+        <div class="summary-value">{{ applies.length }}</div>
+        <div class="summary-sub">待审核 {{ pendingCount }}</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-label">已通过</div>
+        <div class="summary-value">{{ approvedCount }}</div>
+        <div class="summary-sub">已驳回 {{ rejectedCount }}</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-label">最近申请</div>
+        <div class="summary-value">{{ latestApply?.nickname || latestApply?.username || '-' }}</div>
+        <div class="summary-sub">更新时间 {{ latestApply?.updateTime || '-' }}</div>
+      </div>
+    </div>
+
+    <div class="filters">
+      <el-select v-model="query.certStatus" placeholder="审核状态" clearable style="width: 160px">
+        <el-option label="待审核" :value="0" />
+        <el-option label="已通过" :value="1" />
+        <el-option label="已驳回" :value="2" />
+      </el-select>
+      <el-input v-model="query.keyword" placeholder="姓名/手机号/账号" style="width: 220px" />
+      <el-button size="small" @click="loadApplies" :loading="loading">查询</el-button>
+      <el-button size="small" @click="fillSampleQuery">示例筛选</el-button>
+    </div>
+
+    <el-table :data="applies" style="width: 100%" v-loading="loading">
+      <el-table-column prop="profileId" label="档案ID" width="90" />
+      <el-table-column prop="username" label="账号" width="120" />
+      <el-table-column prop="nickname" label="昵称" width="120" />
+      <el-table-column prop="phone" label="手机" width="140" />
+      <el-table-column label="审核状态" width="120">
+        <template #default="scope">
+          <el-tag :type="scope.row.certStatus === 1 ? 'success' : scope.row.certStatus === 2 ? 'danger' : 'warning'">
+            {{ scope.row.certStatusText || formatCertStatus(scope.row.certStatus) }}
+          </el-tag>
+        </template>
+      </el-table-column>
+      <el-table-column prop="years" label="年限" width="90" />
+      <el-table-column prop="price" label="课时价" width="100" />
+      <el-table-column prop="updateTime" label="更新时间" width="180" />
+      <el-table-column label="操作" width="220">
+        <template #default="scope">
+          <el-button size="small" @click="openDetail(scope.row)">详情</el-button>
+          <el-button
+            size="small"
+            type="success"
+            :disabled="scope.row.certStatus !== 0"
+            @click="audit(scope.row, 1)"
+          >
+            通过
+          </el-button>
+          <el-button
+            size="small"
+            type="warning"
+            :disabled="scope.row.certStatus !== 0"
+            @click="audit(scope.row, 2)"
+          >
+            驳回
+          </el-button>
+        </template>
+      </el-table-column>
+    </el-table>
+  </div>
+
+  <el-drawer v-model="detailVisible" title="申请详情" size="36%">
+    <el-descriptions :column="1" border>
+      <el-descriptions-item label="账号">{{ detail?.username }}</el-descriptions-item>
+      <el-descriptions-item label="昵称">{{ detail?.nickname }}</el-descriptions-item>
+      <el-descriptions-item label="手机">{{ detail?.phone }}</el-descriptions-item>
+      <el-descriptions-item label="擅长">{{ detail?.expertise }}</el-descriptions-item>
+      <el-descriptions-item label="简介">{{ detail?.bio }}</el-descriptions-item>
+      <el-descriptions-item label="年限">{{ detail?.years }}</el-descriptions-item>
+      <el-descriptions-item label="课时价">{{ detail?.price }}</el-descriptions-item>
+      <el-descriptions-item label="审核状态">{{ detail?.certStatusText }}</el-descriptions-item>
+      <el-descriptions-item label="更新时间">{{ detail?.updateTime }}</el-descriptions-item>
+    </el-descriptions>
+    <div class="drawer-actions">
+      <el-button type="success" :disabled="detail?.certStatus !== 0" @click="audit(detail, 1)">通过</el-button>
+      <el-button type="warning" :disabled="detail?.certStatus !== 0" @click="audit(detail, 2)">驳回</el-button>
+    </div>
+  </el-drawer>
+</template>
+
+<script setup>
+import { computed, reactive, ref } from 'vue'
+import { ElMessage, ElMessageBox } from 'element-plus'
+import { adminClient } from '../api/client'
+
+const applies = ref([])
+const detail = ref(null)
+const detailVisible = ref(false)
+const loading = ref(false)
+
+const query = reactive({
+  certStatus: null,
+  keyword: ''
+})
+
+const pendingCount = computed(() => applies.value.filter((item) => item.certStatus === 0).length)
+const approvedCount = computed(() => applies.value.filter((item) => item.certStatus === 1).length)
+const rejectedCount = computed(() => applies.value.filter((item) => item.certStatus === 2).length)
+const latestApply = computed(() => (applies.value.length ? applies.value[0] : null))
+
+const loadApplies = async () => {
+  try {
+    loading.value = true
+    const { data } = await adminClient.get('/admin/coach-apply/list', {
+      params: {
+        certStatus: query.certStatus ?? undefined,
+        keyword: query.keyword || undefined
+      }
+    })
+    if (data.code !== 200) throw new Error(data.message || '加载失败')
+    applies.value = data.data || []
+  } catch (err) {
+    ElMessage.error(err.message || '加载失败')
+  } finally {
+    loading.value = false
+  }
+}
+
+const fillSampleQuery = () => {
+  query.certStatus = 0
+  query.keyword = ''
+  loadApplies()
+}
+
+const formatCertStatus = (status) => {
+  if (status === 1) return '已通过'
+  if (status === 2) return '已驳回'
+  return '待审核'
+}
+
+const openDetail = async (row) => {
+  try {
+    const { data } = await adminClient.get(`/admin/coach-apply/${row.profileId}`)
+    if (data.code !== 200) throw new Error(data.message || '加载失败')
+    detail.value = data.data
+    detailVisible.value = true
+  } catch (err) {
+    ElMessage.error(err.message || '加载失败')
+  }
+}
+
+const audit = async (row, certStatus) => {
+  try {
+    const label = certStatus === 1 ? '通过' : '驳回'
+    await ElMessageBox.confirm(`确认${label}该申请吗？`, '提示', { type: 'warning' })
+    const { data } = await adminClient.post('/admin/coach-apply/audit', {
+      profileId: row.profileId,
+      certStatus
+    })
+    if (data.code !== 200) throw new Error(data.message || '审核失败')
+    ElMessage.success('已提交审核')
+    await loadApplies()
+  } catch (err) {
+    if (err !== 'cancel' && err !== 'close' && err?.message) {
+      ElMessage.error(err.message || '审核失败')
+    }
+  }
+}
+
+loadApplies()
+</script>
+
+<style scoped>
+.toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 16px;
+}
+
+.toolbar h2 {
+  margin: 0 0 6px;
+}
+
+.toolbar p {
+  margin: 0;
+  color: #8aa0af;
+  font-size: 13px;
+}
+
+.filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.summary-card {
+  padding: 12px;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: #ffffffcc;
+}
+
+.summary-label {
+  font-size: 12px;
+  color: #8aa0af;
+}
+
+.summary-value {
+  font-size: 22px;
+  font-weight: 700;
+  margin: 6px 0;
+}
+
+.summary-sub {
+  font-size: 12px;
+  color: #6b7280;
+}
+
+.drawer-actions {
+  margin-top: 12px;
+  display: flex;
+  gap: 8px;
+}
+</style>

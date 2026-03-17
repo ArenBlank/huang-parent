@@ -8,9 +8,16 @@ import CourseSchedule from '../pages/CourseSchedule.vue'
 import Orders from '../pages/Orders.vue'
 import Videos from '../pages/Videos.vue'
 import PermissionMatrix from '../pages/PermissionMatrix.vue'
+import ContentOps from '../pages/ContentOps.vue'
+import OperationLogs from '../pages/OperationLogs.vue'
+import CoachApply from '../pages/CoachApply.vue'
+import UserRoleManagement from '../pages/UserRoleManagement.vue'
+import RoleScope from '../pages/RoleScope.vue'
+import RolePermission from '../pages/RolePermission.vue'
+import PermissionCenter from '../pages/PermissionCenter.vue'
 
 const routes = [
-  { path: '/', redirect: '/dashboard' },
+  { path: '/', redirect: '/permission-center' },
   { path: '/login', component: Login },
   {
     path: '/',
@@ -22,7 +29,14 @@ const routes = [
       { path: 'schedules', component: CourseSchedule },
       { path: 'orders', component: Orders },
       { path: 'videos', component: Videos },
-      { path: 'permission-matrix', component: PermissionMatrix }
+      { path: 'permission-matrix', component: PermissionMatrix },
+      { path: 'content', component: ContentOps },
+      { path: 'operation-logs', component: OperationLogs },
+      { path: 'coach-apply', component: CoachApply },
+      { path: 'user-roles', component: UserRoleManagement },
+      { path: 'role-scope', component: RoleScope },
+      { path: 'role-permission', component: RolePermission },
+      { path: 'permission-center', component: PermissionCenter }
     ]
   }
 ]
@@ -37,7 +51,7 @@ router.beforeEach((to, from, next) => {
   if (to.meta.requiresAuth && !store.accessToken) {
     next('/login')
   } else if (to.path === '/login' && store.accessToken) {
-    next('/dashboard')
+    next('/permission-center')
   } else {
     next()
   }
