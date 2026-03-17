@@ -40,5 +40,8 @@ public class UserCoreService {
     public boolean updateById(User user) {
         return userService.updateById(user);
     }
-}
 
+    public User getById(Long id) {
+        return userService.getById(id);
+    }
+}

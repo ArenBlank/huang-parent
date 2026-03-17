@@ -1,6 +1,21 @@
 -- Reset occupancy and pending records for local regression reruns
 USE fitness_platform;
 
+-- ensure user_profile table exists (for app profile fields)
+CREATE TABLE IF NOT EXISTS user_profile (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  user_id BIGINT NOT NULL,
+  bio VARCHAR(500) DEFAULT NULL,
+  address VARCHAR(200) DEFAULT NULL,
+  occupation VARCHAR(50) DEFAULT NULL,
+  height INT DEFAULT NULL,
+  weight INT DEFAULT NULL,
+  create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  is_deleted TINYINT NOT NULL DEFAULT 0,
+  UNIQUE KEY uk_user_profile_user (user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- ensure core roles exist (idempotent, stable role IDs for regression)
 INSERT IGNORE INTO role (id, role_name, role_code, status) VALUES
 (1, '管理员', 'ADMIN', 1),
@@ -35,14 +50,21 @@ DELETE FROM system_config WHERE config_key LIKE 'autotest.%';
 INSERT IGNORE INTO user (id, username, password, nickname, email, phone, gender, birth_date, status, user_type)
 VALUES (4, 'user123', '$2a$10$demoMemberPasswordHash', '回归测试用户', 'user123@fitness.local', '13800000004', 1, '2001-03-15', 1, 'member');
 
+-- simple login accounts for local dev
+INSERT IGNORE INTO user (id, username, password, nickname, email, phone, gender, birth_date, status, user_type) VALUES
+(21, 'root', 'root', '测试学员', 'root@fitness.local', '13800000101', 1, '2000-01-01', 1, 'member'),
+(22, 'root_admin', 'root', '测试管理员', 'root.admin@fitness.local', '13800000102', 1, '1990-01-01', 1, 'admin');
+
 -- restore demo user-role relations for repeatable RBAC regression
-DELETE FROM user_role WHERE user_id IN (1,2,3,4,11,12);
+DELETE FROM user_role WHERE user_id IN (1,2,3,4,11,12,21,22);
 INSERT IGNORE INTO user_role (user_id, role_id) SELECT 1, id FROM role WHERE role_code = 'ADMIN';
 INSERT IGNORE INTO user_role (user_id, role_id) SELECT 2, id FROM role WHERE role_code = 'COACH';
 INSERT IGNORE INTO user_role (user_id, role_id) SELECT 3, id FROM role WHERE role_code = 'MEMBER';
 INSERT IGNORE INTO user_role (user_id, role_id) SELECT 4, id FROM role WHERE role_code = 'MEMBER';
 INSERT IGNORE INTO user_role (user_id, role_id) SELECT 11, id FROM role WHERE role_code = 'OPS_ADMIN';
 INSERT IGNORE INTO user_role (user_id, role_id) SELECT 12, id FROM role WHERE role_code = 'AUDIT_ADMIN';
+INSERT IGNORE INTO user_role (user_id, role_id) SELECT 21, id FROM role WHERE role_code = 'MEMBER';
+INSERT IGNORE INTO user_role (user_id, role_id) SELECT 22, id FROM role WHERE role_code = 'ADMIN';
 
 -- ensure permission data for regression (idempotent)
 INSERT IGNORE INTO permission (perm_name, perm_code, module, status) VALUES

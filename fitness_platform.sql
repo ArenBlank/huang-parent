@@ -23,6 +23,20 @@ CREATE TABLE IF NOT EXISTS user (
   UNIQUE KEY uk_user_email (email)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE IF NOT EXISTS user_profile (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  user_id BIGINT NOT NULL,
+  bio VARCHAR(500) DEFAULT NULL,
+  address VARCHAR(200) DEFAULT NULL,
+  occupation VARCHAR(50) DEFAULT NULL,
+  height INT DEFAULT NULL,
+  weight INT DEFAULT NULL,
+  create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  is_deleted TINYINT NOT NULL DEFAULT 0,
+  UNIQUE KEY uk_user_profile_user (user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 CREATE TABLE IF NOT EXISTS role (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
   role_name VARCHAR(50) NOT NULL,
@@ -485,6 +499,10 @@ INSERT IGNORE INTO user (id, username, password, nickname, email, phone, gender,
 (11, 'ops_admin', 'ops_admin_123', '运营管理员', 'ops.admin@fitness.local', '13800000011', 1, '1994-06-01', 1, 'admin'),
 (12, 'audit_admin', 'audit_admin_123', '审核管理员', 'audit.admin@fitness.local', '13800000012', 2, '1993-08-18', 1, 'admin');
 
+INSERT IGNORE INTO user (id, username, password, nickname, email, phone, gender, birth_date, status, user_type) VALUES
+(21, 'root', 'root', '测试学员', 'root@fitness.local', '13800000101', 1, '2000-01-01', 1, 'member'),
+(22, 'root_admin', 'root', '测试管理员', 'root.admin@fitness.local', '13800000102', 1, '1990-01-01', 1, 'admin');
+
 INSERT IGNORE INTO user_role (id, user_id, role_id) VALUES
 (1, 1, 1),
 (2, 2, 2),
@@ -496,6 +514,12 @@ SELECT 11, id FROM role WHERE role_code = 'OPS_ADMIN';
 
 INSERT IGNORE INTO user_role (user_id, role_id)
 SELECT 12, id FROM role WHERE role_code = 'AUDIT_ADMIN';
+
+INSERT IGNORE INTO user_role (user_id, role_id)
+SELECT 21, id FROM role WHERE role_code = 'MEMBER';
+
+INSERT IGNORE INTO user_role (user_id, role_id)
+SELECT 22, id FROM role WHERE role_code = 'ADMIN';
 
 INSERT IGNORE INTO coach_profile (id, user_id, bio, expertise, years, price, rating, cert_status, status) VALUES
 (1, 2, '国家职业健身教练，擅长减脂增肌与动作矫正', '减脂,增肌,力量训练', 5, 199.00, 4.80, 1, 1);
