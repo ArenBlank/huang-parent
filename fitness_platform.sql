@@ -500,8 +500,8 @@ INSERT IGNORE INTO user (id, username, password, nickname, email, phone, gender,
 (12, 'audit_admin', 'audit_admin_123', '审核管理员', 'audit.admin@fitness.local', '13800000012', 2, '1993-08-18', 1, 'admin');
 
 INSERT IGNORE INTO user (id, username, password, nickname, email, phone, gender, birth_date, status, user_type) VALUES
-(21, 'root', 'root', '测试学员', 'root@fitness.local', '13800000101', 1, '2000-01-01', 1, 'member'),
-(22, 'root_admin', 'root', '测试管理员', 'root.admin@fitness.local', '13800000102', 1, '1990-01-01', 1, 'admin');
+(21, 'root', 'root', 'Test Member', 'root@fitness.local', '13800000101', 1, '2000-01-01', 1, 'member'),
+(22, 'root_admin', 'root', 'Test Admin', 'root.admin@fitness.local', '13800000102', 1, '1990-01-01', 1, 'admin');
 
 INSERT IGNORE INTO user_role (id, user_id, role_id) VALUES
 (1, 1, 1),
