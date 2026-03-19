@@ -24,10 +24,6 @@ INSERT IGNORE INTO role (id, role_name, role_code, status) VALUES
 (4, 'OpsAdmin', 'OPS_ADMIN', 1),
 (5, 'AuditAdmin', 'AUDIT_ADMIN', 1);
 
--- reset schedule occupancy
-UPDATE coach_schedule SET booked_count = 0 WHERE is_deleted = 0;
-UPDATE course_schedule SET booked_count = 0 WHERE is_deleted = 0;
-
 -- close stale unpaid booking/order/payment to avoid blocking future runs
 UPDATE coach_booking
 SET booking_status = 'CANCELLED', pay_status = 'CLOSED'
@@ -40,6 +36,34 @@ WHERE is_deleted = 0 AND pay_status = 'UNPAID';
 UPDATE payment_record
 SET pay_status = 'CLOSED'
 WHERE is_deleted = 0 AND pay_status = 'UNPAID';
+
+-- physically purge logic-deleted enroll/booking rows to avoid unique-key blockers in reruns
+DELETE FROM coach_booking WHERE is_deleted = 1;
+DELETE FROM course_enrollment WHERE is_deleted = 1;
+
+-- rebuild schedule occupancy from current active business rows
+UPDATE coach_schedule cs
+LEFT JOIN (
+  SELECT schedule_id, COUNT(*) AS cnt
+  FROM coach_booking
+  WHERE is_deleted = 0
+    AND booking_status IN ('WAIT_PAY', 'PAID', 'COMPLETED')
+    AND pay_status IN ('UNPAID', 'PAID')
+  GROUP BY schedule_id
+) b ON b.schedule_id = cs.id
+SET cs.booked_count = IFNULL(b.cnt, 0)
+WHERE cs.is_deleted = 0;
+
+UPDATE course_schedule cs
+LEFT JOIN (
+  SELECT schedule_id, COUNT(*) AS cnt
+  FROM course_enrollment
+  WHERE is_deleted = 0
+    AND status IN (1, 2)
+  GROUP BY schedule_id
+) e ON e.schedule_id = cs.id
+SET cs.booked_count = IFNULL(e.cnt, 0)
+WHERE cs.is_deleted = 0;
 
 -- cleanup autotest operation data
 DELETE FROM banner WHERE title LIKE 'AutoTest Banner%';

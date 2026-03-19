@@ -1,12 +1,21 @@
 package com.huang.web.app.service.biz;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.huang.common.constant.BizStatusConstant;
-import com.huang.model.entity.*;
+import com.huang.model.entity.CoachBooking;
+import com.huang.model.entity.CoachReview;
+import com.huang.model.entity.CoachSchedule;
+import com.huang.model.entity.OrderInfo;
+import com.huang.model.entity.OrderItem;
+import com.huang.model.entity.PaymentRecord;
 import com.huang.web.app.dto.booking.BookingReviewDTO;
 import com.huang.web.app.dto.booking.CreateBookingDTO;
-import com.huang.web.app.mapper.*;
+import com.huang.web.app.mapper.CoachBookingMapper;
+import com.huang.web.app.mapper.CoachReviewMapper;
+import com.huang.web.app.mapper.CoachScheduleMapper;
+import com.huang.web.app.mapper.OrderInfoMapper;
+import com.huang.web.app.mapper.OrderItemMapper;
+import com.huang.web.app.mapper.PaymentRecordMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.RedisTemplate;
@@ -51,15 +60,23 @@ public class BookingBizService {
         this.redisTemplate = redisTemplate;
     }
 
-    public List<CoachSchedule> listSchedule(Long coachId, LocalDate date) {
+    public List<CoachSchedule> listSchedule(Long userId, Long coachId, LocalDate date) {
         LambdaQueryWrapper<CoachSchedule> wrapper = new LambdaQueryWrapper<CoachSchedule>()
                 .eq(CoachSchedule::getStatus, 1)
+                .apply("booked_count < capacity")
                 .orderByAsc(CoachSchedule::getScheduleDate, CoachSchedule::getStartTime);
         if (coachId != null) {
             wrapper.eq(CoachSchedule::getCoachId, coachId);
         }
         if (date != null) {
             wrapper.eq(CoachSchedule::getScheduleDate, date);
+        }
+        if (userId != null) {
+            // Hide schedules already booked by current user, avoiding guaranteed duplicate failures.
+            wrapper.apply(
+                    "NOT EXISTS (SELECT 1 FROM coach_booking cb WHERE cb.schedule_id = coach_schedule.id AND cb.user_id = {0})",
+                    userId
+            );
         }
         return coachScheduleMapper.selectList(wrapper);
     }
@@ -77,68 +94,67 @@ public class BookingBizService {
                 return null;
             }
 
-        // 工程亮点：用单条原子更新保护容量，避免并发下 booked_count 超过 capacity（超卖）。
-        int updated = coachScheduleMapper.update(
-                null,
-                new LambdaUpdateWrapper<CoachSchedule>()
-                        .eq(CoachSchedule::getId, schedule.getId())
-                        .eq(CoachSchedule::getStatus, 1)
-                        .apply("booked_count < capacity")
-                        .setSql("booked_count = booked_count + 1")
-        );
+            Long duplicated = coachBookingMapper.countAnyByUserAndSchedule(userId, schedule.getId());
+            if (duplicated != null && duplicated > 0) {
+                reason = "schedule_already_booked";
+                return null;
+            }
+
+            // Atomic update protects capacity under concurrent booking requests.
+            int updated = coachScheduleMapper.reserveSlot(schedule.getId());
             if (updated == 0) {
                 reason = "schedule_full";
                 return null;
             }
 
-        OrderInfo orderInfo = new OrderInfo();
-        orderInfo.setOrderNo(genNo("ORD"));
-        orderInfo.setUserId(userId);
-        orderInfo.setTotalAmount(schedule.getPrice() == null ? BigDecimal.ZERO : schedule.getPrice());
-        orderInfo.setOrderStatus(BizStatusConstant.OrderStatus.NEW);
-        orderInfo.setPayStatus(BizStatusConstant.PayStatus.UNPAID);
-        orderInfo.setBizType(BizStatusConstant.BizType.COACH_BOOKING);
-        orderInfoMapper.insert(orderInfo);
+            OrderInfo orderInfo = new OrderInfo();
+            orderInfo.setOrderNo(genNo("ORD"));
+            orderInfo.setUserId(userId);
+            orderInfo.setTotalAmount(schedule.getPrice() == null ? BigDecimal.ZERO : schedule.getPrice());
+            orderInfo.setOrderStatus(BizStatusConstant.OrderStatus.NEW);
+            orderInfo.setPayStatus(BizStatusConstant.PayStatus.UNPAID);
+            orderInfo.setBizType(BizStatusConstant.BizType.COACH_BOOKING);
+            orderInfoMapper.insert(orderInfo);
 
-        OrderItem orderItem = new OrderItem();
-        orderItem.setOrderId(orderInfo.getId());
-        orderItem.setItemType("coach_booking");
-        orderItem.setItemId(schedule.getId());
-        orderItem.setItemName("Coach booking #" + schedule.getId());
-        orderItem.setPrice(orderInfo.getTotalAmount());
-        orderItem.setQuantity(1);
-        orderItem.setAmount(orderInfo.getTotalAmount());
-        orderItemMapper.insert(orderItem);
+            OrderItem orderItem = new OrderItem();
+            orderItem.setOrderId(orderInfo.getId());
+            orderItem.setItemType("coach_booking");
+            orderItem.setItemId(schedule.getId());
+            orderItem.setItemName("Coach booking #" + schedule.getId());
+            orderItem.setPrice(orderInfo.getTotalAmount());
+            orderItem.setQuantity(1);
+            orderItem.setAmount(orderInfo.getTotalAmount());
+            orderItemMapper.insert(orderItem);
 
-        PaymentRecord paymentRecord = new PaymentRecord();
-        paymentRecord.setOrderId(orderInfo.getId());
-        paymentRecord.setPayNo(genNo("PAY"));
-        paymentRecord.setPayChannel("wechat");
-        paymentRecord.setPayAmount(orderInfo.getTotalAmount());
-        paymentRecord.setPayStatus(BizStatusConstant.PayStatus.UNPAID);
-        paymentRecordMapper.insert(paymentRecord);
+            PaymentRecord paymentRecord = new PaymentRecord();
+            paymentRecord.setOrderId(orderInfo.getId());
+            paymentRecord.setPayNo(genNo("PAY"));
+            paymentRecord.setPayChannel("wechat");
+            paymentRecord.setPayAmount(orderInfo.getTotalAmount());
+            paymentRecord.setPayStatus(BizStatusConstant.PayStatus.UNPAID);
+            paymentRecordMapper.insert(paymentRecord);
 
-        CoachBooking booking = new CoachBooking();
-        booking.setUserId(userId);
-        booking.setCoachId(schedule.getCoachId());
-        booking.setScheduleId(schedule.getId());
-        booking.setOrderId(orderInfo.getId());
-        booking.setBookingStatus(BizStatusConstant.BookingStatus.WAIT_PAY);
-        booking.setPayStatus(BizStatusConstant.PayStatus.UNPAID);
-        coachBookingMapper.insert(booking);
+            CoachBooking booking = new CoachBooking();
+            booking.setUserId(userId);
+            booking.setCoachId(schedule.getCoachId());
+            booking.setScheduleId(schedule.getId());
+            booking.setOrderId(orderInfo.getId());
+            booking.setBookingStatus(BizStatusConstant.BookingStatus.WAIT_PAY);
+            booking.setPayStatus(BizStatusConstant.PayStatus.UNPAID);
+            coachBookingMapper.insert(booking);
 
-        bookingId = booking.getId();
-        orderInfo.setBizId(bookingId);
-        orderInfoMapper.updateById(orderInfo);
+            bookingId = booking.getId();
+            orderInfo.setBizId(bookingId);
+            orderInfoMapper.updateById(orderInfo);
 
-        Map<String, Object> result = new HashMap<>();
-        result.put("bookingId", bookingId);
-        result.put("orderId", orderInfo.getId());
-        result.put("orderNo", orderInfo.getOrderNo());
-        result.put("payNo", paymentRecord.getPayNo());
-        result.put("amount", orderInfo.getTotalAmount());
-        success = true;
-        return result;
+            Map<String, Object> result = new HashMap<>();
+            result.put("bookingId", bookingId);
+            result.put("orderId", orderInfo.getId());
+            result.put("orderNo", orderInfo.getOrderNo());
+            result.put("payNo", paymentRecord.getPayNo());
+            result.put("amount", orderInfo.getTotalAmount());
+            success = true;
+            return result;
         } finally {
             long costMs = System.currentTimeMillis() - start;
             log.info("BOOKING_CREATE userId={} scheduleId={} success={} bookingId={} reason={} costMs={}",
@@ -158,7 +174,7 @@ public class BookingBizService {
         String callbackKey = "pay:callback:booking:" + bookingId;
         try {
             try {
-                // ?????Redis ??????????????????? DB ?????????
+                // Use Redis short lock to reduce repeated callback processing.
                 Boolean first = redisTemplate.opsForValue().setIfAbsent(callbackKey, "1", 10, TimeUnit.MINUTES);
                 if (Boolean.FALSE.equals(first)) {
                     success = true;
@@ -182,7 +198,7 @@ public class BookingBizService {
             }
 
             String idempotencyKey = "CALLBACK_" + paymentRecord.getPayNo();
-            // ?????DB ?????????? Redis ??????????????????
+            // DB-level idempotency still protects when Redis lock is missed.
             if (idempotencyKey.equals(paymentRecord.getCallbackIdempotencyKey())
                     || BizStatusConstant.PayStatus.PAID.equals(paymentRecord.getPayStatus())) {
                 success = true;
@@ -213,7 +229,7 @@ public class BookingBizService {
         }
     }
 
-@Transactional(rollbackFor = Exception.class)
+    @Transactional(rollbackFor = Exception.class)
     public boolean completeBooking(Long bookingId, Long userId) {
         CoachBooking booking = coachBookingMapper.selectById(bookingId);
         if (booking == null || !booking.getUserId().equals(userId)) {
@@ -236,7 +252,7 @@ public class BookingBizService {
         if (!BizStatusConstant.BookingStatus.COMPLETED.equals(booking.getBookingStatus())) {
             return false;
         }
-        // 工程亮点：服务完成后才能评价，防止“未履约先评价”污染评分体系。
+        // Review can only be submitted once per booking.
         CoachReview existed = coachReviewMapper.selectOne(
                 new LambdaQueryWrapper<CoachReview>()
                         .eq(CoachReview::getBookingId, dto.getBookingId())

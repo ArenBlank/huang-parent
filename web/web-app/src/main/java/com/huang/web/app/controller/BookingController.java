@@ -1,15 +1,20 @@
 package com.huang.web.app.controller;
 
-import com.huang.common.result.Result;
 import com.huang.common.login.LoginUser;
 import com.huang.common.login.LoginUserHolder;
+import com.huang.common.result.Result;
 import com.huang.web.app.dto.booking.BookingReviewDTO;
 import com.huang.web.app.dto.booking.CreateBookingDTO;
 import com.huang.web.app.service.biz.BookingBizService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDate;
 
@@ -28,7 +33,9 @@ public class BookingController {
     @GetMapping("/schedule/list")
     public Result<?> scheduleList(@RequestParam(required = false) Long coachId,
                                   @RequestParam(required = false) LocalDate date) {
-        return Result.ok(bookingBizService.listSchedule(coachId, date));
+        LoginUser loginUser = LoginUserHolder.getLoginUser();
+        Long userId = loginUser == null ? null : loginUser.getUserId();
+        return Result.ok(bookingBizService.listSchedule(userId, coachId, date));
     }
 
     @Operation(summary = "创建预约订单")
@@ -39,7 +46,9 @@ public class BookingController {
             return Result.fail("未登录");
         }
         var result = bookingBizService.createBooking(loginUser.getUserId(), dto);
-        return result == null ? Result.fail("预约失败，档期可能已满") : Result.ok(result);
+        return result == null
+                ? Result.fail("预约失败，档期可能已满或已预约")
+                : Result.ok(result);
     }
 
     @Operation(summary = "支付成功回调(模拟)")
@@ -72,7 +81,7 @@ public class BookingController {
             return Result.fail("未登录");
         }
         boolean ok = bookingBizService.review(loginUser.getUserId(), dto);
-        return ok ? Result.ok("评价成功") : Result.fail("评价失败，需在完成后评价且仅可评价一次");
+        return ok ? Result.ok("评价成功") : Result.fail("评价失败，仅完成后可评价且仅可评价一次");
     }
 
     @Operation(summary = "我的预约列表")
