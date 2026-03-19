@@ -11,6 +11,7 @@
   - 管理端：`adminAccount=admin`，`adminPassword=$2a$10$demoAdminPasswordHash`
   - 运营管理员：`opsAdminAccount=ops_admin`，`opsAdminPassword=ops_admin_123`
   - 审核管理员：`auditAdminAccount=audit_admin`，`auditAdminPassword=audit_admin_123`
+  - 说明：全量回归中的“App Update Password”使用 `{{password}}` 作为旧密码
 
 可选：每次回归前重置测试数据（推荐）
 ```powershell

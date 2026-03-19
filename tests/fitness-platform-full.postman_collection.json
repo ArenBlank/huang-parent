@@ -3970,7 +3970,7 @@
                                                 ],
                                      "body":  {
                                                   "mode":  "raw",
-                                                  "raw":  "{\"oldPassword\":\"old-pass\",\"newPassword\":\"new-pass-123\",\"confirmPassword\":\"new-pass-123\"}"
+                                                  "raw":  "{\"oldPassword\":\"{{password}}\",\"newPassword\":\"new-pass-123\",\"confirmPassword\":\"new-pass-123\"}"
                                               },
                                      "url":  "{{appBaseUrl}}/app/profile/password"
                                  },
@@ -4190,3 +4190,5 @@
                      }
                  ]
 }
+
+

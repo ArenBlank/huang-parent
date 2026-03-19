@@ -46,9 +46,32 @@ DELETE FROM banner WHERE title LIKE 'AutoTest Banner%';
 DELETE FROM notice WHERE title LIKE 'AutoTest Notice%';
 DELETE FROM system_config WHERE config_key LIKE 'autotest.%';
 
--- ensure stable regression-only member account exists
-INSERT IGNORE INTO user (id, username, password, nickname, email, phone, gender, birth_date, status, user_type)
-VALUES (4, 'user123', '$2a$10$demoMemberPasswordHash', 'Regression User', 'user123@fitness.local', '13800000004', 1, '2001-03-15', 1, 'member');
+-- restore the regression member accounts used by tests and UI walkthroughs
+INSERT INTO user (id, username, password, nickname, email, phone, gender, birth_date, status, user_type)
+VALUES (4, 'user123', '$2a$10$demoMemberPasswordHash', 'Regression User', 'user123@fitness.local', '13800000004', 1, '2001-03-15', 1, 'member')
+ON DUPLICATE KEY UPDATE
+  username = VALUES(username),
+  password = VALUES(password),
+  nickname = VALUES(nickname),
+  email = VALUES(email),
+  phone = VALUES(phone),
+  gender = VALUES(gender),
+  birth_date = VALUES(birth_date),
+  status = VALUES(status),
+  user_type = VALUES(user_type);
+
+INSERT INTO user (id, username, password, nickname, email, phone, gender, birth_date, status, user_type)
+VALUES (3, 'member_chen', '$2a$10$demoMemberPasswordHash', '陈同学', 'member.chen@fitness.local', '13800000003', 2, '2002-09-09', 1, 'member')
+ON DUPLICATE KEY UPDATE
+  username = VALUES(username),
+  password = VALUES(password),
+  nickname = VALUES(nickname),
+  email = VALUES(email),
+  phone = VALUES(phone),
+  gender = VALUES(gender),
+  birth_date = VALUES(birth_date),
+  status = VALUES(status),
+  user_type = VALUES(user_type);
 
 -- simple login accounts for local dev
 INSERT IGNORE INTO user (id, username, password, nickname, email, phone, gender, birth_date, status, user_type) VALUES
