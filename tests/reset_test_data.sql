@@ -114,7 +114,7 @@ INSERT IGNORE INTO user_role (user_id, role_id) SELECT 21, id FROM role WHERE ro
 INSERT IGNORE INTO user_role (user_id, role_id) SELECT 22, id FROM role WHERE role_code = 'ADMIN';
 
 -- ensure permission data for regression (idempotent)
-INSERT IGNORE INTO permission (perm_name, perm_code, module, status) VALUES
+INSERT IGNORE INTO permission (permission_name, permission_code, module, status) VALUES
 ('Banner Manage', 'banner:manage', 'content', 1),
 ('Notice Manage', 'notice:manage', 'content', 1),
 ('System Config', 'system:config', 'system', 1),
@@ -133,21 +133,21 @@ INSERT IGNORE INTO permission (perm_name, perm_code, module, status) VALUES
 ('Pay Callback Audit', 'pay:callback:audit', 'payment', 1),
 ('Operation Log Read', 'operation:log:read', 'system', 1);
 
-INSERT IGNORE INTO role_permission (role_id, perm_id)
+INSERT IGNORE INTO role_permission (role_id, permission_id)
 SELECT r.id, p.id FROM role r CROSS JOIN permission p WHERE r.role_code = 'ADMIN';
 
-INSERT IGNORE INTO role_permission (role_id, perm_id)
+INSERT IGNORE INTO role_permission (role_id, permission_id)
 SELECT r.id, p.id FROM role r
-JOIN permission p ON p.perm_code IN (
+JOIN permission p ON p.permission_code IN (
   'banner:manage', 'notice:manage', 'system:config',
   'video:asset', 'video:upload', 'video:status', 'video:bind',
   'course:create', 'course:update', 'course:publish', 'course:schedule',
   'operation:log:read'
 ) WHERE r.role_code = 'OPS_ADMIN';
 
-INSERT IGNORE INTO role_permission (role_id, perm_id)
+INSERT IGNORE INTO role_permission (role_id, permission_id)
 SELECT r.id, p.id FROM role r
-JOIN permission p ON p.perm_code IN (
+JOIN permission p ON p.permission_code IN (
   'coach:apply:audit', 'refund:audit', 'pay:callback:audit', 'operation:log:read'
 ) WHERE r.role_code = 'AUDIT_ADMIN';
 

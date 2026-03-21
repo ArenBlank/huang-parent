@@ -11,15 +11,15 @@
     <div class="stat-grid" v-if="stats">
       <div class="stat-card">
         <div class="stat-label">本周打卡</div>
-        <div class="stat-value">{{ stats.totalCount || 0 }}</div>
+        <div class="stat-value">{{ stats.checkinCount ?? stats.totalCount ?? 0 }}</div>
       </div>
       <div class="stat-card">
         <div class="stat-label">训练时长</div>
-        <div class="stat-value">{{ stats.totalDuration || 0 }}</div>
+        <div class="stat-value">{{ stats.totalDurationMin ?? stats.totalDuration ?? 0 }}</div>
       </div>
       <div class="stat-card">
         <div class="stat-label">消耗卡路里</div>
-        <div class="stat-value">{{ stats.totalCalories || 0 }}</div>
+        <div class="stat-value">{{ stats.totalCalories ?? 0 }}</div>
       </div>
     </div>
     <el-empty v-else description="暂无统计，可先完成一次训练打卡">

@@ -1,21 +1,19 @@
 package com.huang.web.app.dto.profile;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.Email;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.Size;
 import lombok.Data;
 
-import jakarta.validation.constraints.*;
 import java.time.LocalDate;
 
-/**
- * 个人信息修改请求DTO
- * @author system
- * @since 2026-02-25
- */
 @Schema(description = "个人信息修改请求")
 @Data
 public class ProfileUpdateDTO {
 
-    @Schema(description = "昵称", example = "新昵称")
+    @Schema(description = "昵称", example = "新的昵称")
     @Size(max = 50, message = "昵称长度不能超过50个字符")
     private String nickname;
 
@@ -24,7 +22,11 @@ public class ProfileUpdateDTO {
     @Size(max = 100, message = "邮箱长度不能超过100个字符")
     private String email;
 
-    @Schema(description = "性别：0-未知，1-男，2-女", example = "1")
+    @Schema(description = "手机号", example = "13800000000")
+    @Size(max = 20, message = "手机号长度不能超过20个字符")
+    private String phone;
+
+    @Schema(description = "性别，0-未知，1-男，2-女", example = "1")
     @Min(value = 0, message = "性别值必须为0、1或2")
     @Max(value = 2, message = "性别值必须为0、1或2")
     private Integer gender;

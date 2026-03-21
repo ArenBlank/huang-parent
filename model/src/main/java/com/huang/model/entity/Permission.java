@@ -16,11 +16,11 @@ public class Permission extends BaseEntity {
     private static final long serialVersionUID = 1L;
 
     @Schema(description = "Permission name")
-    @TableField(value = "perm_name")
+    @TableField(value = "permission_name")
     private String permName;
 
     @Schema(description = "Permission code")
-    @TableField(value = "perm_code")
+    @TableField(value = "permission_code")
     private String permCode;
 
     @Schema(description = "Permission module")

@@ -5,6 +5,18 @@
 
 本仓库为健身平台后端项目，包含 app/admin 两端与回归测试基线。
 
+## 交付说明（收尾版）
+- 当前状态：核心链路可演示（Admin + App），核心/全量回归均通过
+- 演示路径（最短闭环）：
+  - Admin：登录 -> 权限中心 -> 课程 -> 排期 -> 订单
+  - App：登录 -> 计划订阅 -> 打卡 -> 课程报名/支付/退款 -> 预约/支付 -> 资料更新
+- 常用账号（本地）：
+  - Admin：`root_admin / root`
+  - App：`member_chen / $2a$10$demoMemberPasswordHash`
+- 复演建议：演示前执行一次
+  - `powershell -ExecutionPolicy Bypass -File tests/reset-test-data.ps1`
+- 详细收尾说明见：`doc/交付说明.md`
+
 ## 快速查看
 - CI workflow：包含 `CI / build` 与 `CI / api-core-regression`
 - Integration workflow：`Integration / api-regression`

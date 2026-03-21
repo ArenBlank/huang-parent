@@ -180,6 +180,19 @@
           <el-button size="small" text :disabled="!row.orderId" @click="goToOrder(row.orderId)">查看</el-button>
         </template>
       </el-table-column>
+      <el-table-column label="评价" width="120">
+        <template #default="{ row }">
+          <el-button
+            size="small"
+            type="primary"
+            plain
+            :disabled="row.bookingStatus !== 'COMPLETED'"
+            @click="openReview(row)"
+          >
+            写评价
+          </el-button>
+        </template>
+      </el-table-column>
       <el-table-column label="创建时间" min-width="160">
         <template #default="{ row }">
           {{ formatDateTime(row.createTime) }}
@@ -192,10 +205,57 @@
       </div>
     </el-empty>
   </div>
+
+  <div class="card" style="margin-top: 16px;">
+    <div class="toolbar">
+      <div>
+        <h2 class="section-title">预约评价</h2>
+        <p class="section-sub">完成后的预约只可评价一次</p>
+      </div>
+      <el-button size="small" @click="fillReviewFromCompleted">自动选中已完成预约</el-button>
+    </div>
+    <el-alert
+      v-if="!selectedReviewBooking"
+      type="info"
+      show-icon
+      :closable="false"
+      title="先在“我的预约”里选择一条已完成的预约，再提交评价。"
+      style="margin-bottom: 12px"
+    />
+    <div v-else class="detail">
+      <div>预约ID：{{ selectedReviewBooking.id }}</div>
+      <div class="muted">状态：{{ formatBookingStatus(selectedReviewBooking.bookingStatus) }}</div>
+      <div class="muted">订单ID：{{ selectedReviewBooking.orderId }}</div>
+    </div>
+    <el-form :model="reviewForm" label-position="top">
+      <el-form-item label="预约ID">
+        <el-input v-model="reviewForm.bookingId" disabled />
+      </el-form-item>
+      <el-form-item label="评分">
+        <el-select v-model.number="reviewForm.score" style="width: 180px">
+          <el-option v-for="n in 5" :key="n" :label="`${n} 分`" :value="n" />
+        </el-select>
+      </el-form-item>
+      <el-form-item label="评价内容">
+        <el-input
+          v-model="reviewForm.content"
+          type="textarea"
+          :rows="4"
+          maxlength="500"
+          show-word-limit
+          placeholder="填写训练体验、动作指导、服务感受"
+        />
+      </el-form-item>
+      <div class="form-actions">
+        <el-button @click="fillReviewSample">填充示例</el-button>
+        <el-button type="primary" @click="submitReview" :loading="reviewing">提交评价</el-button>
+      </div>
+    </el-form>
+  </div>
 </template>
 
 <script setup>
-import { computed, nextTick, ref } from 'vue'
+import { computed, nextTick, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { appClient } from '../api/client'
@@ -212,6 +272,13 @@ const scheduleTableRef = ref(null)
 
 const myBookings = ref([])
 const myLoading = ref(false)
+const selectedReviewBooking = ref(null)
+const reviewing = ref(false)
+const reviewForm = reactive({
+  bookingId: '',
+  score: 5,
+  content: ''
+})
 
 const coachId = ref(null)
 const date = ref('')
@@ -384,10 +451,76 @@ const loadMyBookings = async () => {
     const { data } = await appClient.get('/app/booking/my/list')
     if (data.code !== 200) throw new Error(data.message || '加载失败')
     myBookings.value = data.data || []
+    if (!selectedReviewBooking.value) {
+      fillReviewFromCompleted(false)
+    }
   } catch (err) {
     ElMessage.error(err.message || '加载失败')
   } finally {
     myLoading.value = false
+  }
+}
+
+const fillReviewFromCompleted = (showMessage = true) => {
+  const target = myBookings.value.find((row) => row.bookingStatus === 'COMPLETED')
+  if (!target) {
+    if (showMessage) {
+      ElMessage.warning('暂无已完成预约可评价')
+    }
+    return false
+  }
+  selectedReviewBooking.value = target
+  reviewForm.bookingId = target.id
+  if (!reviewForm.score) {
+    reviewForm.score = 5
+  }
+  return true
+}
+
+const fillReviewSample = () => {
+  if (!reviewForm.bookingId) {
+    const ok = fillReviewFromCompleted()
+    if (!ok) return
+  }
+  reviewForm.score = 5
+  reviewForm.content = '训练安排合理，动作指导清楚，整体体验很好。'
+}
+
+const openReview = (row) => {
+  if (row.bookingStatus !== 'COMPLETED') {
+    ElMessage.warning('只有已完成的预约才能评价')
+    return
+  }
+  selectedReviewBooking.value = row
+  reviewForm.bookingId = row.id
+  reviewForm.score = 5
+  reviewForm.content = ''
+}
+
+const submitReview = async () => {
+  if (!reviewForm.bookingId) {
+    ElMessage.warning('请选择已完成的预约')
+    return
+  }
+  if (!reviewForm.content.trim()) {
+    ElMessage.warning('请输入评价内容')
+    return
+  }
+  try {
+    reviewing.value = true
+    const { data } = await appClient.post('/app/booking/review', {
+      bookingId: Number(reviewForm.bookingId),
+      score: reviewForm.score,
+      content: reviewForm.content.trim()
+    })
+    if (data.code !== 200) throw new Error(data.message || '评价失败')
+    ElMessage.success('评价成功')
+    reviewForm.content = ''
+    await loadMyBookings()
+  } catch (err) {
+    ElMessage.error(err.message || '评价失败')
+  } finally {
+    reviewing.value = false
   }
 }
 

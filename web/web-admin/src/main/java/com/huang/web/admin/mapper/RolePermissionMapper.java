@@ -20,7 +20,7 @@ public interface RolePermissionMapper extends BaseMapper<RolePermission> {
             "DELETE FROM role_permission",
             " WHERE role_id = #{roleId}",
             " <if test='permIds != null and permIds.size() > 0'>",
-            "   AND perm_id IN",
+            "   AND permission_id IN",
             "   <foreach collection='permIds' item='pid' open='(' separator=',' close=')'>",
             "     #{pid}",
             "   </foreach>",

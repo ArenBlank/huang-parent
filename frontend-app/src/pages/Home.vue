@@ -111,10 +111,42 @@
       </div>
     </div>
   </div>
+
+  <div class="card" style="margin-top: 16px;">
+    <div class="toolbar">
+      <div>
+        <h2 class="section-title">系统配置</h2>
+        <p class="section-sub">按 key 读取展示，轻量查看即可</p>
+      </div>
+      <el-button type="primary" @click="loadSystemConfig" :loading="configLoading">读取配置</el-button>
+    </div>
+
+    <div class="config-panel">
+      <el-input
+        v-model="systemConfigKeysInput"
+        placeholder="site_name,default_avatar"
+        style="max-width: 360px"
+      />
+      <div class="config-actions">
+        <el-button size="small" @click="fillConfigSample">填充示例</el-button>
+        <span class="muted">多个 key 用英文逗号分隔，支持一次读取多个值。</span>
+      </div>
+    </div>
+
+    <el-table v-if="configRows.length" :data="configRows" style="width: 100%" size="small" v-loading="configLoading">
+      <el-table-column prop="key" label="配置键" min-width="220" />
+      <el-table-column prop="value" label="配置值" min-width="260" />
+    </el-table>
+    <el-empty v-else :description="configLoading ? '正在读取配置...' : '暂无配置结果'">
+      <div class="empty-actions">
+        <el-button size="small" @click="loadSystemConfig">重新读取</el-button>
+      </div>
+    </el-empty>
+  </div>
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { appClient } from '../api/client'
@@ -122,7 +154,17 @@ import { appClient } from '../api/client'
 const banners = ref([])
 const notices = ref([])
 const loading = ref(false)
+const configLoading = ref(false)
+const systemConfigKeysInput = ref('site_name,default_avatar')
+const systemConfigMap = ref({})
 const router = useRouter()
+
+const configRows = computed(() => {
+  return Object.entries(systemConfigMap.value || {}).map(([key, value]) => ({
+    key,
+    value
+  }))
+})
 
 const loadAll = async () => {
   try {
@@ -135,6 +177,7 @@ const loadAll = async () => {
     if (noticeRes.data.code !== 200) throw new Error(noticeRes.data.message || '加载公告失败')
     banners.value = bannerRes.data.data || []
     notices.value = noticeRes.data.data || []
+    await loadSystemConfig(false)
   } catch (err) {
     ElMessage.error(err.message || '加载失败')
   } finally {
@@ -143,6 +186,45 @@ const loadAll = async () => {
 }
 
 loadAll()
+
+const fillConfigSample = () => {
+  systemConfigKeysInput.value = 'site_name,default_avatar,banner.rotation.interval'
+}
+
+const parseSystemConfigKeys = () => {
+  return systemConfigKeysInput.value
+    .split(/[,，\n]+/)
+    .map((item) => item.trim())
+    .filter(Boolean)
+}
+
+const loadSystemConfig = async (showError = true) => {
+  const keys = parseSystemConfigKeys()
+  if (!keys.length) {
+    if (showError) {
+      ElMessage.warning('请先输入至少一个配置 key')
+    }
+    systemConfigMap.value = {}
+    return
+  }
+  try {
+    configLoading.value = true
+    const params = new URLSearchParams()
+    keys.forEach((key) => params.append('keys', key))
+    const { data } = await appClient.get(`/app/system-config/map?${params.toString()}`)
+    if (data.code !== 200) throw new Error(data.message || '读取配置失败')
+    systemConfigMap.value = data.data || {}
+    if (!Object.keys(systemConfigMap.value).length && showError) {
+      ElMessage.info('未查到对应配置')
+    }
+  } catch (err) {
+    if (showError) {
+      ElMessage.error(err.message || '读取配置失败')
+    }
+  } finally {
+    configLoading.value = false
+  }
+}
 
 const go = (path) => {
   router.push(path)
@@ -240,5 +322,24 @@ const go = (path) => {
   display: flex;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+.config-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
+.config-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.muted {
+  color: var(--muted);
+  font-size: 12px;
 }
 </style>

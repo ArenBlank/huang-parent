@@ -21,6 +21,7 @@
         <el-menu-item index="/courses">课程</el-menu-item>
         <el-menu-item index="/schedules">排期</el-menu-item>
         <el-menu-item index="/orders">订单</el-menu-item>
+        <el-menu-item index="/booking-ops">预约运维</el-menu-item>
         <el-menu-item index="/videos">视频</el-menu-item>
         <el-menu-item index="/content">运营内容</el-menu-item>
         <el-menu-item index="/permission-matrix">权限矩阵</el-menu-item>
@@ -71,6 +72,7 @@ const pageTitle = computed(() => {
     '/courses': '课程管理',
     '/schedules': '课程排期',
     '/orders': '订单与退款',
+    '/booking-ops': '预约运维',
     '/videos': '视频资产',
     '/content': '运营内容',
     '/permission-center': '权限中心',

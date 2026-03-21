@@ -81,3 +81,11 @@
 - 视频：上传 -> 新建素材 -> 绑定计划项
 - 运营：创建 Banner / 公告 / 系统配置
 
+## 6. 联调记录（最近一次）
+- 日期：2026-03-19
+- 账号：member_chen / $2a$10$demoMemberPasswordHash
+- 结果：APP 端核心链路已跑通（登录、计划订阅、打卡、课程报名/支付/退款、预约/支付、资料更新）
+- 演示数据（本次走查新增）：
+  - course_schedule.id=28（courseId=26）
+  - coach_schedule.id=9（coachId=2）
+

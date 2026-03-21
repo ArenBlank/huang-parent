@@ -22,6 +22,16 @@ public class OrderController {
         this.orderBizService = orderBizService;
     }
 
+    @Operation(summary = "My order list")
+    @GetMapping("/my/list")
+    public Result<?> myList(@RequestParam(defaultValue = "20") Integer limit) {
+        LoginUser loginUser = LoginUserHolder.getLoginUser();
+        if (loginUser == null) {
+            return Result.fail("閺堫亞娅ヨぐ?");
+        }
+        return Result.ok(orderBizService.myOrders(loginUser.getUserId(), limit));
+    }
+
     @Operation(summary = "Order detail (with items)")
     @GetMapping("/detail")
     public Result<?> detail(@RequestParam Long orderId) {

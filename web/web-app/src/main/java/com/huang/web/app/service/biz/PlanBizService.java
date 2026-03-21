@@ -39,6 +39,9 @@ public class PlanBizService {
     @Value("${minio.endpoint:http://localhost:9000}")
     private String minioEndpoint;
 
+    @Value("${minio.public-endpoint:http://files.localhost}")
+    private String minioPublicEndpoint;
+
     @Value("${minio.bucket-name:fitness-platform}")
     private String minioBucketName;
 
@@ -155,7 +158,7 @@ public class PlanBizService {
 
         if (StringUtils.hasText(videoAsset.getMinioPath())) {
             if (videoAsset.getMinioPath().startsWith("http://") || videoAsset.getMinioPath().startsWith("https://")) {
-                return videoAsset.getMinioPath();
+                return rewritePublicUrl(videoAsset.getMinioPath());
             }
             String path = videoAsset.getMinioPath().startsWith("/")
                     ? videoAsset.getMinioPath().substring(1)
@@ -163,25 +166,40 @@ public class PlanBizService {
 
             if (minioClient != null) {
                 try {
-                    return minioClient.getPresignedObjectUrl(
+                    return rewritePublicUrl(minioClient.getPresignedObjectUrl(
                             GetPresignedObjectUrlArgs.builder()
                                     .method(Method.GET)
                                     .bucket(minioBucketName)
                                     .object(path)
                                     .expiry(2, TimeUnit.HOURS)
                                     .build()
-                    );
+                    ));
                 } catch (Exception ignored) {
                     // fallback to normal path url
                 }
             }
 
-            String endpoint = minioEndpoint.endsWith("/")
-                    ? minioEndpoint.substring(0, minioEndpoint.length() - 1)
-                    : minioEndpoint;
+            String endpoint = minioPublicEndpoint.endsWith("/")
+                    ? minioPublicEndpoint.substring(0, minioPublicEndpoint.length() - 1)
+                    : minioPublicEndpoint;
             return endpoint + "/" + minioBucketName + "/" + path;
         }
 
         return videoAsset.getSourceUrl();
+    }
+
+    private String rewritePublicUrl(String url) {
+        if (!StringUtils.hasText(url)) {
+            return url;
+        }
+        String internalEndpoint = StringUtils.hasText(minioEndpoint) ? minioEndpoint : "http://localhost:9000";
+        String publicEndpoint = StringUtils.hasText(minioPublicEndpoint) ? minioPublicEndpoint : "http://files.localhost";
+        String safeInternal = internalEndpoint.endsWith("/")
+                ? internalEndpoint.substring(0, internalEndpoint.length() - 1)
+                : internalEndpoint;
+        String safePublic = publicEndpoint.endsWith("/")
+                ? publicEndpoint.substring(0, publicEndpoint.length() - 1)
+                : publicEndpoint;
+        return url.replace(safeInternal, safePublic).replace("http://localhost:9000", safePublic);
     }
 }

@@ -12,9 +12,11 @@ import com.huang.web.app.mapper.RefundRecordMapper;
 import org.springframework.stereotype.Service;
 
 import java.util.HashMap;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.math.BigDecimal;
+import java.time.ZoneId;
 
 @Service
 public class OrderBizService {
@@ -88,6 +90,34 @@ public class OrderBizService {
         financeSummary.put("stage", buildFinanceStage(payment, refund, order));
         financeSummary.put("displayText", buildFinanceDisplayText(payment, refund, order));
         result.put("financeSummary", financeSummary);
+        return result;
+    }
+
+    public List<Map<String, Object>> myOrders(Long userId, Integer limit) {
+        if (userId == null) {
+            return List.of();
+        }
+        int safeLimit = limit == null || limit <= 0 ? 20 : Math.min(limit, 50);
+        List<OrderInfo> orders = orderInfoMapper.selectList(
+                new LambdaQueryWrapper<OrderInfo>()
+                        .eq(OrderInfo::getUserId, userId)
+                        .orderByDesc(OrderInfo::getId)
+                        .last("LIMIT " + safeLimit)
+        );
+        List<Map<String, Object>> result = new ArrayList<>();
+        for (OrderInfo order : orders) {
+            Map<String, Object> item = new HashMap<>();
+            item.put("id", order.getId());
+            item.put("orderNo", order.getOrderNo());
+            item.put("bizType", order.getBizType());
+            item.put("totalAmount", order.getTotalAmount());
+            item.put("orderStatus", order.getOrderStatus());
+            item.put("payStatus", order.getPayStatus());
+            item.put("createTime", order.getCreateTime() == null
+                    ? null
+                    : order.getCreateTime().toInstant().atZone(ZoneId.systemDefault()).toLocalDateTime());
+            result.add(item);
+        }
         return result;
     }
 

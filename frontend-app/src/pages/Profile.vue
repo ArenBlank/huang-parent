@@ -64,6 +64,9 @@
       <el-form-item label="邮箱">
         <el-input v-model="form.email" />
       </el-form-item>
+      <el-form-item label="手机号">
+        <el-input v-model="form.phone" />
+      </el-form-item>
       <el-form-item label="性别">
         <el-select v-model="form.gender" placeholder="请选择">
           <el-option label="未知" :value="0" />
@@ -128,6 +131,7 @@ const avatarUploading = ref(false)
 const form = reactive({
   nickname: '',
   email: '',
+  phone: '',
   gender: null,
   birthDate: '',
   address: '',
@@ -206,6 +210,7 @@ const loadProfile = async () => {
     profile.value = data.data
     form.nickname = data.data?.nickname || ''
     form.email = data.data?.email || ''
+    form.phone = data.data?.phone || ''
     form.gender = data.data?.gender ?? null
     form.birthDate = data.data?.birthDate || ''
     form.address = data.data?.address || ''
@@ -223,9 +228,30 @@ const loadProfile = async () => {
 const updateProfile = async () => {
   try {
     saving.value = true
-    const payload = { ...form }
+    const trimOrEmpty = (value) => {
+      if (value === null || value === undefined) return undefined
+      if (typeof value !== 'string') return value
+      const trimmed = value.trim()
+      return trimmed.length ? trimmed : undefined
+    }
+    const isValidNumber = (value, min) => {
+      if (!Number.isFinite(value)) return false
+      return min === undefined ? true : value >= min
+    }
+    const payload = {
+      nickname: trimOrEmpty(form.nickname),
+      email: trimOrEmpty(form.email),
+      phone: trimOrEmpty(form.phone),
+      gender: form.gender === 0 || form.gender === 1 || form.gender === 2 ? form.gender : undefined,
+      birthDate: trimOrEmpty(form.birthDate),
+      address: trimOrEmpty(form.address),
+      occupation: trimOrEmpty(form.occupation),
+      height: isValidNumber(form.height, 1) ? form.height : undefined,
+      weight: isValidNumber(form.weight, 1) ? form.weight : undefined,
+      bio: trimOrEmpty(form.bio)
+    }
     Object.keys(payload).forEach((key) => {
-      if (payload[key] === '' || payload[key] === null || payload[key] === undefined) {
+      if (payload[key] === undefined) {
         delete payload[key]
       }
     })
@@ -247,9 +273,20 @@ const updateProfile = async () => {
 const updatePassword = async () => {
   try {
     updatingPwd.value = true
+    if (!pwdForm.oldPassword || !pwdForm.newPassword || !pwdForm.confirmPassword) {
+      ElMessage.warning('请完整填写旧密码和新密码')
+      return
+    }
+    if (pwdForm.newPassword !== pwdForm.confirmPassword) {
+      ElMessage.error('两次输入的新密码不一致')
+      return
+    }
     const { data } = await appClient.put('/app/profile/password', pwdForm)
     if (data.code !== 200) throw new Error(data.message || '更新失败')
     ElMessage.success('密码已更新')
+    pwdForm.oldPassword = ''
+    pwdForm.newPassword = ''
+    pwdForm.confirmPassword = ''
   } catch (err) {
     ElMessage.error(err.message || '更新失败')
   } finally {

@@ -6,6 +6,7 @@ import Dashboard from '../pages/Dashboard.vue'
 import Courses from '../pages/Courses.vue'
 import CourseSchedule from '../pages/CourseSchedule.vue'
 import Orders from '../pages/Orders.vue'
+import BookingOps from '../pages/BookingOps.vue'
 import Videos from '../pages/Videos.vue'
 import PermissionMatrix from '../pages/PermissionMatrix.vue'
 import ContentOps from '../pages/ContentOps.vue'
@@ -28,6 +29,7 @@ const routes = [
       { path: 'courses', component: Courses },
       { path: 'schedules', component: CourseSchedule },
       { path: 'orders', component: Orders },
+      { path: 'booking-ops', component: BookingOps },
       { path: 'videos', component: Videos },
       { path: 'permission-matrix', component: PermissionMatrix },
       { path: 'content', component: ContentOps },

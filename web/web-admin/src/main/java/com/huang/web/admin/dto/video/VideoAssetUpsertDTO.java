@@ -38,7 +38,7 @@ public class VideoAssetUpsertDTO {
     @Schema(description = "标签，逗号分隔")
     private String tags;
 
-    @Schema(description = "MinIO对象路径", required = true, example = "videos/pexels/squat-demo.mp4")
+    @Schema(description = "MinIO对象路径", required = true, example = "videos/upload/20260320/demo-13.mp4")
     @NotBlank(message = "MinIO路径不能为空")
     private String minioPath;
 

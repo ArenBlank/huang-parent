@@ -185,7 +185,7 @@
       </el-table-column>
       <el-table-column label="创建时间" min-width="160">
         <template #default="{ row }">
-          {{ formatDateTime(row.createTime) }}
+          {{ formatDateTime(row.createTime || row.enrollTime) }}
         </template>
       </el-table-column>
     </el-table>
@@ -450,7 +450,10 @@ const loadEnrollments = async () => {
     enrollmentsLoading.value = true
     const { data } = await appClient.get('/app/course/my/enrollments')
     if (data.code !== 200) throw new Error(data.message || '加载失败')
-    enrollments.value = data.data || []
+    enrollments.value = (data.data || []).map((item) => ({
+      ...item,
+      createTime: item.createTime || item.enrollTime || ''
+    }))
   } catch (err) {
     ElMessage.error(err.message || '加载失败')
   } finally {

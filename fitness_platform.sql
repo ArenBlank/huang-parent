@@ -50,26 +50,26 @@ CREATE TABLE IF NOT EXISTS role (
 
 CREATE TABLE IF NOT EXISTS permission (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
-  perm_name VARCHAR(100) NOT NULL,
-  perm_code VARCHAR(100) NOT NULL,
+  permission_name VARCHAR(100) NOT NULL,
+  permission_code VARCHAR(100) NOT NULL,
   module VARCHAR(100) DEFAULT NULL,
   status TINYINT NOT NULL DEFAULT 1,
   create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   is_deleted TINYINT NOT NULL DEFAULT 0,
-  UNIQUE KEY uk_perm_code (perm_code)
+  UNIQUE KEY uk_permission_code (permission_code)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS role_permission (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
   role_id BIGINT NOT NULL,
-  perm_id BIGINT NOT NULL,
+  permission_id BIGINT NOT NULL,
   create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   is_deleted TINYINT NOT NULL DEFAULT 0,
-  UNIQUE KEY uk_role_perm (role_id, perm_id),
-  KEY idx_role_perm_role (role_id),
-  KEY idx_role_perm_perm (perm_id)
+  UNIQUE KEY uk_role_permission (role_id, permission_id),
+  KEY idx_role_permission_role (role_id),
+  KEY idx_role_permission_perm (permission_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 CREATE TABLE IF NOT EXISTS role_course_category_scope (
@@ -440,7 +440,7 @@ INSERT INTO role (role_name, role_code, status) VALUES
 ('运营管理员', 'OPS_ADMIN', 1),
 ('审核管理员', 'AUDIT_ADMIN', 1);
 
-INSERT INTO permission (perm_name, perm_code, module, status) VALUES
+INSERT INTO permission (permission_name, permission_code, module, status) VALUES
 ('Banner Manage', 'banner:manage', 'content', 1),
 ('Notice Manage', 'notice:manage', 'content', 1),
 ('System Config', 'system:config', 'system', 1),
@@ -459,21 +459,21 @@ INSERT INTO permission (perm_name, perm_code, module, status) VALUES
 ('Pay Callback Audit', 'pay:callback:audit', 'payment', 1),
 ('Operation Log Read', 'operation:log:read', 'system', 1);
 
-INSERT IGNORE INTO role_permission (role_id, perm_id)
+INSERT IGNORE INTO role_permission (role_id, permission_id)
 SELECT r.id, p.id FROM role r CROSS JOIN permission p WHERE r.role_code = 'ADMIN';
 
-INSERT IGNORE INTO role_permission (role_id, perm_id)
+INSERT IGNORE INTO role_permission (role_id, permission_id)
 SELECT r.id, p.id FROM role r
-JOIN permission p ON p.perm_code IN (
+JOIN permission p ON p.permission_code IN (
   'banner:manage', 'notice:manage', 'system:config',
   'video:asset', 'video:upload', 'video:status', 'video:bind',
   'course:create', 'course:update', 'course:publish', 'course:schedule',
   'operation:log:read'
 ) WHERE r.role_code = 'OPS_ADMIN';
 
-INSERT IGNORE INTO role_permission (role_id, perm_id)
+INSERT IGNORE INTO role_permission (role_id, permission_id)
 SELECT r.id, p.id FROM role r
-JOIN permission p ON p.perm_code IN (
+JOIN permission p ON p.permission_code IN (
   'coach:apply:audit', 'refund:audit', 'pay:callback:audit', 'operation:log:read'
 ) WHERE r.role_code = 'AUDIT_ADMIN';
 
@@ -536,8 +536,8 @@ INSERT IGNORE INTO training_plan (id, title, goal, level, duration_weeks, cover_
 (1, '4周减脂入门计划', 'fat_loss', 'beginner', 4, '/minio/plan/cover/plan-fatloss-1.jpg', 1);
 
 INSERT IGNORE INTO video_asset (id, title, source_site, source_url, license_type, attribution_required, author_name, duration_sec, tags, minio_path, status) VALUES
-(1, 'Bodyweight Squat Demo', 'pexels', 'https://www.pexels.com/video/placeholder-squat-demo/', 'Pexels License', 0, 'Pexels Author', 45, 'squat,legs,beginner', 'videos/pexels/squat-demo.mp4', 1),
-(2, 'Push-up Demo', 'pexels', 'https://www.pexels.com/video/placeholder-pushup-demo/', 'Pexels License', 0, 'Pexels Author', 38, 'pushup,chest,beginner', 'videos/pexels/pushup-demo.mp4', 1);
+(1, 'Bodyweight Squat Demo', 'pexels', 'https://www.pexels.com/video/placeholder-squat-demo/', 'Pexels License', 0, 'Pexels Author', 45, 'squat,legs,beginner', 'videos/upload/20260320/5b904041c0ee4517851004777534c499.mp4', 1),
+(2, 'Push-up Demo', 'pexels', 'https://www.pexels.com/video/placeholder-pushup-demo/', 'Pexels License', 0, 'Pexels Author', 38, 'pushup,chest,beginner', 'videos/upload/20260320/5b904041c0ee4517851004777534c499.mp4', 1);
 
 INSERT IGNORE INTO training_plan_item (id, plan_id, day_index, action_name, `sets`, reps, duration_min, rest_sec, video_id, `sort`) VALUES
 (1, 1, 1, '深蹲', 4, 12, 15, 60, 1, 1),

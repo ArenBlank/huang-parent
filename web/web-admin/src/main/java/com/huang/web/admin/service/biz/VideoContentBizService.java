@@ -13,6 +13,7 @@ import io.minio.MakeBucketArgs;
 import io.minio.MinioClient;
 import io.minio.PutObjectArgs;
 import io.minio.http.Method;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -32,6 +33,9 @@ public class VideoContentBizService {
     private final TrainingPlanItemMapper trainingPlanItemMapper;
     private final MinioClient minioClient;
     private final MinioProperties minioProperties;
+
+    @Value("${minio.public-endpoint:http://files.localhost}")
+    private String minioPublicEndpoint;
 
     public VideoContentBizService(VideoAssetMapper videoAssetMapper,
                                   TrainingPlanItemMapper trainingPlanItemMapper,
@@ -181,13 +185,32 @@ public class VideoContentBizService {
     }
 
     private String buildPreviewUrl(String objectPath) throws Exception {
-        return minioClient.getPresignedObjectUrl(
+        return rewritePublicUrl(minioClient.getPresignedObjectUrl(
                 GetPresignedObjectUrlArgs.builder()
                         .method(Method.GET)
                         .bucket(minioProperties.getBucketName())
                         .object(objectPath)
                         .expiry(2, TimeUnit.HOURS)
                         .build()
-        );
+        ));
+    }
+
+    private String rewritePublicUrl(String url) {
+        if (!StringUtils.hasText(url)) {
+            return url;
+        }
+        String internalEndpoint = StringUtils.hasText(minioProperties.getEndpoint())
+                ? minioProperties.getEndpoint()
+                : "http://localhost:9000";
+        String publicEndpoint = StringUtils.hasText(minioPublicEndpoint)
+                ? minioPublicEndpoint
+                : "http://files.localhost";
+        String safeInternal = internalEndpoint.endsWith("/")
+                ? internalEndpoint.substring(0, internalEndpoint.length() - 1)
+                : internalEndpoint;
+        String safePublic = publicEndpoint.endsWith("/")
+                ? publicEndpoint.substring(0, publicEndpoint.length() - 1)
+                : publicEndpoint;
+        return url.replace(safeInternal, safePublic).replace("http://localhost:9000", safePublic);
     }
 }

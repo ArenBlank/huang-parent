@@ -20,6 +20,6 @@ public class RolePermission extends BaseEntity {
     private Long roleId;
 
     @Schema(description = "Permission ID")
-    @TableField(value = "perm_id")
+    @TableField(value = "permission_id")
     private Long permId;
 }

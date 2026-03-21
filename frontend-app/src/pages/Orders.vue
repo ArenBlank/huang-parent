@@ -2,28 +2,63 @@
   <div class="card">
     <div class="toolbar">
       <div>
-        <h2 class="section-title">订单查询</h2>
-        <p class="section-sub">输入订单ID查看详情</p>
+        <h2 class="section-title">我的订单</h2>
+        <p class="section-sub">查看最近订单并打开详情</p>
       </div>
+      <el-button type="primary" @click="loadOrders" :loading="ordersLoading">刷新订单</el-button>
     </div>
-    <el-form :inline="true" label-position="top">
-      <el-form-item label="订单ID">
-        <el-input v-model.number="orderId" placeholder="例如 4（可从报名/预约详情点击带入）" />
-      </el-form-item>
-      <el-form-item>
-        <el-button type="primary" @click="loadDetail" :loading="loading">查询</el-button>
-      </el-form-item>
-      <el-form-item>
-        <el-button @click="loadLastOrder">最近订单</el-button>
-      </el-form-item>
-    </el-form>
-    <el-empty v-if="!detail" description="暂无订单详情，可先完成报名或预约">
+
+    <el-empty v-if="!orders.length && !ordersLoading" description="暂无订单，可先完成报名或预约">
       <div class="empty-actions">
         <el-button size="small" @click="go('/courses')">去报名课程</el-button>
         <el-button size="small" @click="go('/booking')">去预约教练</el-button>
       </div>
     </el-empty>
-    <div v-else>
+
+    <el-table
+      v-else
+      :data="orders"
+      v-loading="ordersLoading"
+      style="width: 100%; margin-bottom: 16px"
+      @row-click="handleOrderSelect"
+      highlight-current-row
+    >
+      <el-table-column prop="orderNo" label="订单号" min-width="220" />
+      <el-table-column label="类型" width="120">
+        <template #default="{ row }">
+          {{ formatBizType(row.bizType) }}
+        </template>
+      </el-table-column>
+      <el-table-column label="金额" width="120">
+        <template #default="{ row }">
+          {{ formatAmount(row.totalAmount) }}
+        </template>
+      </el-table-column>
+      <el-table-column label="支付状态" width="120">
+        <template #default="{ row }">
+          {{ formatPayStatus(row.payStatus) }}
+        </template>
+      </el-table-column>
+      <el-table-column label="订单状态" width="120">
+        <template #default="{ row }">
+          {{ formatOrderStatus(row.orderStatus) }}
+        </template>
+      </el-table-column>
+      <el-table-column label="下单时间" min-width="160">
+        <template #default="{ row }">
+          {{ formatDateTime(row.createTime) }}
+        </template>
+      </el-table-column>
+      <el-table-column label="操作" width="100">
+        <template #default="{ row }">
+          <el-button text size="small" @click.stop="openOrder(row.id)">查看</el-button>
+        </template>
+      </el-table-column>
+    </el-table>
+
+    <el-empty v-if="orders.length && !detail" description="请选择一条订单查看详情" />
+
+    <div v-else-if="detail">
       <div class="summary-grid">
         <div>
           <div class="label">订单号</div>
@@ -86,21 +121,14 @@
 
       <div class="section-title-sm">资金说明</div>
       <div class="finance-card">
-        <div class="finance-main">{{ formatValue(normalized.financeSummary.displayText) }}</div>
-        <div class="finance-sub">
-          {{ formatValue(normalized.financeSummary.statusText) }}
-          {{ normalized.financeSummary.statusHint ? `｜${normalized.financeSummary.statusHint}` : '' }}
-        </div>
-        <div class="finance-sub">{{ formatValue(normalized.financeSummary.statusExplain) }}</div>
-        <div class="finance-sub">阶段：{{ formatValue(normalized.financeSummary.stage) }}</div>
+        <div class="finance-main">{{ formatFinanceDisplay(normalized.financeSummary.displayText, normalized.refundStatus, normalized.payStatus, normalized.orderStatus) }}</div>
+        <div class="finance-sub">{{ formatFinanceExplain(normalized.financeSummary.statusExplain, normalized.refundStatus, normalized.payStatus, normalized.orderStatus) }}</div>
       </div>
 
       <el-divider />
 
       <div class="section-title-sm">退款原因</div>
       <div class="muted">{{ formatValue(normalized.refundReason) }}</div>
-
-      <pre class="payload">{{ detailText }}</pre>
     </div>
   </div>
 </template>
@@ -113,10 +141,12 @@ import { appClient } from '../api/client'
 
 const route = useRoute()
 const router = useRouter()
-const orderId = ref(4)
+const orderId = ref(null)
+const orders = ref([])
+const ordersLoading = ref(false)
 const detail = ref(null)
 const loading = ref(false)
-const detailText = computed(() => (detail.value ? JSON.stringify(detail.value, null, 2) : ''))
+
 const normalized = computed(() => {
   const d = detail.value || {}
   const order = d.order || {}
@@ -170,9 +200,52 @@ const formatPayChannel = (channel) => {
   return map[channel] || channel || '-'
 }
 
+const formatBizType = (value) => {
+  const map = {
+    coach_booking: '教练预约',
+    course: '课程报名',
+    course_enrollment: '课程报名'
+  }
+  return map[value] || value || '-'
+}
+
 const formatValue = (value) => {
   if (value === null || value === undefined || value === '') return '-'
   return value
+}
+
+const formatFinanceDisplay = (value, refundStatus, payStatus, orderStatus) => {
+  const raw = String(value || '').trim()
+  const map = {
+    Refunded: '已退款',
+    'Paid (awaiting service)': '已支付',
+    Closed: '已关闭',
+    Unpaid: '待支付',
+    Unknown: '状态未知'
+  }
+  if (map[raw]) return map[raw]
+  if (refundStatus === 'REFUNDED') return '已退款'
+  if (payStatus === 'PAID') return '已支付'
+  if (orderStatus === 'CLOSED') return '已关闭'
+  if (payStatus === 'UNPAID') return '待支付'
+  return formatValue(value)
+}
+
+const formatFinanceExplain = (value, refundStatus, payStatus, orderStatus) => {
+  const raw = String(value || '').trim()
+  const map = {
+    'Refund completed': '退款已完成',
+    'Payment received': '订单已完成支付',
+    'Order closed': '订单已关闭',
+    'Awaiting payment': '等待支付',
+    'Unknown status': '当前状态暂时无法识别'
+  }
+  if (map[raw]) return map[raw]
+  if (refundStatus === 'REFUNDED') return '退款已完成'
+  if (payStatus === 'PAID') return '订单已完成支付'
+  if (orderStatus === 'CLOSED') return '订单已关闭'
+  if (payStatus === 'UNPAID') return '等待支付'
+  return formatValue(value)
 }
 
 const formatDateTime = (value) => {
@@ -191,9 +264,44 @@ const formatAmount = (value) => {
   return value
 }
 
+const openOrder = async (id) => {
+  if (!id) return
+  orderId.value = Number(id)
+  localStorage.setItem('fp_last_order_id', String(id))
+  await loadDetail()
+}
+
+const handleOrderSelect = (row) => {
+  if (!row?.id) return
+  openOrder(row.id)
+}
+
+const loadOrders = async () => {
+  try {
+    ordersLoading.value = true
+    const { data } = await appClient.get('/app/order/my/list', { params: { limit: 20 } })
+    if (data.code !== 200) throw new Error(data.message || '加载失败')
+    orders.value = data.data || []
+    if (!orders.value.length) {
+      detail.value = null
+      return
+    }
+    const routeId = Number(route.query.orderId)
+    const cachedId = Number(localStorage.getItem('fp_last_order_id'))
+    const preferredId = [orderId.value, routeId, cachedId, orders.value[0].id].find((item) => Number.isFinite(Number(item)) && Number(item) > 0)
+    if (preferredId) {
+      await openOrder(preferredId)
+    }
+  } catch (err) {
+    ElMessage.error(err.message || '加载失败')
+  } finally {
+    ordersLoading.value = false
+  }
+}
+
 const loadDetail = async () => {
   if (!orderId.value) {
-    ElMessage.warning('请输入订单ID')
+    ElMessage.warning('请选择订单')
     return
   }
   try {
@@ -206,16 +314,6 @@ const loadDetail = async () => {
   } finally {
     loading.value = false
   }
-}
-
-const loadLastOrder = () => {
-  const cached = localStorage.getItem('fp_last_order_id')
-  if (!cached) {
-    ElMessage.warning('暂无最近订单')
-    return
-  }
-  orderId.value = Number(cached)
-  loadDetail()
 }
 
 const loadFromRoute = () => {
@@ -236,16 +334,11 @@ watch(
   () => loadFromRoute()
 )
 
+loadOrders()
 loadFromRoute()
 </script>
 
 <style scoped>
-.payload {
-  color: #365062;
-  font-size: 12px;
-  white-space: pre-wrap;
-}
-
 .summary-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
@@ -291,5 +384,4 @@ loadFromRoute()
   font-weight: 600;
   margin-top: 4px;
 }
-
 </style>

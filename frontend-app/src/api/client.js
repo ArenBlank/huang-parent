@@ -49,6 +49,10 @@ appClient.interceptors.response.use(
     if (status === 404) {
       return Promise.reject(new Error('接口不存在，请检查前端代理或后端路由'))
     }
+    if (status === 400) {
+      const message = error.response?.data?.message
+      return Promise.reject(new Error(message || '请求参数错误，请检查填写内容'))
+    }
     if (status >= 500) {
       return Promise.reject(new Error('服务端异常，请查看后端日志'))
     }
