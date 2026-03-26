@@ -14,8 +14,8 @@ spring:
       database: 0
 
 minio:
-  endpoint: http://files.localhost
-  public-endpoint: http://files.localhost
-  access-key: root
-  secret-key: rootroot
-  bucket-name: lease
+  endpoint: ${MINIO_ENDPOINT:http://localhost:9000}
+  public-endpoint: ${MINIO_PUBLIC_ENDPOINT:http://files.localhost}
+  access-key: ${MINIO_ACCESS_KEY:root}
+  secret-key: ${MINIO_SECRET_KEY:rootroot}
+  bucket-name: ${MINIO_BUCKET:lease}
