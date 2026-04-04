@@ -1,28 +1,32 @@
 ﻿<template>
   <div class="card">
-    <div class="toolbar">
+    <div class="page-heading">
       <div>
+        <div class="eyebrow">Content Studio</div>
         <h2>运营内容</h2>
-        <p>Banner、公告、系统配置集中管理</p>
+        <p>Banner、公告和系统配置集中在一个工坊里维护，顶部卡片只保留真正有用的数量信息。</p>
       </div>
-      <el-button type="primary" @click="refreshAll" :loading="loading">刷新</el-button>
+      <div class="toolbar-actions">
+        <span class="code-pill">BANNER · NOTICE · CONFIG</span>
+        <el-button type="primary" @click="refreshAll" :loading="loading">刷新</el-button>
+      </div>
     </div>
 
-    <div class="summary-grid">
-      <div class="summary-card">
-        <div class="summary-label">Banner</div>
-        <div class="summary-value">{{ banners.length }}</div>
-        <div class="summary-sub">启用 {{ bannerActiveCount }}</div>
+    <div class="metric-grid content-metrics">
+      <div class="metric-card">
+        <div class="metric-label">Banner</div>
+        <div class="metric-value">{{ banners.length }}</div>
+        <div class="metric-note">启用 {{ bannerActiveCount }}</div>
       </div>
-      <div class="summary-card">
-        <div class="summary-label">公告</div>
-        <div class="summary-value">{{ notices.length }}</div>
-        <div class="summary-sub">启用 {{ noticeActiveCount }}</div>
+      <div class="metric-card">
+        <div class="metric-label">公告</div>
+        <div class="metric-value">{{ notices.length }}</div>
+        <div class="metric-note">启用 {{ noticeActiveCount }}</div>
       </div>
-      <div class="summary-card">
-        <div class="summary-label">系统配置</div>
-        <div class="summary-value">{{ configs.length }}</div>
-        <div class="summary-sub">已配置项</div>
+      <div class="metric-card">
+        <div class="metric-label">系统配置</div>
+        <div class="metric-value">{{ configs.length }}</div>
+        <div class="metric-note">当前已配置项</div>
       </div>
     </div>
 
@@ -38,6 +42,7 @@
           </div>
           <el-button type="primary" @click="openBannerDrawer()">新建 Banner</el-button>
         </div>
+        <div class="table-shell">
         <el-table :data="banners" style="width: 100%" v-loading="bannerLoading">
           <el-table-column prop="id" label="ID" width="70" />
           <el-table-column prop="title" label="标题" />
@@ -62,14 +67,17 @@
           </el-table-column>
           <el-table-column label="操作" width="220">
             <template #default="scope">
-              <el-button size="small" @click="openBannerDrawer(scope.row)">编辑</el-button>
-              <el-button size="small" type="warning" @click="toggleBanner(scope.row)">
-                {{ scope.row.status === 1 ? '停用' : '启用' }}
-              </el-button>
-              <el-button size="small" type="danger" @click="deleteBanner(scope.row)">删除</el-button>
+              <div class="table-action-row">
+                <el-button size="small" @click="openBannerDrawer(scope.row)">编辑</el-button>
+                <el-button size="small" type="warning" @click="toggleBanner(scope.row)">
+                  {{ scope.row.status === 1 ? '停用' : '启用' }}
+                </el-button>
+                <el-button size="small" type="danger" @click="deleteBanner(scope.row)">删除</el-button>
+              </div>
             </template>
           </el-table-column>
         </el-table>
+        </div>
       </el-tab-pane>
 
       <el-tab-pane label="公告" name="notice">
@@ -83,6 +91,7 @@
           </div>
           <el-button type="primary" @click="openNoticeDrawer()">新建公告</el-button>
         </div>
+        <div class="table-shell">
         <el-table :data="notices" style="width: 100%" v-loading="noticeLoading">
           <el-table-column prop="id" label="ID" width="70" />
           <el-table-column prop="title" label="标题" />
@@ -96,14 +105,17 @@
           </el-table-column>
           <el-table-column label="操作" width="220">
             <template #default="scope">
-              <el-button size="small" @click="openNoticeDrawer(scope.row)">编辑</el-button>
-              <el-button size="small" type="warning" @click="toggleNotice(scope.row)">
-                {{ scope.row.status === 1 ? '停用' : '启用' }}
-              </el-button>
-              <el-button size="small" type="danger" @click="deleteNotice(scope.row)">删除</el-button>
+              <div class="table-action-row">
+                <el-button size="small" @click="openNoticeDrawer(scope.row)">编辑</el-button>
+                <el-button size="small" type="warning" @click="toggleNotice(scope.row)">
+                  {{ scope.row.status === 1 ? '停用' : '启用' }}
+                </el-button>
+                <el-button size="small" type="danger" @click="deleteNotice(scope.row)">删除</el-button>
+              </div>
             </template>
           </el-table-column>
         </el-table>
+        </div>
       </el-tab-pane>
 
       <el-tab-pane label="系统配置" name="config">
@@ -114,6 +126,7 @@
           </div>
           <el-button type="primary" @click="openConfigDrawer()">新建配置</el-button>
         </div>
+        <div class="table-shell">
         <el-table :data="configs" style="width: 100%" v-loading="configLoading">
           <el-table-column prop="id" label="ID" width="70" />
           <el-table-column prop="configKey" label="配置键" width="200" />
@@ -121,11 +134,14 @@
           <el-table-column prop="remark" label="备注" />
           <el-table-column label="操作" width="160">
             <template #default="scope">
-              <el-button size="small" @click="openConfigDrawer(scope.row)">编辑</el-button>
-              <el-button size="small" type="danger" @click="deleteConfig(scope.row)">删除</el-button>
+              <div class="table-action-row">
+                <el-button size="small" @click="openConfigDrawer(scope.row)">编辑</el-button>
+                <el-button size="small" type="danger" @click="deleteConfig(scope.row)">删除</el-button>
+              </div>
             </template>
           </el-table-column>
         </el-table>
+        </div>
       </el-tab-pane>
     </el-tabs>
   </div>
@@ -517,73 +533,37 @@ onMounted(() => {
 </script>
 
 <style scoped>
-.toolbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-}
-
-.toolbar h2 {
-  margin: 0 0 6px;
-}
-
-.toolbar p {
-  margin: 0;
-  color: #8aa0af;
-  font-size: 13px;
-}
-
 .tab-toolbar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 12px;
+  gap: 12px;
+  margin-bottom: 14px;
 }
 
 .filters {
   display: flex;
   align-items: center;
-  gap: 8px;
-}
-
-.summary-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 12px;
-  margin-bottom: 16px;
-}
-
-.summary-card {
-  padding: 12px;
-  border-radius: 14px;
-  border: 1px solid var(--border);
-  background: #ffffffcc;
-}
-
-.summary-label {
-  font-size: 12px;
-  color: #8aa0af;
-}
-
-.summary-value {
-  font-size: 22px;
-  font-weight: 700;
-  margin: 6px 0;
-}
-
-.summary-sub {
-  font-size: 12px;
-  color: #6b7280;
+  gap: 10px;
+  flex-wrap: wrap;
 }
 
 .drawer-actions {
   display: flex;
   gap: 8px;
+  flex-wrap: wrap;
 }
 
-.muted {
-  color: #9aa6b2;
-  font-size: 12px;
+.content-metrics {
+  margin-bottom: 18px;
+}
+
+:deep(.el-tabs__item) {
+  font-size: 16px;
+  font-weight: 800;
+}
+
+:deep(.el-table .cell) {
+  color: var(--text);
 }
 </style>

@@ -1,28 +1,32 @@
 ﻿<template>
   <div class="card">
-    <div class="toolbar">
+    <div class="page-heading">
       <div>
+        <div class="eyebrow">Coach Hub</div>
         <h2>教练申请</h2>
-        <p>申请列表与审核</p>
+        <p>把申请审核也放到同一套可点、可扫读、可浮动反馈的控制台里。</p>
       </div>
-      <el-button type="primary" @click="loadApplies" :loading="loading">刷新</el-button>
+      <div class="toolbar-actions">
+        <span class="code-pill">APPLY · REVIEW · APPROVE</span>
+        <el-button type="primary" @click="loadApplies" :loading="loading">刷新</el-button>
+      </div>
     </div>
 
-    <div class="summary-grid">
-      <div class="summary-card">
-        <div class="summary-label">申请总数</div>
-        <div class="summary-value">{{ applies.length }}</div>
-        <div class="summary-sub">待审核 {{ pendingCount }}</div>
+    <div class="metric-grid">
+      <div class="metric-card">
+        <div class="metric-label">申请总数</div>
+        <div class="metric-value">{{ applies.length }}</div>
+        <div class="metric-note">待审核 {{ pendingCount }}</div>
       </div>
-      <div class="summary-card">
-        <div class="summary-label">已通过</div>
-        <div class="summary-value">{{ approvedCount }}</div>
-        <div class="summary-sub">已驳回 {{ rejectedCount }}</div>
+      <div class="metric-card">
+        <div class="metric-label">已通过</div>
+        <div class="metric-value">{{ approvedCount }}</div>
+        <div class="metric-note">已驳回 {{ rejectedCount }}</div>
       </div>
-      <div class="summary-card">
-        <div class="summary-label">最近申请</div>
-        <div class="summary-value">{{ latestApply?.nickname || latestApply?.username || '-' }}</div>
-        <div class="summary-sub">更新时间 {{ latestApply?.updateTime || '-' }}</div>
+      <div class="metric-card">
+        <div class="metric-label">最近申请</div>
+        <div class="metric-value">{{ latestApply?.nickname || latestApply?.username || '-' }}</div>
+        <div class="metric-note">更新时间 {{ latestApply?.updateTime || '-' }}</div>
       </div>
     </div>
 
@@ -37,6 +41,7 @@
       <el-button size="small" @click="fillSampleQuery">示例筛选</el-button>
     </div>
 
+    <div class="table-shell">
     <el-table :data="applies" style="width: 100%" v-loading="loading">
       <el-table-column prop="profileId" label="档案ID" width="90" />
       <el-table-column prop="username" label="账号" width="120" />
@@ -54,26 +59,29 @@
       <el-table-column prop="updateTime" label="更新时间" width="180" />
       <el-table-column label="操作" width="220">
         <template #default="scope">
-          <el-button size="small" @click="openDetail(scope.row)">详情</el-button>
-          <el-button
-            size="small"
-            type="success"
-            :disabled="scope.row.certStatus !== 0"
-            @click="audit(scope.row, 1)"
-          >
-            通过
-          </el-button>
-          <el-button
-            size="small"
-            type="warning"
-            :disabled="scope.row.certStatus !== 0"
-            @click="audit(scope.row, 2)"
-          >
-            驳回
-          </el-button>
+          <div class="table-action-row">
+            <el-button size="small" @click="openDetail(scope.row)">详情</el-button>
+            <el-button
+              size="small"
+              type="success"
+              :disabled="scope.row.certStatus !== 0"
+              @click="audit(scope.row, 1)"
+            >
+              通过
+            </el-button>
+            <el-button
+              size="small"
+              type="warning"
+              :disabled="scope.row.certStatus !== 0"
+              @click="audit(scope.row, 2)"
+            >
+              驳回
+            </el-button>
+          </div>
         </template>
       </el-table-column>
     </el-table>
+    </div>
   </div>
 
   <el-drawer v-model="detailVisible" title="申请详情" size="36%">
@@ -178,63 +186,30 @@ loadApplies()
 </script>
 
 <style scoped>
-.toolbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-}
-
-.toolbar h2 {
-  margin: 0 0 6px;
-}
-
-.toolbar p {
-  margin: 0;
-  color: #8aa0af;
-  font-size: 13px;
-}
-
 .filters {
   display: flex;
+  align-items: center;
   flex-wrap: wrap;
-  gap: 8px;
-  margin-bottom: 12px;
-}
-
-.summary-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 12px;
+  gap: 10px;
   margin-bottom: 16px;
-}
-
-.summary-card {
-  padding: 12px;
-  border-radius: 14px;
-  border: 1px solid var(--border);
-  background: #ffffffcc;
-}
-
-.summary-label {
-  font-size: 12px;
-  color: #8aa0af;
-}
-
-.summary-value {
-  font-size: 22px;
-  font-weight: 700;
-  margin: 6px 0;
-}
-
-.summary-sub {
-  font-size: 12px;
-  color: #6b7280;
 }
 
 .drawer-actions {
-  margin-top: 12px;
+  margin-top: 18px;
   display: flex;
   gap: 8px;
+  flex-wrap: nowrap;
+  justify-content: flex-end;
+}
+
+:deep(.el-table .cell) {
+  color: var(--text);
+}
+
+@media (max-width: 900px) {
+  .drawer-actions {
+    flex-wrap: wrap;
+    justify-content: flex-start;
+  }
 }
 </style>

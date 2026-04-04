@@ -1,4 +1,4 @@
-﻿<template>
+<template>
   <div class="stat-card">
     <div class="stat-label">{{ label }}</div>
     <div class="stat-value">{{ value }}</div>
@@ -15,9 +15,17 @@ defineProps({
 </script>
 
 <style scoped>
+.stat-card {
+  justify-content: space-between;
+}
+
+.stat-value {
+  min-height: 28px;
+}
+
 .stat-note {
-  margin-top: 6px;
+  color: var(--muted);
   font-size: 12px;
-  color: #9bb0bd;
+  line-height: 1.6;
 }
 </style>

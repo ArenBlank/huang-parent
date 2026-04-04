@@ -1,162 +1,187 @@
-﻿<template>
-  <div class="card">
-    <div class="toolbar">
-      <div>
-        <h2>权限中心</h2>
-        <p>权限矩阵、角色权限与资源范围的统一入口</p>
-      </div>
-      <el-button type="primary" @click="loadAll" :loading="loading">刷新</el-button>
-    </div>
-
-    <div class="stat-grid">
-      <StatCard label="必需权限" :value="matrix?.required?.length || 0" />
-      <StatCard label="已配置权限" :value="matrix?.config?.length || 0" />
-      <StatCard label="数据库权限" :value="matrix?.database?.length || 0" />
-      <div class="clickable" @click="openMissing">
-        <StatCard
-          label="缺失权限"
-          :value="matrix?.missing?.length || 0"
-          :note="matrix?.warning || ''"
-        />
-      </div>
-      <StatCard label="角色数" :value="roles.length" />
-      <StatCard label="权限总数" :value="permissions.length" />
-      <StatCard label="未分配权限" :value="unassignedCount" />
-      <StatCard label="覆盖率" :value="coverageRate" note="已配置 / 必需" />
-    </div>
-
-    <div class="fix-panel">
-      <el-select
-        v-model="fixRoleId"
-        placeholder="选择角色用于一键修复"
-        filterable
-        style="width: 240px"
-      >
-        <el-option
-          v-for="role in roles"
-          :key="role.id"
-          :label="`${role.roleName} (${role.roleCode})`"
-          :value="role.id"
-        />
-      </el-select>
-      <el-button type="primary" @click="fixPermissions" :loading="fixing">
-        一键修复权限缺口
-      </el-button>
-      <el-button type="success" @click="demoInit" :loading="demoing">
-        一键演示初始化
-      </el-button>
-      <el-button type="warning" @click="runDemoFlow" :loading="demoFlowing">
-        一键闭环演示
-      </el-button>
-      <el-button @click="go('/role-permission')">去角色权限分配</el-button>
-    </div>
-
-    <div class="action-row">
-      <el-button @click="syncOnly" :loading="syncingOnly">同步缺失权限</el-button>
-      <el-button @click="go('/permission-matrix')">查看权限矩阵</el-button>
-      <el-button @click="go('/role-scope')">角色分类范围</el-button>
-      <el-button @click="go('/user-roles')">用户与角色</el-button>
-      <el-button @click="copySummary">复制权限摘要</el-button>
-    </div>
-    <div v-if="demoHint" class="demo-hint">{{ demoHint }}</div>
-  </div>
-
-  <div class="card" style="margin-top: 16px;">
-    <div class="section">
-      <h3>快速入口</h3>
-      <p class="section-sub">把权限闭环跑起来只需要几步</p>
-      <div class="quick-grid">
-        <div class="quick-card" @click="go('/permission-matrix')">
-          <div class="quick-title">权限矩阵</div>
-          <div class="quick-sub">查看缺失并一键同步</div>
+<template>
+  <div class="section-stack">
+    <section class="card surface-peach">
+      <div class="page-heading">
+        <div>
+          <div class="eyebrow">Access Academy</div>
+          <h2>权限学院</h2>
+          <p>把权限矩阵、角色分配、缺口修复和审计记录做成一组更直观的学院任务卡。</p>
         </div>
-        <div class="quick-card" @click="go('/role-permission')">
-          <div class="quick-title">角色权限分配</div>
-          <div class="quick-sub">替换 / 追加 / 移除权限</div>
-        </div>
-        <div class="quick-card" @click="go('/role-scope')">
-          <div class="quick-title">角色分类范围</div>
-          <div class="quick-sub">课程分类的可见范围</div>
-        </div>
-        <div class="quick-card" @click="go('/user-roles')">
-          <div class="quick-title">用户与角色</div>
-          <div class="quick-sub">分配角色与禁用账号</div>
+        <div class="toolbar-actions">
+          <span class="code-pill">FIX · SYNC · DEMO</span>
+          <el-button type="primary" :loading="loading" @click="loadAll">刷新学院数据</el-button>
         </div>
       </div>
-    </div>
-  </div>
 
-  <div class="card" style="margin-top: 16px;">
-    <el-collapse v-model="collapseActive">
-      <el-collapse-item title="演示流程提示" name="demo">
-        <p class="section-sub">适合面试或作品集演示的最短路径</p>
-        <ol class="demo-list">
-          <li>选择角色（建议使用 root_admin 或管理员角色）。</li>
-          <li>点击“一键修复权限缺口”，自动同步并追加缺失权限。</li>
-          <li>进入“角色权限分配”查看权限已写入。</li>
-          <li>进入“权限修复日志”确认审计记录生成。</li>
-        </ol>
-      </el-collapse-item>
-      <el-collapse-item title="权限健康度说明" name="health">
-        <ul class="health-list">
-          <li>缺失权限：接口声明需要但系统未登记的权限码，需先同步。</li>
-          <li>未分配权限：权限已存在但未赋给任何角色，用户访问会被拦截。</li>
-          <li>覆盖率：已配置权限 / 必需权限的比例，越高越安全可用。</li>
-        </ul>
-      </el-collapse-item>
-    </el-collapse>
-  </div>
-
-  <div class="card" style="margin-top: 16px;">
-    <div class="toolbar">
-      <div>
-        <h3>权限修复日志</h3>
-        <p class="section-sub">同步与分配相关操作最近记录</p>
+      <div class="stat-grid">
+        <StatCard label="必需权限" :value="matrix?.required?.length || 0" note="系统声明需要的权限数量" />
+        <StatCard label="已配置权限" :value="matrix?.config?.length || 0" note="已经接入矩阵的权限" />
+        <StatCard label="缺失权限" :value="matrix?.missing?.length || 0" :note="matrix?.warning || '点击查看详情'" @click="openMissing" />
+        <StatCard label="覆盖率" :value="coverageRate" note="已配置 / 必需" />
       </div>
-      <div class="summary" v-if="lastFixSummary">{{ lastFixSummary }}</div>
-      <el-button size="small" @click="loadLogs" :loading="logLoading">刷新</el-button>
-    </div>
-    <el-table :data="logs" style="width: 100%" v-loading="logLoading">
-      <el-table-column prop="id" label="ID" width="70" />
-      <el-table-column prop="module" label="模块" width="140" />
-      <el-table-column prop="action" label="动作" width="140" />
-      <el-table-column prop="detail" label="详情" />
-      <el-table-column prop="operatorId" label="操作者" width="110" />
-      <el-table-column prop="success" label="结果" width="90">
-        <template #default="scope">
-          <el-tag :type="scope.row.success === 1 ? 'success' : 'danger'">
-            {{ scope.row.success === 1 ? '成功' : '失败' }}
-          </el-tag>
-        </template>
-      </el-table-column>
-    </el-table>
+    </section>
+
+    <section class="split-layout">
+      <div class="section-stack">
+        <div class="card surface-lilac">
+          <div class="toolbar">
+            <div>
+              <div class="section-title-sm">修复工作台</div>
+              <div class="section-copy">先选择角色，再执行一键修复、同步或闭环演示。</div>
+            </div>
+          </div>
+
+          <div class="workbench-grid">
+            <div class="workbench-card">
+              <div class="info-label">选择演示角色</div>
+              <el-select
+                v-model="fixRoleId"
+                placeholder="选择角色用于一键修复"
+                filterable
+                style="width: 100%; margin-top: 10px;"
+              >
+                <el-option
+                  v-for="role in roles"
+                  :key="role.id"
+                  :label="`${role.roleName} (${role.roleCode})`"
+                  :value="role.id"
+                />
+              </el-select>
+            </div>
+
+            <button type="button" class="action-card" @click="fixPermissions">
+              <span>一键修复权限缺口</span>
+              <strong>{{ fixing ? '处理中...' : 'Fix Access Gaps' }}</strong>
+            </button>
+            <button type="button" class="action-card mint" @click="demoInit">
+              <span>演示初始化</span>
+              <strong>{{ demoing ? '处理中...' : 'Demo Setup' }}</strong>
+            </button>
+            <button type="button" class="action-card butter" @click="runDemoFlow">
+              <span>闭环演示</span>
+              <strong>{{ demoFlowing ? '处理中...' : 'Run Demo Flow' }}</strong>
+            </button>
+          </div>
+
+          <div v-if="demoHint" class="demo-banner">{{ demoHint }}</div>
+        </div>
+
+        <div class="card">
+          <div class="toolbar">
+            <div>
+              <div class="section-title-sm">快速入口</div>
+              <div class="section-copy">权限学院的几个核心入口都做成可点击任务卡。</div>
+            </div>
+          </div>
+          <div class="quick-grid">
+            <button type="button" class="quick-card" @click="go('/permission-matrix')">
+              <span>权限矩阵</span>
+              <strong>查看缺失并一键同步</strong>
+            </button>
+            <button type="button" class="quick-card" @click="go('/role-permission')">
+              <span>角色权限分配</span>
+              <strong>替换 / 追加 / 移除权限</strong>
+            </button>
+            <button type="button" class="quick-card" @click="go('/role-scope')">
+              <span>角色分类范围</span>
+              <strong>检查课程分类边界</strong>
+            </button>
+            <button type="button" class="quick-card" @click="go('/user-roles')">
+              <span>用户与角色</span>
+              <strong>查看账号归属与禁用状态</strong>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-stack">
+        <div class="card surface-mint">
+          <div class="section-title-sm">学院健康度</div>
+          <div class="info-list" style="margin-top: 14px;">
+            <div class="info-row">
+              <div class="info-label">角色数</div>
+              <div class="info-value">{{ roles.length }}</div>
+            </div>
+            <div class="info-row">
+              <div class="info-label">权限总数</div>
+              <div class="info-value">{{ permissions.length }}</div>
+            </div>
+            <div class="info-row">
+              <div class="info-label">未分配权限</div>
+              <div class="info-value">{{ unassignedCount }}</div>
+            </div>
+            <div class="info-row">
+              <div class="info-label">最近摘要</div>
+              <div class="info-value wrap">{{ lastFixSummary || '暂无最近修复记录' }}</div>
+            </div>
+          </div>
+          <div class="toolbar-actions" style="margin-top: 16px;">
+            <el-button @click="syncOnly" :loading="syncingOnly">同步缺失权限</el-button>
+            <el-button @click="copySummary">复制权限摘要</el-button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="section-title-sm">演示流程提示</div>
+          <ol class="list-block">
+            <li>选择管理员角色。</li>
+            <li>执行一键修复权限缺口。</li>
+            <li>进入角色权限分配页查看结果。</li>
+            <li>在下方日志区确认审计记录生成。</li>
+          </ol>
+        </div>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="toolbar">
+        <div>
+          <div class="section-title-sm">权限修复日志</div>
+          <div class="section-copy">同步与分配相关操作最近记录，继续保留真实数据能力。</div>
+        </div>
+        <el-button size="small" :loading="logLoading" @click="loadLogs">刷新日志</el-button>
+      </div>
+      <div class="table-shell">
+        <el-table :data="logs" style="width: 100%" v-loading="logLoading">
+          <el-table-column prop="id" label="ID" width="70" />
+          <el-table-column prop="module" label="模块" width="140" />
+          <el-table-column prop="action" label="动作" width="140" />
+          <el-table-column prop="detail" label="详情" />
+          <el-table-column prop="operatorId" label="操作者" width="110" />
+          <el-table-column prop="success" label="结果" width="90">
+            <template #default="scope">
+              <el-tag :type="scope.row.success === 1 ? 'success' : 'danger'">
+                {{ scope.row.success === 1 ? '成功' : '失败' }}
+              </el-tag>
+            </template>
+          </el-table-column>
+        </el-table>
+      </div>
+    </section>
+
+    <el-dialog v-model="missingVisible" title="缺失权限详情" width="620px">
+      <div v-if="!matrix?.missing?.length">
+        <el-empty description="暂无缺失权限" />
+      </div>
+      <div v-else class="missing-list">
+        <el-tag v-for="perm in matrix.missing" :key="perm" type="danger">
+          {{ perm }}
+        </el-tag>
+      </div>
+      <template #footer>
+        <el-button @click="missingVisible = false">关闭</el-button>
+        <el-button type="primary" @click="go('/role-permission')">去分配</el-button>
+      </template>
+    </el-dialog>
+
+    <el-dialog v-model="demoFlowVisible" title="演示闭环完成" width="520px">
+      <div class="section-copy" style="margin-top: 0;">{{ demoFlowResult }}</div>
+      <template #footer>
+        <el-button @click="demoFlowVisible = false">关闭</el-button>
+        <el-button type="primary" @click="go('/operation-logs')">查看日志</el-button>
+      </template>
+    </el-dialog>
   </div>
-
-  <el-dialog v-model="missingVisible" title="缺失权限详情" width="620px">
-    <div v-if="!matrix?.missing?.length">
-      <el-empty description="暂无缺失权限" />
-    </div>
-    <div v-else class="missing-list">
-      <el-tag v-for="perm in matrix.missing" :key="perm" type="danger" class="tag-item">
-        {{ perm }}
-      </el-tag>
-    </div>
-    <template #footer>
-      <el-button @click="missingVisible = false">关闭</el-button>
-      <el-button type="primary" @click="go('/role-permission')">去分配</el-button>
-    </template>
-  </el-dialog>
-
-  <el-dialog v-model="demoFlowVisible" title="演示闭环完成" width="520px">
-    <div class="demo-flow-summary">
-      <div>{{ demoFlowResult }}</div>
-      <div class="muted">建议继续查看“角色权限分配”和“权限修复日志”。</div>
-    </div>
-    <template #footer>
-      <el-button @click="demoFlowVisible = false">关闭</el-button>
-      <el-button type="primary" @click="go('/operation-logs')">查看日志</el-button>
-    </template>
-  </el-dialog>
 </template>
 
 <script setup>
@@ -181,7 +206,6 @@ const logLoading = ref(false)
 const missingVisible = ref(false)
 const syncingOnly = ref(false)
 const lastFixSummary = ref('')
-const collapseActive = ref(['demo'])
 const demoFlowVisible = ref(false)
 const demoFlowResult = ref('')
 
@@ -373,121 +397,75 @@ loadAll()
 </script>
 
 <style scoped>
-.toolbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 16px;
-}
-
-.toolbar h2 {
-  margin: 0 0 6px;
-}
-
-.toolbar p {
-  margin: 0;
-  color: #8aa0af;
-  font-size: 13px;
-}
-
-.section h3 {
-  margin: 0 0 4px;
-}
-
-.section-sub {
-  margin: 0 0 12px;
-  color: #8aa0af;
-  font-size: 12px;
-}
-
+.workbench-grid,
 .quick-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 12px;
-}
-
-.quick-card {
-  padding: 16px;
-  border-radius: 14px;
-  border: 1px dashed rgba(45, 212, 191, 0.4);
-  background: rgba(45, 212, 191, 0.08);
-  cursor: pointer;
-  transition: transform 0.2s ease;
-}
-
-.quick-card:hover {
-  transform: translateY(-2px);
-}
-
-.quick-title {
-  font-weight: 600;
-  margin-bottom: 6px;
-}
-
-.quick-sub {
-  font-size: 12px;
-  color: #9bb0bd;
-}
-
-.fix-panel {
   margin-top: 16px;
-  display: flex;
-  gap: 12px;
-  align-items: center;
 }
 
-.action-row {
-  margin-top: 12px;
-  display: flex;
-  flex-wrap: wrap;
+.workbench-card,
+.quick-card,
+.action-card {
+  padding: 18px;
+  border-radius: 22px;
+  border: 3px solid var(--border);
+  background: #fffdf8;
+  box-shadow: 0 8px 0 rgba(52, 45, 105, 0.08);
+}
+
+.quick-card,
+.action-card {
+  display: grid;
   gap: 8px;
+  text-align: left;
 }
 
-.demo-hint {
-  margin-top: 10px;
-  font-size: 12px;
-  color: #9bb0bd;
+.quick-card span,
+.action-card span {
+  color: var(--text-soft);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
 }
 
-.health-list {
-  margin: 0;
-  padding-left: 18px;
-  color: #9bb0bd;
+.quick-card strong,
+.action-card strong {
+  font-family: 'Fredoka', sans-serif;
+  font-size: 18px;
+  line-height: 1.45;
+}
+
+.action-card.mint {
+  background: #ecfff8;
+}
+
+.action-card.butter {
+  background: #fff6d8;
+}
+
+.demo-banner {
+  margin-top: 14px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 3px solid var(--border);
+  background: #ffffff;
   font-size: 13px;
-  line-height: 1.7;
+  font-weight: 700;
 }
 
-.demo-list {
-  margin: 0;
-  padding-left: 18px;
-  color: #9bb0bd;
-  font-size: 13px;
-  line-height: 1.7;
-}
-
-.summary {
-  font-size: 12px;
-  color: #9bb0bd;
-}
-
-.clickable {
-  cursor: pointer;
+.list-block {
+  margin: 14px 0 0;
+  padding-left: 20px;
+  color: var(--text-soft);
+  line-height: 1.8;
 }
 
 .missing-list {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-}
-
-.demo-flow-summary {
-  font-size: 13px;
-  color: #4b5563;
-}
-
-.muted {
-  color: #9bb0bd;
-  font-size: 12px;
-  margin-top: 8px;
+  gap: 8px;
 }
 </style>
