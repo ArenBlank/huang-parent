@@ -6,7 +6,7 @@
       <div class="brand-cluster">
         <div class="brand-bubble">FP</div>
         <div>
-          <div class="brand-title">Fitness Academy Console</div>
+          <div class="brand-title">健身学院控制台</div>
           <div class="brand-sub">把训练、内容、订单和权限做成一块更好用的运营画布。</div>
         </div>
       </div>
@@ -182,7 +182,7 @@ const authStore = useAuthStore()
 
 const userLabel = computed(() => authStore.user?.username || '管理员')
 const roleLabel = computed(() => authStore.roles?.[0] || '未识别')
-const pageTitle = computed(() => pageMeta[route.path]?.title || 'Fitness Academy Console')
+const pageTitle = computed(() => pageMeta[route.path]?.title || '健身学院控制台')
 const pageDescription = computed(() => pageMeta[route.path]?.description || '把管理后台变成更友好、更有识别度的控制台。')
 
 const handleLogout = () => {

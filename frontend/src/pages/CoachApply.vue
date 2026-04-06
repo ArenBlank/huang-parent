@@ -12,7 +12,7 @@
       </div>
     </div>
 
-    <div class="metric-grid">
+    <div class="metric-grid coach-metrics">
       <div class="metric-card">
         <div class="metric-label">申请总数</div>
         <div class="metric-value">{{ applies.length }}</div>
@@ -25,7 +25,7 @@
       </div>
       <div class="metric-card">
         <div class="metric-label">最近申请</div>
-        <div class="metric-value">{{ latestApply?.nickname || latestApply?.username || '-' }}</div>
+        <div class="metric-value metric-value--latest">{{ latestApply?.nickname || latestApply?.username || '-' }}</div>
         <div class="metric-note">更新时间 {{ latestApply?.updateTime || '-' }}</div>
       </div>
     </div>
@@ -42,12 +42,12 @@
     </div>
 
     <div class="table-shell">
-    <el-table :data="applies" style="width: 100%" v-loading="loading">
+      <el-table :data="applies" style="width: 100%" v-loading="loading">
       <el-table-column prop="profileId" label="档案ID" width="90" />
       <el-table-column prop="username" label="账号" width="120" />
-      <el-table-column prop="nickname" label="昵称" width="120" />
+      <el-table-column prop="nickname" label="昵称" min-width="140" show-overflow-tooltip />
       <el-table-column prop="phone" label="手机" width="140" />
-      <el-table-column label="审核状态" width="120">
+      <el-table-column label="审核状态" width="140" align="center" header-align="center">
         <template #default="scope">
           <el-tag :type="scope.row.certStatus === 1 ? 'success' : scope.row.certStatus === 2 ? 'danger' : 'warning'">
             {{ scope.row.certStatusText || formatCertStatus(scope.row.certStatus) }}
@@ -56,8 +56,8 @@
       </el-table-column>
       <el-table-column prop="years" label="年限" width="90" />
       <el-table-column prop="price" label="课时价" width="100" />
-      <el-table-column prop="updateTime" label="更新时间" width="180" />
-      <el-table-column label="操作" width="220">
+      <el-table-column prop="updateTime" label="更新时间" width="190" />
+      <el-table-column label="操作" width="320" align="center" header-align="center">
         <template #default="scope">
           <div class="table-action-row">
             <el-button size="small" @click="openDetail(scope.row)">详情</el-button>
@@ -186,6 +186,21 @@ loadApplies()
 </script>
 
 <style scoped>
+.coach-metrics .metric-card {
+  justify-content: space-between;
+  min-height: 180px;
+}
+
+.coach-metrics .metric-note {
+  margin-top: auto;
+}
+
+.metric-value--latest {
+  font-size: clamp(24px, 2.2vw, 40px);
+  line-height: 1.15;
+  word-break: break-word;
+}
+
 .filters {
   display: flex;
   align-items: center;
@@ -200,6 +215,15 @@ loadApplies()
   gap: 8px;
   flex-wrap: nowrap;
   justify-content: flex-end;
+}
+
+.table-action-row {
+  justify-content: center;
+  gap: 12px;
+}
+
+:deep(.el-table .cell) {
+  line-height: 1.6;
 }
 
 :deep(.el-table .cell) {

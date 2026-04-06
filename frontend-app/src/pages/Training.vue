@@ -1,133 +1,156 @@
-﻿<template>
-  <div class="card">
-    <div class="toolbar">
-      <div>
-        <h2 class="section-title">训练打卡</h2>
-        <p class="section-sub">记录训练数据，形成统计</p>
+<template>
+  <div class="page-stack">
+    <section class="hero-panel">
+      <div class="training-hero">
+        <div>
+          <p class="quest-kicker">Training Check-in</p>
+          <h1 class="hero-title">把每日打卡变成持续进步曲线</h1>
+          <p class="hero-subtitle">先选计划动作，再提交记录，最后在下方回看训练历史。</p>
+          <div class="hero-badges">
+            <span class="badge-pill is-dark">计划 {{ plans.length }}</span>
+            <span class="badge-pill is-dark">动作 {{ planItems.length }}</span>
+            <span class="badge-pill is-dark">记录 {{ records.length }}</span>
+          </div>
+        </div>
+        <div class="progress-panel">
+          <p class="progress-title">本周训练热度 {{ weeklyHeat }}%</p>
+          <el-progress :percentage="weeklyHeat" />
+          <p class="muted progress-note">根据周打卡次数与训练时长估算，不使用静态写死数值。</p>
+        </div>
       </div>
-      <el-button type="primary" @click="loadStats" :loading="loading">刷新</el-button>
-    </div>
+    </section>
 
-    <div class="stat-grid" v-if="stats">
-      <div class="stat-card">
-        <div class="stat-label">本周打卡</div>
-        <div class="stat-value">{{ stats.checkinCount ?? stats.totalCount ?? 0 }}</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">训练时长</div>
-        <div class="stat-value">{{ stats.totalDurationMin ?? stats.totalDuration ?? 0 }}</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">消耗卡路里</div>
-        <div class="stat-value">{{ stats.totalCalories ?? 0 }}</div>
-      </div>
-    </div>
-    <el-empty v-else description="暂无统计，可先完成一次训练打卡">
-      <div class="empty-actions">
-        <el-button size="small" @click="loadStats">刷新</el-button>
-        <el-button size="small" @click="goPlans">去订阅计划</el-button>
-      </div>
-    </el-empty>
-  </div>
+    <section class="metric-grid">
+      <article class="metric-card">
+        <p class="metric-label">本周打卡</p>
+        <p class="metric-value">{{ stats?.checkinCount ?? stats?.totalCount ?? 0 }}</p>
+        <p class="metric-note">本周累计训练次数</p>
+      </article>
+      <article class="metric-card">
+        <p class="metric-label">训练时长</p>
+        <p class="metric-value">{{ stats?.totalDurationMin ?? stats?.totalDuration ?? 0 }}</p>
+        <p class="metric-note">单位：分钟</p>
+      </article>
+      <article class="metric-card">
+        <p class="metric-label">消耗热量</p>
+        <p class="metric-value">{{ stats?.totalCalories ?? 0 }}</p>
+        <p class="metric-note">本周总热量消耗</p>
+      </article>
+    </section>
 
-  <div class="card" style="margin-top: 16px;">
-    <div class="toolbar">
-      <div>
-        <h2 class="section-title">新增打卡</h2>
-        <p class="section-sub">选择计划与训练动作</p>
+    <section class="card">
+      <div class="toolbar">
+        <div>
+          <h2 class="section-title">今日打卡</h2>
+          <p class="section-sub">完成计划动作选择后，填写时长、热量和训练感受。</p>
+        </div>
+        <div class="toolbar-actions">
+          <el-button @click="loadStats" :loading="loading">刷新统计</el-button>
+          <el-button type="success" :loading="submitting" :disabled="!plans.length" @click="submit">提交打卡</el-button>
+        </div>
       </div>
-      <el-button type="success" :loading="submitting" :disabled="!plans.length" @click="submit">提交</el-button>
-    </div>
-    <el-empty v-if="!plans.length" description="暂无可用计划，可先订阅训练计划">
-      <el-button size="small" @click="goPlans">去订阅计划</el-button>
-    </el-empty>
-    <el-form v-else :model="form" label-position="top">
-      <el-form-item label="训练计划">
-        <el-select v-model="form.planId" filterable placeholder="选择计划" style="width: 100%" @change="handlePlanChange">
-          <el-option v-for="plan in plans" :key="plan.id" :label="plan.title" :value="plan.id" />
-        </el-select>
-      </el-form-item>
-      <el-form-item label="计划动作">
-        <el-select v-model="form.planItemId" filterable placeholder="选择动作" style="width: 100%" :loading="planItemLoading">
-          <el-option
-            v-for="item in planItems"
-            :key="item.id"
-            :label="`${item.actionName}（第 ${item.dayIndex} 天）`"
-            :value="item.id"
-          />
-        </el-select>
-      </el-form-item>
-      <el-empty v-if="plans.length && !planItems.length && !planItemLoading" description="该计划暂无动作">
+
+      <el-empty v-if="!plans.length" description="暂无可用计划">
         <div class="empty-actions">
-          <el-button size="small" @click="handlePlanChange(form.planId)">刷新动作</el-button>
+          <el-button @click="goPlans">去订阅计划</el-button>
         </div>
       </el-empty>
-      <el-form-item label="训练日期">
-        <el-date-picker v-model="form.recordDate" type="date" placeholder="选择日期" value-format="YYYY-MM-DD" />
-      </el-form-item>
-      <el-form-item label="时长（分钟）">
-        <el-input v-model.number="form.durationMin" />
-      </el-form-item>
-      <el-form-item label="卡路里">
-        <el-input v-model.number="form.calories" />
-      </el-form-item>
-      <el-form-item label="感受">
-        <el-input v-model="form.feeling" />
-      </el-form-item>
-    </el-form>
 
-    <div v-if="selectedItem" class="preview-card">
-      <div class="preview-title">动作预览</div>
-      <div class="preview-row">
-        <div class="preview-name">{{ selectedItem.actionName }}（第 {{ selectedItem.dayIndex }} 天）</div>
-        <div class="preview-meta">计划：{{ currentPlanTitle }}</div>
-      </div>
-      <div class="preview-meta">
-        {{ selectedItem.sets }} 组 × {{ selectedItem.reps }} 次 ｜ 休息 {{ selectedItem.restSec }} 秒
-      </div>
-      <div class="preview-actions">
-        <el-button
-          size="small"
-          type="primary"
-          :disabled="!selectedItem.video?.playUrl"
-          @click="openVideo(selectedItem.video?.playUrl)"
-        >
-          观看教学视频
-        </el-button>
-        <span v-if="!selectedItem.video" class="muted">该动作未绑定视频</span>
-      </div>
-    </div>
-  </div>
+      <div v-else class="training-grid">
+        <article class="form-card">
+          <el-form :model="form" label-position="top">
+            <el-form-item label="训练计划">
+              <el-select v-model="form.planId" filterable placeholder="选择计划" style="width: 100%" @change="handlePlanChange">
+                <el-option v-for="plan in plans" :key="plan.id" :label="plan.title" :value="plan.id" />
+              </el-select>
+            </el-form-item>
 
-  <div class="card" style="margin-top: 16px;">
-    <div class="toolbar">
-      <div>
-        <h2 class="section-title">我的打卡记录</h2>
-        <p class="section-sub">最近 20 条</p>
+            <el-form-item label="计划动作">
+              <el-select v-model="form.planItemId" filterable placeholder="选择动作" style="width: 100%" :loading="planItemLoading">
+                <el-option
+                  v-for="item in planItems"
+                  :key="item.id"
+                  :label="`${item.actionName}（第 ${item.dayIndex} 天）`"
+                  :value="item.id"
+                />
+              </el-select>
+            </el-form-item>
+
+            <el-form-item label="训练日期">
+              <el-date-picker v-model="form.recordDate" type="date" value-format="YYYY-MM-DD" style="width: 100%" />
+            </el-form-item>
+
+            <div class="split-grid">
+              <el-form-item label="时长（分钟）">
+                <el-input v-model.number="form.durationMin" />
+              </el-form-item>
+              <el-form-item label="热量消耗">
+                <el-input v-model.number="form.calories" />
+              </el-form-item>
+            </div>
+
+            <el-form-item label="训练感受">
+              <el-input v-model="form.feeling" placeholder="例如：动作流畅，状态不错" />
+            </el-form-item>
+          </el-form>
+        </article>
+
+        <article class="quest-card quest-card--accent">
+          <p class="quest-kicker">Action Preview</p>
+          <h3 class="preview-title">{{ selectedItem ? selectedItem.actionName : "等待选择动作" }}</h3>
+          <p class="quest-copy">
+            {{ selectedItem ? `当前计划：${currentPlanTitle}，第 ${selectedItem.dayIndex} 天动作` : "选择动作后将展示节点详情与视频资源。" }}
+          </p>
+          <div v-if="selectedItem" class="badge-row">
+            <span class="tag">组数 {{ selectedItem.sets || 0 }}</span>
+            <span class="tag">次数 {{ selectedItem.reps || 0 }}</span>
+            <span class="tag">休息 {{ selectedItem.restSec || 0 }} 秒</span>
+          </div>
+          <div class="action-row">
+            <el-button type="primary" :disabled="!selectedItem?.video?.playUrl" @click="openVideo(selectedItem?.video?.playUrl)">
+              {{ selectedItem?.video?.playUrl ? "查看教学视频" : "暂无视频" }}
+            </el-button>
+            <span class="muted">{{ selectedItem?.video?.title || "当前节点未绑定视频资源" }}</span>
+          </div>
+        </article>
       </div>
-      <el-button type="primary" @click="loadRecords" :loading="recordsLoading">刷新</el-button>
-    </div>
-    <el-table v-if="records.length" :data="records" v-loading="recordsLoading" style="width: 100%">
-      <el-table-column prop="id" label="ID" width="70" />
-      <el-table-column prop="recordDate" label="日期" />
-      <el-table-column prop="durationMin" label="时长" width="100" />
-      <el-table-column prop="calories" label="卡路里" width="100" />
-      <el-table-column prop="feeling" label="感受" />
-    </el-table>
-    <el-empty v-else :description="recordsLoading ? '正在加载记录...' : '暂无打卡记录，可先完成一次打卡'">
-      <div class="empty-actions">
-        <el-button size="small" @click="loadRecords">刷新记录</el-button>
-        <el-button size="small" @click="goPlans">去订阅计划</el-button>
+    </section>
+
+    <section class="card">
+      <div class="toolbar">
+        <div>
+          <h2 class="section-title">最近训练记录</h2>
+          <p class="section-sub">展示最近 20 条打卡记录。</p>
+        </div>
+        <el-button type="primary" @click="loadRecords" :loading="recordsLoading">刷新记录</el-button>
       </div>
-    </el-empty>
+
+      <el-empty v-if="!records.length && !recordsLoading" description="暂无打卡记录">
+        <div class="empty-actions">
+          <el-button size="small" @click="loadRecords">重试</el-button>
+          <el-button size="small" @click="goPlans">去订阅计划</el-button>
+        </div>
+      </el-empty>
+
+      <div v-else class="record-grid">
+        <article v-for="record in records" :key="record.id" class="record-card">
+          <div class="record-head">
+            <strong>{{ record.recordDate }}</strong>
+            <span class="tag">{{ record.durationMin || 0 }} 分钟</span>
+          </div>
+          <p class="muted">热量 {{ record.calories || 0 }}</p>
+          <p class="muted">感受 {{ record.feeling || "无" }}</p>
+        </article>
+      </div>
+    </section>
   </div>
 </template>
 
 <script setup>
-import { computed, reactive, ref } from 'vue'
-import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
-import { appClient } from '../api/client'
+import { computed, reactive, ref } from "vue"
+import { useRouter } from "vue-router"
+import { ElMessage } from "element-plus"
+import { appClient } from "../api/client"
 
 const router = useRouter()
 const stats = ref(null)
@@ -137,7 +160,6 @@ const records = ref([])
 const recordsLoading = ref(false)
 const plans = ref([])
 const planItems = ref([])
-const planLoading = ref(false)
 const planItemLoading = ref(false)
 
 const selectedItem = computed(() => {
@@ -147,7 +169,14 @@ const selectedItem = computed(() => {
 
 const currentPlanTitle = computed(() => {
   const current = plans.value.find((plan) => plan.id === form.planId)
-  return current?.title || '未选择'
+  return current?.title || "未选择"
+})
+
+const weeklyHeat = computed(() => {
+  const count = Number(stats.value?.checkinCount ?? stats.value?.totalCount ?? 0)
+  const duration = Number(stats.value?.totalDurationMin ?? stats.value?.totalDuration ?? 0)
+  const score = count * 18 + duration * 0.6
+  return Math.max(8, Math.min(Math.round(score), 100))
 })
 
 const formatDate = (date) => {
@@ -161,23 +190,20 @@ const form = reactive({
   recordDate: formatDate(new Date()),
   durationMin: 30,
   calories: 200,
-  feeling: '轻松'
+  feeling: "状态不错"
 })
 
 const loadPlans = async () => {
   try {
-    planLoading.value = true
-    const { data } = await appClient.get('/app/plan/list')
-    if (data.code !== 200) throw new Error(data.message || '加载失败')
+    const { data } = await appClient.get("/app/plan/list")
+    if (data.code !== 200) throw new Error(data.message || "加载计划失败")
     plans.value = data.data || []
     if (plans.value.length) {
       form.planId = form.planId || plans.value[0].id
       await loadPlanDetail(form.planId)
     }
   } catch (err) {
-    ElMessage.error(err.message || '加载失败')
-  } finally {
-    planLoading.value = false
+    ElMessage.error(err.message || "加载计划失败")
   }
 }
 
@@ -186,13 +212,11 @@ const loadPlanDetail = async (planId) => {
   try {
     planItemLoading.value = true
     const { data } = await appClient.get(`/app/plan/${planId}`)
-    if (data.code !== 200) throw new Error(data.message || '加载失败')
+    if (data.code !== 200) throw new Error(data.message || "加载计划详情失败")
     planItems.value = data.data?.items || []
-    if (planItems.value.length) {
-      form.planItemId = planItems.value[0].id
-    }
+    form.planItemId = planItems.value.length ? planItems.value[0].id : null
   } catch (err) {
-    ElMessage.error(err.message || '加载失败')
+    ElMessage.error(err.message || "加载计划详情失败")
   } finally {
     planItemLoading.value = false
   }
@@ -205,11 +229,11 @@ const handlePlanChange = async (planId) => {
 const loadStats = async () => {
   try {
     loading.value = true
-    const { data } = await appClient.get('/app/record/my/weekly-stat')
-    if (data.code !== 200) throw new Error(data.message || '加载失败')
+    const { data } = await appClient.get("/app/record/my/weekly-stat")
+    if (data.code !== 200) throw new Error(data.message || "加载统计失败")
     stats.value = data.data
   } catch (err) {
-    ElMessage.error(err.message || '加载失败')
+    ElMessage.error(err.message || "加载统计失败")
   } finally {
     loading.value = false
   }
@@ -217,26 +241,23 @@ const loadStats = async () => {
 
 const submit = async () => {
   if (!plans.value.length) {
-    ElMessage.warning('暂无可用计划')
+    ElMessage.warning("暂无可用计划")
     return
   }
   if (!form.planId || !form.planItemId || !form.recordDate) {
-    ElMessage.warning('请填写计划信息与日期')
+    ElMessage.warning("请完整填写打卡信息")
     return
   }
   try {
     submitting.value = true
-    const payload = {
-      ...form,
-      recordDate: form.recordDate
-    }
-    const { data } = await appClient.post('/app/record/checkin', payload)
-    if (data.code !== 200) throw new Error(data.message || '打卡失败')
-    ElMessage.success('打卡成功')
+    const payload = { ...form, recordDate: form.recordDate }
+    const { data } = await appClient.post("/app/record/checkin", payload)
+    if (data.code !== 200) throw new Error(data.message || "打卡失败")
+    ElMessage.success("打卡成功")
     await loadRecords()
     await loadStats()
   } catch (err) {
-    ElMessage.error(err.message || '打卡失败')
+    ElMessage.error(err.message || "打卡失败")
   } finally {
     submitting.value = false
   }
@@ -244,21 +265,21 @@ const submit = async () => {
 
 const openVideo = (url) => {
   if (!url) return
-  window.open(url, '_blank')
+  window.open(url, "_blank")
 }
 
 const goPlans = () => {
-  router.push('/plans')
+  router.push("/plans")
 }
 
 const loadRecords = async () => {
   try {
     recordsLoading.value = true
-    const { data } = await appClient.get('/app/record/my/list', { params: { limit: 20 } })
-    if (data.code !== 200) throw new Error(data.message || '加载失败')
+    const { data } = await appClient.get("/app/record/my/list", { params: { limit: 20 } })
+    if (data.code !== 200) throw new Error(data.message || "加载记录失败")
     records.value = data.data || []
   } catch (err) {
-    ElMessage.error(err.message || '加载失败')
+    ElMessage.error(err.message || "加载记录失败")
   } finally {
     recordsLoading.value = false
   }
@@ -270,64 +291,79 @@ loadRecords()
 </script>
 
 <style scoped>
-.stat-grid {
+.training-hero {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  grid-template-columns: minmax(0, 1.25fr) minmax(280px, 0.75fr);
+  gap: 12px;
+  align-items: end;
+}
+
+.progress-panel {
+  border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.32);
+  background: rgba(20, 56, 37, 0.34);
+  padding: 12px;
+}
+
+.progress-title {
+  margin: 0;
+  font-size: 16px;
+  color: #f4ffef;
+  font-weight: 700;
+}
+
+.progress-note {
+  margin-top: 8px;
+  color: rgba(244, 255, 239, 0.9);
+}
+
+.training-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.15fr) minmax(300px, 0.85fr);
   gap: 12px;
 }
 
-.stat-card {
-  background: rgba(59, 130, 246, 0.08);
-  border: 1px solid rgba(59, 130, 246, 0.2);
-  border-radius: 12px;
-  padding: 12px;
-}
-
-.stat-label {
-  font-size: 12px;
-  color: var(--muted);
-}
-
-.stat-value {
-  font-size: 20px;
-  font-weight: 700;
-  margin-top: 6px;
-}
-
-.preview-card {
-  margin-top: 12px;
-  padding: 12px;
-  border-radius: 12px;
-  border: 1px dashed var(--border);
-  background: #ffffffcc;
+.form-card {
+  border: 1px solid var(--eco-border);
+  border-radius: 18px;
+  background: #fffdf8;
+  padding: 14px;
 }
 
 .preview-title {
-  font-weight: 600;
-  margin-bottom: 6px;
+  margin: 0;
+  font-size: 24px;
+  line-height: 1.1;
 }
 
-.preview-row {
+.record-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px;
+}
+
+.record-card {
+  border: 1px solid var(--eco-border);
+  border-radius: 16px;
+  background: #ffffff;
+  padding: 12px;
+}
+
+.record-head {
   display: flex;
   justify-content: space-between;
-  align-items: baseline;
-  gap: 12px;
-}
-
-.preview-name {
-  font-weight: 600;
-}
-
-.preview-meta {
-  font-size: 12px;
-  color: var(--muted);
-  margin-top: 4px;
-}
-
-.preview-actions {
-  margin-top: 8px;
-  display: flex;
+  gap: 8px;
   align-items: center;
-  gap: 10px;
+}
+
+.record-head strong {
+  font-size: 16px;
+}
+
+@media (max-width: 960px) {
+  .training-hero,
+  .training-grid {
+    grid-template-columns: 1fr;
+  }
 }
 </style>

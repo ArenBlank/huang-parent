@@ -42,11 +42,11 @@
           </div>
           <el-button type="primary" @click="openBannerDrawer()">新建 Banner</el-button>
         </div>
-        <div class="table-shell">
+        <div class="table-shell content-table-shell">
         <el-table :data="banners" style="width: 100%" v-loading="bannerLoading">
           <el-table-column prop="id" label="ID" width="70" />
-          <el-table-column prop="title" label="标题" />
-          <el-table-column label="图片" width="160">
+          <el-table-column prop="title" label="标题" min-width="260" show-overflow-tooltip />
+          <el-table-column label="图片" width="180" align="center" header-align="center">
             <template #default="scope">
               <el-image
                 v-if="scope.row.imageUrl"
@@ -57,15 +57,15 @@
               <span v-else class="muted">无</span>
             </template>
           </el-table-column>
-          <el-table-column prop="sort" label="排序" width="90" />
-          <el-table-column prop="status" label="状态" width="90">
+          <el-table-column prop="sort" label="排序" width="100" align="center" header-align="center" />
+          <el-table-column prop="status" label="状态" width="120" align="center" header-align="center">
             <template #default="scope">
               <el-tag :type="scope.row.status === 1 ? 'success' : 'info'">
                 {{ scope.row.status === 1 ? '启用' : '停用' }}
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="220">
+          <el-table-column label="操作" width="320" align="center" header-align="center">
             <template #default="scope">
               <div class="table-action-row">
                 <el-button size="small" @click="openBannerDrawer(scope.row)">编辑</el-button>
@@ -91,19 +91,19 @@
           </div>
           <el-button type="primary" @click="openNoticeDrawer()">新建公告</el-button>
         </div>
-        <div class="table-shell">
+        <div class="table-shell content-table-shell">
         <el-table :data="notices" style="width: 100%" v-loading="noticeLoading">
           <el-table-column prop="id" label="ID" width="70" />
-          <el-table-column prop="title" label="标题" />
-          <el-table-column prop="publishTime" label="发布时间" width="180" />
-          <el-table-column prop="status" label="状态" width="90">
+          <el-table-column prop="title" label="标题" min-width="260" show-overflow-tooltip />
+          <el-table-column prop="publishTime" label="发布时间" width="210" align="center" header-align="center" />
+          <el-table-column prop="status" label="状态" width="120" align="center" header-align="center">
             <template #default="scope">
               <el-tag :type="scope.row.status === 1 ? 'success' : 'info'">
                 {{ scope.row.status === 1 ? '启用' : '停用' }}
               </el-tag>
             </template>
           </el-table-column>
-          <el-table-column label="操作" width="220">
+          <el-table-column label="操作" width="320" align="center" header-align="center">
             <template #default="scope">
               <div class="table-action-row">
                 <el-button size="small" @click="openNoticeDrawer(scope.row)">编辑</el-button>
@@ -126,13 +126,13 @@
           </div>
           <el-button type="primary" @click="openConfigDrawer()">新建配置</el-button>
         </div>
-        <div class="table-shell">
+        <div class="table-shell content-table-shell">
         <el-table :data="configs" style="width: 100%" v-loading="configLoading">
           <el-table-column prop="id" label="ID" width="70" />
           <el-table-column prop="configKey" label="配置键" width="200" />
-          <el-table-column prop="configValue" label="配置值" />
-          <el-table-column prop="remark" label="备注" />
-          <el-table-column label="操作" width="160">
+          <el-table-column prop="configValue" label="配置值" min-width="220" show-overflow-tooltip />
+          <el-table-column prop="remark" label="备注" min-width="220" show-overflow-tooltip />
+          <el-table-column label="操作" width="190" align="center" header-align="center">
             <template #default="scope">
               <div class="table-action-row">
                 <el-button size="small" @click="openConfigDrawer(scope.row)">编辑</el-button>
@@ -556,6 +556,25 @@ onMounted(() => {
 
 .content-metrics {
   margin-bottom: 18px;
+}
+
+.content-metrics .metric-card {
+  justify-content: space-between;
+  min-height: 184px;
+}
+
+.content-metrics .metric-note {
+  margin-top: auto;
+  font-size: 14px;
+}
+
+.content-table-shell :deep(.el-table .cell) {
+  line-height: 1.65;
+}
+
+.content-table-shell .table-action-row {
+  justify-content: center;
+  gap: 12px;
 }
 
 :deep(.el-tabs__item) {

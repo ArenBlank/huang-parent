@@ -6,9 +6,9 @@
         <p>上传、登记、上下架、删除、绑定训练计划项</p>
       </div>
       <div class="toolbar-actions">
-        <el-button @click="openPanel('library')">素材库</el-button>
-        <el-button @click="startCreate">新建素材</el-button>
-        <el-button @click="openPanel('binding')">计划项绑定</el-button>
+        <el-button @click="openPanel('library')">去素材库</el-button>
+        <el-button @click="startCreate">去新建素材</el-button>
+        <el-button @click="openPanel('binding')">去计划项绑定</el-button>
         <el-button type="primary" @click="loadVideos" :loading="loading">刷新</el-button>
       </div>
     </div>
@@ -28,16 +28,69 @@
       </div>
     </div>
 
-    <el-collapse v-model="activePanel" accordion class="video-collapse">
-      <el-collapse-item name="library">
-        <template #title>
-          <div class="collapse-title">
-            <span>素材库</span>
-            <span class="collapse-sub">查询、上传、浏览已有素材</span>
-          </div>
-        </template>
+    <div class="workspace-switcher">
+      <button
+        type="button"
+        class="workspace-card hover-lift"
+        :class="{ 'workspace-card--active': activePanel === 'library' }"
+        @click="openPanel('library')"
+      >
+        <span class="workspace-card__eyebrow">素材浏览</span>
+        <strong>素材库</strong>
+        <p>查询、上传、浏览已有素材</p>
+        <div class="workspace-card__meta">
+          <span class="tag">素材 {{ videos.length }}</span>
+          <span class="tag">最近上传 {{ lastUpload?.objectPath ? '已更新' : '暂无' }}</span>
+        </div>
+        <span class="workspace-card__cta">点击进入</span>
+      </button>
 
-        <div ref="librarySection" class="panel-block">
+      <button
+        type="button"
+        class="workspace-card hover-lift"
+        :class="{ 'workspace-card--active': activePanel === 'editor' }"
+        @click="startCreate"
+      >
+        <span class="workspace-card__eyebrow">素材编辑</span>
+        <strong>{{ editingId ? `编辑素材 #${editingId}` : '新建视频素材' }}</strong>
+        <p>上传后的路径会自动带到这里，适合连续新建或编辑现有素材。</p>
+        <div class="workspace-card__meta">
+          <span class="tag">模式 {{ editingId ? '编辑中' : '新建中' }}</span>
+          <span class="tag">路径 {{ videoForm.minioPath ? '已回填' : '待上传' }}</span>
+        </div>
+        <span class="workspace-card__cta">点击进入</span>
+      </button>
+
+      <button
+        type="button"
+        class="workspace-card hover-lift"
+        :class="{ 'workspace-card--active': activePanel === 'binding' }"
+        @click="openPanel('binding')"
+      >
+        <span class="workspace-card__eyebrow">计划关联</span>
+        <strong>计划项绑定</strong>
+        <p>把素材绑到训练计划项，或对已有计划项做解绑处理。</p>
+        <div class="workspace-card__meta">
+          <span class="tag">视频 ID {{ bindForm.videoId || videoFormIdHint }}</span>
+          <span class="tag">计划项 {{ bindForm.planItemId || unbindForm.planItemId || '待输入' }}</span>
+        </div>
+        <span class="workspace-card__cta">点击进入</span>
+      </button>
+    </div>
+
+    <section ref="workspacePanelRef" class="workspace-panel">
+      <div class="workspace-panel__head">
+        <div>
+          <div class="workspace-panel__eyebrow">{{ panelMeta[activePanel].eyebrow }}</div>
+          <h3>{{ panelMeta[activePanel].title }}</h3>
+          <p>{{ panelMeta[activePanel].description }}</p>
+        </div>
+        <div class="workspace-panel__status">
+          <span class="tag">{{ panelMeta[activePanel].status }}</span>
+        </div>
+      </div>
+
+      <div v-if="activePanel === 'library'" class="panel-block">
           <div class="filters">
             <el-input v-model="query.keyword" placeholder="关键词" style="width: 220px" clearable />
             <el-select v-model="query.status" placeholder="状态筛选" clearable style="width: 140px">
@@ -88,29 +141,22 @@
                 {{ formatAttribution(row.attributionRequired) }}
               </template>
             </el-table-column>
-            <el-table-column label="操作" width="380" fixed="right">
+            <el-table-column label="快捷操作" width="360" fixed="right" align="center" header-align="center">
               <template #default="{ row }">
-                <el-button size="small" @click="openEditor(row)">编辑</el-button>
-                <el-button size="small" type="warning" @click="toggleStatus(row)">
-                  {{ row.status === 1 ? '停用' : '启用' }}
-                </el-button>
-                <el-button size="small" type="danger" plain @click="deleteVideo(row)">删除</el-button>
-                <el-button size="small" type="primary" plain @click="prefillBind(row)">绑定计划项</el-button>
+                <div class="video-action-grid">
+                  <el-button size="small" @click="openEditor(row)">编辑素材</el-button>
+                  <el-button size="small" type="warning" @click="toggleStatus(row)">
+                    {{ row.status === 1 ? '停用素材' : '启用素材' }}
+                  </el-button>
+                  <el-button size="small" type="danger" plain @click="deleteVideo(row)">删除素材</el-button>
+                  <el-button size="small" type="primary" @click="prefillBind(row)">绑定计划</el-button>
+                </div>
               </template>
             </el-table-column>
           </el-table>
-        </div>
-      </el-collapse-item>
+      </div>
 
-      <el-collapse-item name="editor">
-        <template #title>
-          <div class="collapse-title">
-            <span>{{ editingId ? `编辑视频素材 #${editingId}` : '新建视频素材' }}</span>
-            <span class="collapse-sub">上传后的路径会自动回填到这里</span>
-          </div>
-        </template>
-
-        <div ref="editorSection" class="panel-block">
+      <div v-else-if="activePanel === 'editor'" class="panel-block">
           <div class="editor-header">
             <div class="editor-tip">
               <span v-if="videoForm.minioPath">当前已回填 MinIO 路径</span>
@@ -161,20 +207,11 @@
                 <el-option label="停用" :value="0" />
                 <el-option label="启用" :value="1" />
               </el-select>
-            </el-form-item>
-          </el-form>
-        </div>
-      </el-collapse-item>
+              </el-form-item>
+            </el-form>
+      </div>
 
-      <el-collapse-item name="binding">
-        <template #title>
-          <div class="collapse-title">
-            <span>计划项绑定</span>
-            <span class="collapse-sub">把视频绑到训练计划里的某一个动作项</span>
-          </div>
-        </template>
-
-        <div ref="bindingSection" class="panel-block">
+      <div v-else class="panel-block">
           <div class="binding-toolbar">
             <div class="editor-tip">这里绑定的是“计划项 ID”，不是整套训练计划 ID。</div>
             <el-button size="small" @click="prefillBind({ id: videoFormIdHint })">带入当前编辑视频</el-button>
@@ -210,9 +247,8 @@
               </el-form>
             </div>
           </div>
-        </div>
-      </el-collapse-item>
-    </el-collapse>
+      </div>
+    </section>
   </div>
 </template>
 
@@ -231,12 +267,29 @@ const file = ref(null)
 const lastUpload = ref(null)
 const editingId = ref(null)
 const activePanel = ref('library')
-
-const librarySection = ref(null)
-const editorSection = ref(null)
-const bindingSection = ref(null)
+const workspacePanelRef = ref(null)
 
 const videoFormIdHint = computed(() => editingId.value || videos.value[0]?.id || 1)
+const panelMeta = computed(() => ({
+  library: {
+    eyebrow: '素材浏览',
+    title: '素材库',
+    description: '在这里集中完成搜索、上传、筛选和快捷操作，适合快速扫素材。',
+    status: `当前共 ${videos.value.length} 条素材`
+  },
+  editor: {
+    eyebrow: editingId.value ? '素材编辑' : '素材创建',
+    title: editingId.value ? `编辑视频素材 #${editingId.value}` : '新建视频素材',
+    description: '填写基础信息、自动回填上传路径，并保存为可用的视频素材。',
+    status: videoForm.minioPath ? 'MinIO 路径已回填' : '等待上传文件'
+  },
+  binding: {
+    eyebrow: '计划关联',
+    title: '计划项绑定',
+    description: '把视频素材绑定到训练计划项，或者直接解除已有绑定。',
+    status: bindForm.videoId ? `当前视频 ID ${bindForm.videoId}` : `默认视频 ID ${videoFormIdHint.value}`
+  }
+}))
 
 const query = reactive({
   keyword: '',
@@ -267,12 +320,7 @@ const unbindForm = reactive({
 
 const scrollToSection = async (panel) => {
   await nextTick()
-  const map = {
-    library: librarySection.value,
-    editor: editorSection.value,
-    binding: bindingSection.value
-  }
-  map[panel]?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  workspacePanelRef.value?.scrollIntoView({ behavior: 'smooth', block: 'start' })
 }
 
 const openPanel = async (panel) => {
@@ -573,24 +621,116 @@ onMounted(loadVideos)
   word-break: break-all;
 }
 
-.video-collapse {
-  border-top: none;
+.workspace-switcher {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-bottom: 18px;
 }
 
-.collapse-title {
+.workspace-card {
+  position: relative;
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 4px 0;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  min-height: 184px;
+  padding: 18px;
+  border-radius: 22px;
+  border: 3px solid var(--border);
+  background: linear-gradient(180deg, #ffffff 0%, #fff8f0 100%);
+  box-shadow: 0 10px 0 rgba(52, 45, 105, 0.08);
+  text-align: left;
 }
 
-.collapse-sub {
-  font-size: 12px;
-  color: #8aa0af;
+.workspace-card:nth-child(2) {
+  background: linear-gradient(180deg, #f2efff 0%, #ffffff 100%);
+}
+
+.workspace-card:nth-child(3) {
+  background: linear-gradient(180deg, #ecfff8 0%, #ffffff 100%);
+}
+
+.workspace-card--active {
+  border-color: var(--primary);
+  box-shadow: 0 12px 0 rgba(68, 58, 217, 0.14), 0 18px 26px rgba(79, 70, 229, 0.14);
+  transform: translateY(-2px);
+}
+
+.workspace-card__eyebrow,
+.workspace-panel__eyebrow {
+  color: #6c6594;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.workspace-card strong {
+  font-family: 'Fredoka', 'Nunito', sans-serif;
+  font-size: 26px;
+  line-height: 1.08;
+}
+
+.workspace-card p {
+  margin: 0;
+  color: #60598a;
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.workspace-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: auto;
+}
+
+.workspace-card__cta {
+  color: var(--primary-strong);
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.workspace-panel {
+  padding: 20px;
+  border-radius: 24px;
+  border: 3px solid var(--border);
+  background: rgba(255, 255, 255, 0.72);
+  box-shadow: 0 10px 0 rgba(52, 45, 105, 0.08);
+}
+
+.workspace-panel__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.workspace-panel__head h3 {
+  margin: 6px 0 0;
+  font-family: 'Fredoka', 'Nunito', sans-serif;
+  font-size: 28px;
+  line-height: 1.08;
+}
+
+.workspace-panel__head p {
+  margin: 10px 0 0;
+  color: #60598a;
+  font-size: 14px;
+  line-height: 1.65;
+}
+
+.workspace-panel__status {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
 }
 
 .panel-block {
-  padding-top: 8px;
+  padding-top: 2px;
 }
 
 .filters {
@@ -699,6 +839,24 @@ onMounted(loadVideos)
   margin-bottom: 12px;
 }
 
+.video-action-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  width: 100%;
+  align-items: stretch;
+  justify-items: stretch;
+}
+
+.video-action-grid .el-button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100% !important;
+  min-width: 0;
+  margin: 0 !important;
+}
+
 .form-actions {
   display: flex;
   gap: 8px;
@@ -706,6 +864,7 @@ onMounted(loadVideos)
 }
 
 @media (max-width: 1100px) {
+  .workspace-switcher,
   .upload-panel,
   .binding-grid,
   .editor-form {
@@ -715,6 +874,7 @@ onMounted(loadVideos)
 
 @media (max-width: 768px) {
   .toolbar,
+  .workspace-panel__head,
   .editor-header,
   .binding-toolbar {
     align-items: flex-start;

@@ -1,345 +1,339 @@
-﻿<template>
-  <div class="card">
-    <div class="toolbar">
-      <div>
-        <h2 class="section-title">首页</h2>
-        <p class="section-sub">今日推荐与最新公告</p>
-      </div>
-      <el-button type="primary" @click="loadAll" :loading="loading">刷新</el-button>
-    </div>
-
-    <div class="banner-grid" v-if="banners.length">
-      <div v-for="item in banners" :key="item.id" class="banner-card">
-        <div class="banner-title">{{ item.title || '运营Banner' }}</div>
-        <div class="banner-sub">{{ item.subtitle || item.description || '点击查看更多' }}</div>
-      </div>
-    </div>
-    <el-empty v-else description="暂无 Banner，可先刷新">
-      <div class="empty-actions">
-        <el-button size="small" @click="loadAll">刷新</el-button>
-      </div>
-    </el-empty>
-  </div>
-
-  <div class="card" style="margin-top: 16px;">
-    <div class="toolbar">
-      <div>
-        <h2 class="section-title">公告</h2>
-        <p class="section-sub">最近更新</p>
-      </div>
-      <span class="tag">{{ notices.length }} 条</span>
-    </div>
-    <el-timeline v-if="notices.length">
-      <el-timeline-item v-for="notice in notices" :key="notice.id" :timestamp="notice.publishTime || ''">
-        <div class="notice-title">{{ notice.title || '公告' }}</div>
-        <div class="notice-content">{{ notice.content || notice.summary || '' }}</div>
-      </el-timeline-item>
-    </el-timeline>
-    <el-empty v-else description="暂无公告，可先刷新">
-      <div class="empty-actions">
-        <el-button size="small" @click="loadAll">刷新公告</el-button>
-      </div>
-    </el-empty>
-  </div>
-
-  <div class="card" style="margin-top: 16px;">
-    <div class="toolbar">
-      <div>
-        <h2 class="section-title">快速开始</h2>
-        <p class="section-sub">一键进入核心功能</p>
-      </div>
-    </div>
-    <div class="quick-grid">
-      <div class="quick-card">
-        <div class="quick-title">订阅训练计划</div>
-        <div class="quick-desc">选择计划，开启训练</div>
-        <el-button type="primary" size="small" @click="go('/plans')">去订阅</el-button>
-      </div>
-      <div class="quick-card">
-        <div class="quick-title">报名课程</div>
-        <div class="quick-desc">查看课程排期</div>
-        <el-button type="success" size="small" @click="go('/courses')">去报名</el-button>
-      </div>
-      <div class="quick-card">
-        <div class="quick-title">预约教练</div>
-        <div class="quick-desc">挑选合适档期</div>
-        <el-button type="warning" size="small" @click="go('/booking')">去预约</el-button>
-      </div>
-      <div class="quick-card">
-        <div class="quick-title">查看订单</div>
-        <div class="quick-desc">追踪支付与退款</div>
-        <el-button size="small" @click="go('/orders')">去查看</el-button>
-      </div>
-      <div class="quick-card">
-        <div class="quick-title">教练申请</div>
-        <div class="quick-desc">提交资料等待审核</div>
-        <el-button size="small" @click="go('/coach-apply')">去申请</el-button>
-      </div>
-    </div>
-  </div>
-
-  <div class="card" style="margin-top: 16px;">
-    <div class="toolbar">
-      <div>
-        <h2 class="section-title">演示路径</h2>
-        <p class="section-sub">建议按此顺序体验完整闭环</p>
-      </div>
-    </div>
-    <div class="demo-flow">
-      <div class="demo-step">
-        <div class="demo-title">1. 订阅训练计划</div>
-        <div class="demo-desc">选择计划并订阅</div>
-        <el-button size="small" type="primary" @click="go('/plans')">去订阅</el-button>
-      </div>
-      <div class="demo-step">
-        <div class="demo-title">2. 训练打卡</div>
-        <div class="demo-desc">记录训练数据</div>
-        <el-button size="small" type="success" @click="go('/training')">去打卡</el-button>
-      </div>
-      <div class="demo-step">
-        <div class="demo-title">3. 预约/报名</div>
-        <div class="demo-desc">预约教练或报名课程</div>
-        <div class="demo-actions">
-          <el-button size="small" @click="go('/booking')">去预约</el-button>
-          <el-button size="small" @click="go('/courses')">去报名</el-button>
+<template>
+  <div class="page-stack">
+    <section class="card home-hero">
+      <div class="toolbar">
+        <div>
+          <p class="quest-kicker">App Operations Deck</p>
+          <h2 class="section-title">实时运营总览</h2>
+          <p class="section-sub">风格与 admin 端统一，首页只保留高价值信息与入口。</p>
         </div>
+        <el-button type="primary" :loading="loading" @click="loadAll">刷新首页数据</el-button>
       </div>
-      <div class="demo-step">
-        <div class="demo-title">4. 订单查看</div>
-        <div class="demo-desc">查看支付与退款状态</div>
-        <el-button size="small" @click="go('/orders')">去查看</el-button>
-      </div>
-    </div>
-  </div>
 
-  <div class="card" style="margin-top: 16px;">
-    <div class="toolbar">
-      <div>
-        <h2 class="section-title">系统配置</h2>
-        <p class="section-sub">按 key 读取展示，轻量查看即可</p>
+      <div class="metric-grid">
+        <article class="metric-card">
+          <p class="metric-label">计划数</p>
+          <p class="metric-value">{{ plans.length }}</p>
+          <p class="metric-note">当前可用训练计划</p>
+        </article>
+        <article class="metric-card">
+          <p class="metric-label">课程数</p>
+          <p class="metric-value">{{ courses.length }}</p>
+          <p class="metric-note">可浏览课程目录</p>
+        </article>
+        <article class="metric-card">
+          <p class="metric-label">订单数</p>
+          <p class="metric-value">{{ orders.length }}</p>
+          <p class="metric-note">最近订单记录</p>
+        </article>
+        <article class="metric-card">
+          <p class="metric-label">打卡次数</p>
+          <p class="metric-value">{{ weeklyCount }}</p>
+          <p class="metric-note">来自周统计接口</p>
+        </article>
       </div>
-      <el-button type="primary" @click="loadSystemConfig" :loading="configLoading">读取配置</el-button>
-    </div>
+    </section>
 
-    <div class="config-panel">
-      <el-input
-        v-model="systemConfigKeysInput"
-        placeholder="site_name,default_avatar"
-        style="max-width: 360px"
-      />
-      <div class="config-actions">
-        <el-button size="small" @click="fillConfigSample">填充示例</el-button>
-        <span class="muted">多个 key 用英文逗号分隔，支持一次读取多个值。</span>
-      </div>
-    </div>
+    <section class="page-split">
+      <article class="card surface-lilac">
+        <div class="toolbar">
+          <div>
+            <h2 class="section-title-sm">核心入口</h2>
+            <p class="section-sub">入口全部可点，hover 与 admin 保持一致。</p>
+          </div>
+        </div>
+        <div class="entry-grid">
+          <button
+            v-for="entry in entries"
+            :key="entry.path"
+            type="button"
+            class="entry-card eco-clickable"
+            @click="go(entry.path)"
+          >
+            <span class="entry-code">{{ entry.code }}</span>
+            <span class="entry-body">
+              <strong>{{ entry.title }}</strong>
+              <small>{{ entry.desc }}</small>
+            </span>
+          </button>
+        </div>
+      </article>
 
-    <el-table v-if="configRows.length" :data="configRows" style="width: 100%" size="small" v-loading="configLoading">
-      <el-table-column prop="key" label="配置键" min-width="220" />
-      <el-table-column prop="value" label="配置值" min-width="260" />
-    </el-table>
-    <el-empty v-else :description="configLoading ? '正在读取配置...' : '暂无配置结果'">
-      <div class="empty-actions">
-        <el-button size="small" @click="loadSystemConfig">重新读取</el-button>
-      </div>
-    </el-empty>
+      <article class="card surface-peach">
+        <div class="toolbar">
+          <div>
+            <h2 class="section-title-sm">训练影响指标</h2>
+            <p class="section-sub">圆形进度 + 横向进度，显示训练活跃度变化。</p>
+          </div>
+          <span class="tag">Live</span>
+        </div>
+        <div class="impact-row">
+          <div class="ring-progress" :style="ringStyle">
+            <div class="ring-center">
+              <div class="ring-value">{{ carbonFootprint }}</div>
+              <div class="ring-unit">tons</div>
+            </div>
+          </div>
+          <div class="impact-meta">
+            <p class="metric-label">较基线变化</p>
+            <p class="impact-delta">{{ changeRate > 0 ? `-${changeRate}%` : "0%" }}</p>
+            <p class="metric-note">根据打卡时长、打卡次数、订单数量计算。</p>
+          </div>
+        </div>
+        <div class="progress-list">
+          <div class="progress-item">
+            <span>训练时长</span>
+            <div class="progress-track"><div class="progress-fill" :style="{ width: `${energyBar}%` }"></div></div>
+            <div class="progress-num">{{ energyBar }}%</div>
+          </div>
+          <div class="progress-item">
+            <span>打卡频率</span>
+            <div class="progress-track"><div class="progress-fill" :style="{ width: `${transportBar}%` }"></div></div>
+            <div class="progress-num">{{ transportBar }}%</div>
+          </div>
+          <div class="progress-item">
+            <span>订单活跃</span>
+            <div class="progress-track"><div class="progress-fill" :style="{ width: `${supplyBar}%` }"></div></div>
+            <div class="progress-num">{{ supplyBar }}%</div>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <section class="page-split">
+      <article class="card surface-mint">
+        <div class="toolbar">
+          <div>
+            <h2 class="section-title-sm">活动推荐</h2>
+            <p class="section-sub">数据来自 `/app/banner/list`。</p>
+          </div>
+        </div>
+        <el-empty v-if="!banners.length" description="暂无活动内容" />
+        <div v-else class="signal-list">
+          <button
+            v-for="item in banners.slice(0, 5)"
+            :key="item.id"
+            class="signal-item eco-clickable"
+            type="button"
+            @click="openBanner(item)"
+          >
+            <span>{{ item.title || `活动 ${item.id}` }}</span>
+            <small>{{ item.linkUrl ? "查看详情" : "未配置外链" }}</small>
+          </button>
+        </div>
+      </article>
+
+      <article class="card">
+        <div class="toolbar">
+          <div>
+            <h2 class="section-title-sm">公告更新</h2>
+            <p class="section-sub">数据来自 `/app/notice/list`。</p>
+          </div>
+        </div>
+        <el-empty v-if="!notices.length" description="暂无公告" />
+        <div v-else class="signal-list">
+          <div v-for="notice in notices.slice(0, 5)" :key="notice.id" class="signal-item">
+            <span>{{ notice.title || "系统公告" }}</span>
+            <small>{{ notice.publishTime || "最近更新" }}</small>
+          </div>
+        </div>
+      </article>
+    </section>
   </div>
 </template>
 
 <script setup>
-import { computed, ref } from 'vue'
-import { useRouter } from 'vue-router'
-import { ElMessage } from 'element-plus'
-import { appClient } from '../api/client'
+import { computed, ref } from "vue"
+import { useRouter } from "vue-router"
+import { ElMessage } from "element-plus"
+import { appClient } from "../api/client"
 
+const router = useRouter()
+const loading = ref(false)
 const banners = ref([])
 const notices = ref([])
-const loading = ref(false)
-const configLoading = ref(false)
-const systemConfigKeysInput = ref('site_name,default_avatar')
-const systemConfigMap = ref({})
-const router = useRouter()
+const plans = ref([])
+const courses = ref([])
+const weekly = ref({})
+const orders = ref([])
 
-const configRows = computed(() => {
-  return Object.entries(systemConfigMap.value || {}).map(([key, value]) => ({
-    key,
-    value
-  }))
+const entries = [
+  { path: "/plans", code: "PL", title: "训练计划", desc: "订阅与管理训练主线" },
+  { path: "/training", code: "TR", title: "打卡成长", desc: "查看周训练记录和进度" },
+  { path: "/courses", code: "CR", title: "课程目录", desc: "浏览课程并进入报名" },
+  { path: "/booking", code: "BK", title: "预约大厅", desc: "选择可预约档期" },
+  { path: "/orders", code: "OD", title: "订单中心", desc: "查看支付退款与明细" },
+  { path: "/profile", code: "ME", title: "个人档案", desc: "维护资料与安全设置" }
+]
+
+const weeklyCount = computed(() => Number(weekly.value?.checkinCount ?? weekly.value?.totalCount ?? 0))
+const weeklyDuration = computed(() => Number(weekly.value?.totalDurationMin ?? weekly.value?.totalDuration ?? 0))
+const orderCount = computed(() => orders.value.length)
+
+const energyBar = computed(() => Math.min(100, Math.round((weeklyDuration.value / 240) * 100)))
+const transportBar = computed(() => Math.min(100, Math.round((weeklyCount.value / 14) * 100)))
+const supplyBar = computed(() => Math.min(100, Math.round((orderCount.value / 20) * 100)))
+
+const changeRate = computed(() => {
+  const score = weeklyCount.value * 8 + Math.round(weeklyDuration.value / 10) + orderCount.value * 2
+  return Math.min(35, Math.max(0, score))
 })
+
+const carbonFootprint = computed(() => {
+  const baseline = 3.2
+  const reduce = changeRate.value / 100
+  return Math.max(0.8, Number((baseline * (1 - reduce)).toFixed(1)))
+})
+
+const ringStyle = computed(() => {
+  const p = Math.min(100, Math.max(8, Math.round((changeRate.value / 35) * 100)))
+  return { "--progress": p }
+})
+
+const go = (path) => router.push(path)
+
+const openBanner = (item) => {
+  if (item?.linkUrl) {
+    window.open(item.linkUrl, "_blank")
+    return
+  }
+  ElMessage.info("该活动暂未配置跳转链接")
+}
 
 const loadAll = async () => {
   try {
     loading.value = true
-    const [bannerRes, noticeRes] = await Promise.all([
-      appClient.get('/app/banner/list'),
-      appClient.get('/app/notice/list', { params: { limit: 10 } })
+    const [bannerRes, noticeRes, planRes, courseRes, weeklyRes, orderRes] = await Promise.all([
+      appClient.get("/app/banner/list"),
+      appClient.get("/app/notice/list", { params: { limit: 10 } }),
+      appClient.get("/app/plan/list"),
+      appClient.get("/app/course/list"),
+      appClient.get("/app/record/my/weekly-stat"),
+      appClient.get("/app/order/my/list", { params: { limit: 20 } })
     ])
-    if (bannerRes.data.code !== 200) throw new Error(bannerRes.data.message || '加载Banner失败')
-    if (noticeRes.data.code !== 200) throw new Error(noticeRes.data.message || '加载公告失败')
+
+    if (bannerRes.data.code !== 200) throw new Error(bannerRes.data.message || "加载活动失败")
+    if (noticeRes.data.code !== 200) throw new Error(noticeRes.data.message || "加载公告失败")
+    if (planRes.data.code !== 200) throw new Error(planRes.data.message || "加载计划失败")
+    if (courseRes.data.code !== 200) throw new Error(courseRes.data.message || "加载课程失败")
+    if (weeklyRes.data.code !== 200) throw new Error(weeklyRes.data.message || "加载周统计失败")
+    if (orderRes.data.code !== 200) throw new Error(orderRes.data.message || "加载订单失败")
+
     banners.value = bannerRes.data.data || []
     notices.value = noticeRes.data.data || []
-    await loadSystemConfig(false)
+    plans.value = planRes.data.data || []
+    courses.value = courseRes.data.data || []
+    weekly.value = weeklyRes.data.data || {}
+    orders.value = orderRes.data.data || []
   } catch (err) {
-    ElMessage.error(err.message || '加载失败')
+    ElMessage.error(err.message || "首页数据加载失败")
   } finally {
     loading.value = false
   }
 }
 
 loadAll()
-
-const fillConfigSample = () => {
-  systemConfigKeysInput.value = 'site_name,default_avatar,banner.rotation.interval'
-}
-
-const parseSystemConfigKeys = () => {
-  return systemConfigKeysInput.value
-    .split(/[,，\n]+/)
-    .map((item) => item.trim())
-    .filter(Boolean)
-}
-
-const loadSystemConfig = async (showError = true) => {
-  const keys = parseSystemConfigKeys()
-  if (!keys.length) {
-    if (showError) {
-      ElMessage.warning('请先输入至少一个配置 key')
-    }
-    systemConfigMap.value = {}
-    return
-  }
-  try {
-    configLoading.value = true
-    const params = new URLSearchParams()
-    keys.forEach((key) => params.append('keys', key))
-    const { data } = await appClient.get(`/app/system-config/map?${params.toString()}`)
-    if (data.code !== 200) throw new Error(data.message || '读取配置失败')
-    systemConfigMap.value = data.data || {}
-    if (!Object.keys(systemConfigMap.value).length && showError) {
-      ElMessage.info('未查到对应配置')
-    }
-  } catch (err) {
-    if (showError) {
-      ElMessage.error(err.message || '读取配置失败')
-    }
-  } finally {
-    configLoading.value = false
-  }
-}
-
-const go = (path) => {
-  router.push(path)
-}
 </script>
 
 <style scoped>
-.banner-grid {
+.home-hero {
+  background: linear-gradient(180deg, #fff5ea 0%, #fffdf8 100%);
+}
+
+.entry-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 12px;
-}
-
-.banner-card {
-  padding: 16px;
-  border-radius: 16px;
-  background: linear-gradient(135deg, rgba(59, 130, 246, 0.12), rgba(34, 197, 94, 0.12));
-  border: 1px dashed rgba(59, 130, 246, 0.3);
-}
-
-.banner-title {
-  font-size: 16px;
-  font-weight: 600;
-}
-
-.banner-sub {
-  font-size: 12px;
-  color: var(--muted);
-  margin-top: 6px;
-}
-
-.notice-title {
-  font-weight: 600;
-  margin-bottom: 4px;
-}
-
-.notice-content {
-  font-size: 12px;
-  color: var(--muted);
-}
-
-.quick-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 12px;
-}
-
-.quick-card {
-  padding: 14px;
-  border-radius: 14px;
-  border: 1px solid var(--border);
-  background: #ffffffcc;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.quick-title {
-  font-weight: 600;
-}
-
-.quick-desc {
-  font-size: 12px;
-  color: var(--muted);
-  margin-bottom: 4px;
-}
-
-.demo-flow {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 12px;
-}
-
-.demo-step {
-  padding: 14px;
-  border-radius: 14px;
-  border: 1px dashed var(--border);
-  background: #ffffffcc;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.demo-title {
-  font-weight: 600;
-}
-
-.demo-desc {
-  font-size: 12px;
-  color: var(--muted);
-  margin-bottom: 4px;
-}
-
-.demo-actions {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
-
-.config-panel {
-  display: flex;
-  flex-direction: column;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 10px;
-  margin-bottom: 12px;
 }
 
-.config-actions {
+.entry-card {
+  border: 3px solid var(--eco-border);
+  border-radius: 20px;
+  background: #ffffff;
+  padding: 12px;
   display: flex;
   align-items: center;
   gap: 10px;
-  flex-wrap: wrap;
+  text-align: left;
+  box-shadow: 0 8px 0 rgba(52, 45, 105, 0.08);
 }
 
-.muted {
-  color: var(--muted);
+.entry-code {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid var(--eco-border);
+  background: #ffffff;
+  display: grid;
+  place-items: center;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.entry-body {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.entry-body strong {
+  font-size: 16px;
+  font-family: "Fredoka", "Nunito", sans-serif;
+}
+
+.entry-body small {
+  color: var(--eco-text-soft);
   font-size: 12px;
+}
+
+.impact-row {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 14px;
+  align-items: center;
+}
+
+.impact-delta {
+  margin: 0;
+  font-size: clamp(34px, 5vw, 50px);
+  line-height: 1;
+  color: var(--eco-primary);
+  font-family: "Fredoka", "Nunito", sans-serif;
+}
+
+.signal-list {
+  display: grid;
+  gap: 10px;
+}
+
+.signal-item {
+  border: 3px solid var(--eco-border);
+  border-radius: 16px;
+  background: #ffffff;
+  padding: 10px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  box-shadow: 0 6px 0 rgba(52, 45, 105, 0.06);
+}
+
+.signal-item span {
+  font-weight: 700;
+}
+
+.signal-item small {
+  color: var(--eco-text-soft);
+  font-size: 12px;
+}
+
+@media (max-width: 1040px) {
+  .entry-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .impact-row {
+    grid-template-columns: 1fr;
+  }
 }
 </style>
