@@ -293,18 +293,18 @@ public class ProfileController {
             return avatar;
         }
         if (avatar.startsWith("http://") || avatar.startsWith("https://") || avatar.startsWith("/")) {
-            return rewritePublicUrl(avatar);
+            return avatar;
         }
         if (minioClient != null && StringUtils.hasText(minioProperties.getBucketName())) {
             try {
-                return rewritePublicUrl(minioClient.getPresignedObjectUrl(
+                return minioClient.getPresignedObjectUrl(
                         GetPresignedObjectUrlArgs.builder()
                                 .method(Method.GET)
                                 .bucket(minioProperties.getBucketName())
                                 .object(avatar)
                                 .expiry(7, TimeUnit.DAYS)
                                 .build()
-                ));
+                );
             } catch (Exception e) {
                 log.warn("resolve avatar url failed, avatar={}", avatar, e);
             }
@@ -319,24 +319,5 @@ public class ProfileController {
             return safeEndpoint + "/" + minioProperties.getBucketName() + "/" + avatar;
         }
         return avatar;
-    }
-
-    private String rewritePublicUrl(String url) {
-        if (!StringUtils.hasText(url)) {
-            return url;
-        }
-        String publicEndpoint = StringUtils.hasText(minioProperties.getPublicEndpoint())
-                ? minioProperties.getPublicEndpoint()
-                : "http://files.localhost";
-        String internalEndpoint = StringUtils.hasText(minioProperties.getEndpoint())
-                ? minioProperties.getEndpoint()
-                : "http://localhost:9000";
-        String safePublic = publicEndpoint.endsWith("/")
-                ? publicEndpoint.substring(0, publicEndpoint.length() - 1)
-                : publicEndpoint;
-        String safeInternal = internalEndpoint.endsWith("/")
-                ? internalEndpoint.substring(0, internalEndpoint.length() - 1)
-                : internalEndpoint;
-        return url.replace(safeInternal, safePublic).replace("http://localhost:9000", safePublic);
     }
 }

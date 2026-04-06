@@ -12,6 +12,7 @@ import com.huang.web.admin.service.biz.VideoContentBizService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -22,7 +23,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-@Tag(name = "Admin视频内容", description = "教学视频素材管理与计划项绑定")
+@Tag(name = "Admin Video", description = "Video asset management and plan item binding")
 @RestController
 @RequestMapping("/admin/video")
 @RequireAdminRole({AdminRoleCode.ADMIN, AdminRoleCode.OPS_ADMIN})
@@ -34,7 +35,7 @@ public class VideoManageController {
         this.videoContentBizService = videoContentBizService;
     }
 
-    @Operation(summary = "视频素材列表")
+    @Operation(summary = "List video assets")
     @RequireAdminPermission({"video:asset"})
     @GetMapping("/list")
     public Result<?> list(@RequestParam(required = false) Integer status,
@@ -42,7 +43,7 @@ public class VideoManageController {
         return Result.ok(videoContentBizService.list(status, keyword));
     }
 
-    @Operation(summary = "新增视频素材")
+    @Operation(summary = "Create video asset")
     @PostMapping
     @RequireAdminPermission({"video:asset"})
     @OperationLog(module = "video", action = "create", detail = "admin create video asset")
@@ -50,7 +51,7 @@ public class VideoManageController {
         return Result.ok(videoContentBizService.create(dto));
     }
 
-    @Operation(summary = "上传视频到MinIO")
+    @Operation(summary = "Upload video to MinIO")
     @PostMapping("/upload")
     @RequireAdminPermission({"video:upload"})
     @OperationLog(module = "video", action = "upload", detail = "admin upload video")
@@ -58,7 +59,7 @@ public class VideoManageController {
         return Result.ok(videoContentBizService.uploadVideo(file));
     }
 
-    @Operation(summary = "更新视频素材")
+    @Operation(summary = "Update video asset")
     @PutMapping("/{id}")
     @RequireAdminPermission({"video:asset"})
     @OperationLog(module = "video", action = "update", detail = "admin update video asset")
@@ -67,7 +68,7 @@ public class VideoManageController {
         return ok ? Result.ok("更新成功") : Result.fail(AdminErrorCode.VIDEO_ASSET_NOT_FOUND, "素材不存在");
     }
 
-    @Operation(summary = "更新视频素材状态")
+    @Operation(summary = "Update video asset status")
     @PutMapping("/{id}/status")
     @RequireAdminPermission({"video:status"})
     @OperationLog(module = "video", action = "update_status", detail = "admin update video status")
@@ -76,16 +77,30 @@ public class VideoManageController {
         return ok ? Result.ok("状态更新成功") : Result.fail(AdminErrorCode.VIDEO_ASSET_NOT_FOUND, "素材不存在");
     }
 
-    @Operation(summary = "训练计划项绑定视频")
+    @Operation(summary = "Delete video asset")
+    @DeleteMapping("/{id}")
+    @RequireAdminPermission({"video:asset"})
+    @OperationLog(module = "video", action = "delete", detail = "admin delete video asset")
+    public Result<?> delete(@PathVariable Long id) {
+        try {
+            boolean ok = videoContentBizService.delete(id);
+            return ok ? Result.ok("删除成功") : Result.fail(AdminErrorCode.VIDEO_ASSET_NOT_FOUND, "素材不存在");
+        } catch (IllegalStateException e) {
+            return Result.fail(AdminErrorCode.VIDEO_BIND_FAILED, e.getMessage());
+        }
+    }
+
+    @Operation(summary = "Bind video to training plan item")
     @PutMapping("/bind-plan-item")
     @RequireAdminPermission({"video:bind"})
     @OperationLog(module = "video", action = "bind_plan_item", detail = "admin bind video to plan item")
     public Result<?> bindPlanItem(@Valid @RequestBody PlanItemVideoBindDTO dto) {
         boolean ok = videoContentBizService.bindToPlanItem(dto.getPlanItemId(), dto.getVideoId());
-        return ok ? Result.ok("绑定成功") : Result.fail(AdminErrorCode.VIDEO_BIND_FAILED, "绑定失败：计划项不存在或视频不可用");
+        return ok ? Result.ok("绑定成功")
+                : Result.fail(AdminErrorCode.VIDEO_BIND_FAILED, "绑定失败：计划项不存在或视频不可用");
     }
 
-    @Operation(summary = "训练计划项解绑视频")
+    @Operation(summary = "Unbind video from training plan item")
     @PutMapping("/unbind-plan-item/{planItemId}")
     @RequireAdminPermission({"video:bind"})
     @OperationLog(module = "video", action = "unbind_plan_item", detail = "admin unbind video from plan item")

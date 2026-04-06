@@ -36,9 +36,6 @@ public class PlanBizService {
     private final VideoAssetMapper videoAssetMapper;
     private final MinioClient minioClient;
 
-    @Value("${minio.endpoint:http://localhost:9000}")
-    private String minioEndpoint;
-
     @Value("${minio.public-endpoint:http://files.localhost}")
     private String minioPublicEndpoint;
 
@@ -57,15 +54,34 @@ public class PlanBizService {
         this.minioClient = minioClientProvider.getIfAvailable();
     }
 
-    public List<TrainingPlan> listActivePlans() {
-        return trainingPlanMapper.selectList(
+    public List<Map<String, Object>> listActivePlans(Long userId) {
+        List<TrainingPlan> plans = trainingPlanMapper.selectList(
                 new LambdaQueryWrapper<TrainingPlan>()
                         .eq(TrainingPlan::getStatus, 1)
                         .orderByDesc(TrainingPlan::getId)
         );
+        if (plans.isEmpty()) {
+            return List.of();
+        }
+
+        Map<Long, TrainingPlanSubscribe> subscribeMap = loadUserSubscribeMap(userId);
+        return plans.stream().map(plan -> {
+            Map<String, Object> row = new HashMap<>();
+            row.put("id", plan.getId());
+            row.put("title", plan.getTitle());
+            row.put("goal", plan.getGoal());
+            row.put("level", plan.getLevel());
+            row.put("durationWeeks", plan.getDurationWeeks());
+            row.put("coverUrl", plan.getCoverUrl());
+            row.put("status", plan.getStatus());
+            TrainingPlanSubscribe subscribe = subscribeMap.get(plan.getId());
+            row.put("subscribed", subscribe != null && subscribe.getStatus() != null && subscribe.getStatus() == 1);
+            row.put("startDate", subscribe == null ? null : subscribe.getStartDate());
+            return row;
+        }).toList();
     }
 
-    public Map<String, Object> getPlanDetail(Long planId) {
+    public Map<String, Object> getPlanDetail(Long planId, Long userId) {
         TrainingPlan plan = trainingPlanMapper.selectById(planId);
         if (plan == null || plan.getStatus() == null || plan.getStatus() != 1) {
             return null;
@@ -84,7 +100,6 @@ public class PlanBizService {
 
         Map<Long, VideoAsset> videoMap = new HashMap<>();
         if (!videoIds.isEmpty()) {
-            // 工程亮点：批量查询视频素材，避免 N+1 查询。
             videoMap = videoAssetMapper.selectBatchIds(videoIds).stream()
                     .collect(Collectors.toMap(VideoAsset::getId, v -> v));
         }
@@ -93,6 +108,7 @@ public class PlanBizService {
         for (TrainingPlanItem item : items) {
             Map<String, Object> row = new HashMap<>();
             row.put("id", item.getId());
+            row.put("planId", item.getPlanId());
             row.put("dayIndex", item.getDayIndex());
             row.put("actionName", item.getActionName());
             row.put("sets", item.getSets());
@@ -117,9 +133,16 @@ public class PlanBizService {
             itemViews.add(row);
         }
 
+        TrainingPlanSubscribe subscribe = userId == null ? null : loadPlanSubscribe(userId, planId);
+
         Map<String, Object> detail = new HashMap<>();
         detail.put("plan", plan);
         detail.put("items", itemViews);
+        detail.put("subscription", subscribe == null ? null : Map.of(
+                "planId", subscribe.getPlanId(),
+                "startDate", subscribe.getStartDate(),
+                "status", subscribe.getStatus()
+        ));
         return detail;
     }
 
@@ -130,14 +153,8 @@ public class PlanBizService {
             return false;
         }
 
-        TrainingPlanSubscribe existed = trainingPlanSubscribeMapper.selectOne(
-                new LambdaQueryWrapper<TrainingPlanSubscribe>()
-                        .eq(TrainingPlanSubscribe::getPlanId, dto.getPlanId())
-                        .eq(TrainingPlanSubscribe::getUserId, userId)
-                        .last("LIMIT 1")
-        );
+        TrainingPlanSubscribe existed = loadPlanSubscribe(userId, dto.getPlanId());
         if (existed != null) {
-            // 工程亮点：幂等更新，重复订阅不产生脏数据。
             existed.setStartDate(dto.getStartDate());
             existed.setStatus(1);
             return trainingPlanSubscribeMapper.updateById(existed) > 0;
@@ -151,6 +168,30 @@ public class PlanBizService {
         return trainingPlanSubscribeMapper.insert(subscribe) > 0;
     }
 
+    private Map<Long, TrainingPlanSubscribe> loadUserSubscribeMap(Long userId) {
+        if (userId == null) {
+            return Map.of();
+        }
+        return trainingPlanSubscribeMapper.selectList(
+                        new LambdaQueryWrapper<TrainingPlanSubscribe>()
+                                .eq(TrainingPlanSubscribe::getUserId, userId)
+                                .eq(TrainingPlanSubscribe::getStatus, 1)
+                ).stream()
+                .collect(Collectors.toMap(TrainingPlanSubscribe::getPlanId, item -> item, (left, right) -> right));
+    }
+
+    private TrainingPlanSubscribe loadPlanSubscribe(Long userId, Long planId) {
+        if (userId == null || planId == null) {
+            return null;
+        }
+        return trainingPlanSubscribeMapper.selectOne(
+                new LambdaQueryWrapper<TrainingPlanSubscribe>()
+                        .eq(TrainingPlanSubscribe::getPlanId, planId)
+                        .eq(TrainingPlanSubscribe::getUserId, userId)
+                        .last("LIMIT 1")
+        );
+    }
+
     private String buildPlayableUrl(VideoAsset videoAsset) {
         if (videoAsset == null) {
             return null;
@@ -158,7 +199,7 @@ public class PlanBizService {
 
         if (StringUtils.hasText(videoAsset.getMinioPath())) {
             if (videoAsset.getMinioPath().startsWith("http://") || videoAsset.getMinioPath().startsWith("https://")) {
-                return rewritePublicUrl(videoAsset.getMinioPath());
+                return videoAsset.getMinioPath();
             }
             String path = videoAsset.getMinioPath().startsWith("/")
                     ? videoAsset.getMinioPath().substring(1)
@@ -166,14 +207,14 @@ public class PlanBizService {
 
             if (minioClient != null) {
                 try {
-                    return rewritePublicUrl(minioClient.getPresignedObjectUrl(
+                    return minioClient.getPresignedObjectUrl(
                             GetPresignedObjectUrlArgs.builder()
                                     .method(Method.GET)
                                     .bucket(minioBucketName)
                                     .object(path)
                                     .expiry(2, TimeUnit.HOURS)
                                     .build()
-                    ));
+                    );
                 } catch (Exception ignored) {
                     // fallback to normal path url
                 }
@@ -186,20 +227,5 @@ public class PlanBizService {
         }
 
         return videoAsset.getSourceUrl();
-    }
-
-    private String rewritePublicUrl(String url) {
-        if (!StringUtils.hasText(url)) {
-            return url;
-        }
-        String internalEndpoint = StringUtils.hasText(minioEndpoint) ? minioEndpoint : "http://localhost:9000";
-        String publicEndpoint = StringUtils.hasText(minioPublicEndpoint) ? minioPublicEndpoint : "http://files.localhost";
-        String safeInternal = internalEndpoint.endsWith("/")
-                ? internalEndpoint.substring(0, internalEndpoint.length() - 1)
-                : internalEndpoint;
-        String safePublic = publicEndpoint.endsWith("/")
-                ? publicEndpoint.substring(0, publicEndpoint.length() - 1)
-                : publicEndpoint;
-        return url.replace(safeInternal, safePublic).replace("http://localhost:9000", safePublic);
     }
 }

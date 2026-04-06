@@ -14,10 +14,10 @@ function Stop-ListeningProcess {
     )
     $listeners = Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue |
         Select-Object -ExpandProperty OwningProcess -Unique
-    foreach ($pid in $listeners) {
-        if ($pid) {
-            Stop-Process -Id $pid -Force -ErrorAction SilentlyContinue
-            Write-Host "Stopped stale process on port $Port pid=$pid" -ForegroundColor Yellow
+    foreach ($processId in $listeners) {
+        if ($processId) {
+            Stop-Process -Id $processId -Force -ErrorAction SilentlyContinue
+            Write-Host "Stopped stale process on port $Port pid=$processId" -ForegroundColor Yellow
         }
     }
 }

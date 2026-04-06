@@ -47,3 +47,11 @@ frontend/.vite/
 frontend-app/node_modules/
 frontend-app/dist/
 frontend-app/.vite/
+
+### Local run artifacts ###
+.run/*.log
+.run/*.err.log
+.run/*.out.log
+.run/pids.json
+frontend-preview.log
+frontend-app-preview.log

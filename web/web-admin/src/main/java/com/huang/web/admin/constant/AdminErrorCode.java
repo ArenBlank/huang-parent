@@ -15,6 +15,10 @@ public final class AdminErrorCode {
     public static final int VIDEO_ASSET_NOT_FOUND = 7501;
     public static final int VIDEO_BIND_FAILED = 7502;
 
+    public static final int TRAINING_PLAN_NOT_FOUND = 7551;
+    public static final int TRAINING_PLAN_ITEM_NOT_FOUND = 7552;
+    public static final int TRAINING_PLAN_DELETE_FAILED = 7553;
+
     public static final int BOOKING_COMPLETE_FAILED = 7601;
     public static final int ORDER_NOT_FOUND = 7602;
 

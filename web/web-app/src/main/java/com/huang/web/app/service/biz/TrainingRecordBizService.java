@@ -38,6 +38,11 @@ public class TrainingRecordBizService {
         if (subscribe == null) {
             return false;
         }
+        if (subscribe.getStartDate() != null
+                && dto.getRecordDate() != null
+                && dto.getRecordDate().isBefore(subscribe.getStartDate())) {
+            return false;
+        }
 
         // 工程亮点：只允许“已订阅且激活”的计划打卡，避免非法写入与脏统计。
         TrainingRecord record = new TrainingRecord();
