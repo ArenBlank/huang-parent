@@ -2,6 +2,8 @@ package com.huang.web.admin.service.biz;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.huang.common.constant.RedisConstant;
+import com.huang.common.redis.RedisCacheSupport;
 import com.huang.model.entity.TrainingPlan;
 import com.huang.model.entity.TrainingPlanItem;
 import com.huang.model.entity.VideoAsset;
@@ -31,17 +33,20 @@ public class AdminTrainingPlanBizService {
     private final TrainingPlanSubscribeMapper trainingPlanSubscribeMapper;
     private final TrainingRecordMapper trainingRecordMapper;
     private final VideoAssetMapper videoAssetMapper;
+    private final RedisCacheSupport redisCacheSupport;
 
     public AdminTrainingPlanBizService(TrainingPlanMapper trainingPlanMapper,
                                        TrainingPlanItemMapper trainingPlanItemMapper,
                                        TrainingPlanSubscribeMapper trainingPlanSubscribeMapper,
                                        TrainingRecordMapper trainingRecordMapper,
-                                       VideoAssetMapper videoAssetMapper) {
+                                       VideoAssetMapper videoAssetMapper,
+                                       RedisCacheSupport redisCacheSupport) {
         this.trainingPlanMapper = trainingPlanMapper;
         this.trainingPlanItemMapper = trainingPlanItemMapper;
         this.trainingPlanSubscribeMapper = trainingPlanSubscribeMapper;
         this.trainingRecordMapper = trainingRecordMapper;
         this.videoAssetMapper = videoAssetMapper;
+        this.redisCacheSupport = redisCacheSupport;
     }
 
     public List<Map<String, Object>> listPlans(Integer status) {
@@ -146,6 +151,8 @@ public class AdminTrainingPlanBizService {
         TrainingPlan plan = new TrainingPlan();
         fillPlan(plan, dto);
         trainingPlanMapper.insert(plan);
+        clearPlanListCache();
+        clearPlanDetailCache(plan.getId());
         return plan.getId();
     }
 
@@ -156,7 +163,12 @@ public class AdminTrainingPlanBizService {
             return false;
         }
         fillPlan(exists, dto);
-        return trainingPlanMapper.updateById(exists) > 0;
+        boolean updated = trainingPlanMapper.updateById(exists) > 0;
+        if (updated) {
+            clearPlanListCache();
+            clearPlanDetailCache(id);
+        }
+        return updated;
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -170,19 +182,24 @@ public class AdminTrainingPlanBizService {
                         .eq(com.huang.model.entity.TrainingPlanSubscribe::getPlanId, id)
         );
         if (subscribeCount > 0) {
-            throw new IllegalStateException("已有用户订阅该计划，不能删除");
+            throw new IllegalStateException("宸叉湁鐢ㄦ埛璁㈤槄璇ヨ鍒掞紝涓嶈兘鍒犻櫎");
         }
         long recordCount = trainingRecordMapper.selectCount(
                 new LambdaQueryWrapper<com.huang.model.entity.TrainingRecord>()
                         .eq(com.huang.model.entity.TrainingRecord::getPlanId, id)
         );
         if (recordCount > 0) {
-            throw new IllegalStateException("已有训练打卡记录关联该计划，不能删除");
+            throw new IllegalStateException("宸叉湁璁粌鎵撳崱璁板綍鍏宠仈璇ヨ鍒掞紝涓嶈兘鍒犻櫎");
         }
         trainingPlanItemMapper.delete(
                 Wrappers.<TrainingPlanItem>lambdaQuery().eq(TrainingPlanItem::getPlanId, id)
         );
-        return trainingPlanMapper.deleteById(id) > 0;
+        boolean deleted = trainingPlanMapper.deleteById(id) > 0;
+        if (deleted) {
+            clearPlanListCache();
+            clearPlanDetailCache(id);
+        }
+        return deleted;
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -196,6 +213,8 @@ public class AdminTrainingPlanBizService {
         item.setPlanId(planId);
         fillPlanItem(item, dto);
         trainingPlanItemMapper.insert(item);
+        clearPlanListCache();
+        clearPlanDetailCache(planId);
         return item.getId();
     }
 
@@ -206,8 +225,14 @@ public class AdminTrainingPlanBizService {
             return false;
         }
         validateVideo(dto.getVideoId());
+        Long planId = exists.getPlanId();
         fillPlanItem(exists, dto);
-        return trainingPlanItemMapper.updateById(exists) > 0;
+        boolean updated = trainingPlanItemMapper.updateById(exists) > 0;
+        if (updated) {
+            clearPlanListCache();
+            clearPlanDetailCache(planId);
+        }
+        return updated;
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -221,9 +246,14 @@ public class AdminTrainingPlanBizService {
                         .eq(com.huang.model.entity.TrainingRecord::getPlanItemId, itemId)
         );
         if (recordCount > 0) {
-            throw new IllegalStateException("已有训练打卡记录关联该计划项，不能删除");
+            throw new IllegalStateException("宸叉湁璁粌鎵撳崱璁板綍鍏宠仈璇ヨ鍒掗」锛屼笉鑳藉垹闄?");
         }
-        return trainingPlanItemMapper.deleteById(itemId) > 0;
+        boolean deleted = trainingPlanItemMapper.deleteById(itemId) > 0;
+        if (deleted) {
+            clearPlanListCache();
+            clearPlanDetailCache(exists.getPlanId());
+        }
+        return deleted;
     }
 
     private void fillPlan(TrainingPlan plan, TrainingPlanUpsertDTO dto) {
@@ -252,7 +282,17 @@ public class AdminTrainingPlanBizService {
         }
         VideoAsset videoAsset = videoAssetMapper.selectById(videoId);
         if (videoAsset == null || videoAsset.getStatus() == null || videoAsset.getStatus() != 1) {
-            throw new IllegalStateException("绑定的视频不存在或未启用");
+            throw new IllegalStateException("缁戝畾鐨勮棰戜笉瀛樺湪鎴栨湭鍚敤");
+        }
+    }
+
+    private void clearPlanListCache() {
+        redisCacheSupport.safeDelete(RedisConstant.APP_PLAN_LIST_ACTIVE_KEY);
+    }
+
+    private void clearPlanDetailCache(Long planId) {
+        if (planId != null) {
+            redisCacheSupport.safeDelete(RedisConstant.appPlanDetailStaticKey(planId));
         }
     }
 }

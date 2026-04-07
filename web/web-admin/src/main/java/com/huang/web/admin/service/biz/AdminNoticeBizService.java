@@ -1,6 +1,8 @@
 package com.huang.web.admin.service.biz;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.huang.common.constant.RedisConstant;
+import com.huang.common.redis.RedisCacheSupport;
 import com.huang.model.entity.Notice;
 import com.huang.web.admin.dto.notice.NoticeUpsertDTO;
 import com.huang.web.admin.mapper.NoticeMapper;
@@ -14,9 +16,11 @@ import java.util.List;
 public class AdminNoticeBizService {
 
     private final NoticeMapper noticeMapper;
+    private final RedisCacheSupport redisCacheSupport;
 
-    public AdminNoticeBizService(NoticeMapper noticeMapper) {
+    public AdminNoticeBizService(NoticeMapper noticeMapper, RedisCacheSupport redisCacheSupport) {
         this.noticeMapper = noticeMapper;
+        this.redisCacheSupport = redisCacheSupport;
     }
 
     public List<Notice> list(Integer status) {
@@ -34,6 +38,7 @@ public class AdminNoticeBizService {
         Notice notice = new Notice();
         fill(notice, dto);
         noticeMapper.insert(notice);
+        clearNoticeCaches();
         return notice.getId();
     }
 
@@ -44,7 +49,11 @@ public class AdminNoticeBizService {
             return false;
         }
         fill(notice, dto);
-        return noticeMapper.updateById(notice) > 0;
+        boolean updated = noticeMapper.updateById(notice) > 0;
+        if (updated) {
+            clearNoticeCaches();
+        }
+        return updated;
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -57,12 +66,20 @@ public class AdminNoticeBizService {
         if (status == 1 && notice.getPublishTime() == null) {
             notice.setPublishTime(LocalDateTime.now());
         }
-        return noticeMapper.updateById(notice) > 0;
+        boolean updated = noticeMapper.updateById(notice) > 0;
+        if (updated) {
+            clearNoticeCaches();
+        }
+        return updated;
     }
 
     @Transactional(rollbackFor = Exception.class)
     public boolean delete(Long id) {
-        return noticeMapper.deleteById(id) > 0;
+        boolean deleted = noticeMapper.deleteById(id) > 0;
+        if (deleted) {
+            clearNoticeCaches();
+        }
+        return deleted;
     }
 
     private void fill(Notice notice, NoticeUpsertDTO dto) {
@@ -75,5 +92,8 @@ public class AdminNoticeBizService {
             notice.setPublishTime(LocalDateTime.now());
         }
     }
-}
 
+    private void clearNoticeCaches() {
+        redisCacheSupport.deleteByPrefix(RedisConstant.APP_NOTICE_PUBLISHED_PREFIX);
+    }
+}

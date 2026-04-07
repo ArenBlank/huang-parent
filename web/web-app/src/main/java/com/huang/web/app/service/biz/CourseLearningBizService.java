@@ -2,7 +2,10 @@ package com.huang.web.app.service.biz;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.fasterxml.jackson.core.type.TypeReference;
 import com.huang.common.constant.BizStatusConstant;
+import com.huang.common.constant.RedisConstant;
+import com.huang.common.redis.RedisCacheSupport;
 import com.huang.model.entity.Course;
 import com.huang.model.entity.CourseEnrollment;
 import com.huang.model.entity.CourseSchedule;
@@ -42,6 +45,7 @@ public class CourseLearningBizService {
     private final OrderItemMapper orderItemMapper;
     private final PaymentRecordMapper paymentRecordMapper;
     private final RefundRecordMapper refundRecordMapper;
+    private final RedisCacheSupport redisCacheSupport;
 
     public CourseLearningBizService(CourseMapper courseMapper,
                                     CourseScheduleMapper courseScheduleMapper,
@@ -49,7 +53,8 @@ public class CourseLearningBizService {
                                     OrderInfoMapper orderInfoMapper,
                                     OrderItemMapper orderItemMapper,
                                     PaymentRecordMapper paymentRecordMapper,
-                                    RefundRecordMapper refundRecordMapper) {
+                                    RefundRecordMapper refundRecordMapper,
+                                    RedisCacheSupport redisCacheSupport) {
         this.courseMapper = courseMapper;
         this.courseScheduleMapper = courseScheduleMapper;
         this.courseEnrollmentMapper = courseEnrollmentMapper;
@@ -57,16 +62,29 @@ public class CourseLearningBizService {
         this.orderItemMapper = orderItemMapper;
         this.paymentRecordMapper = paymentRecordMapper;
         this.refundRecordMapper = refundRecordMapper;
+        this.redisCacheSupport = redisCacheSupport;
     }
 
     public List<Course> listCourses(Long categoryId) {
+        String cacheKey = RedisConstant.appCourseListKey(categoryId);
+        var cached = redisCacheSupport.getJson(cacheKey, new TypeReference<List<Course>>() {});
+        if (cached.found()) {
+            return cached.nullValue() ? List.of() : cached.value();
+        }
+
         LambdaQueryWrapper<Course> wrapper = new LambdaQueryWrapper<Course>()
                 .eq(Course::getStatus, 1)
                 .orderByDesc(Course::getId);
         if (categoryId != null) {
             wrapper.eq(Course::getCategoryId, categoryId);
         }
-        return courseMapper.selectList(wrapper);
+        List<Course> courses = courseMapper.selectList(wrapper);
+        redisCacheSupport.setJson(
+                cacheKey,
+                courses,
+                redisCacheSupport.ttlWithJitter(RedisConstant.APP_COURSE_LIST_TTL_SEC, RedisConstant.JITTER_SHORT_SEC)
+        );
+        return courses;
     }
 
     public List<CourseSchedule> listSchedules(Long courseId) {

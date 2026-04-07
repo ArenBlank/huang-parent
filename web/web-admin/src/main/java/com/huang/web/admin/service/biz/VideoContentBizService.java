@@ -1,7 +1,9 @@
 package com.huang.web.admin.service.biz;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.huang.common.constant.RedisConstant;
 import com.huang.common.minio.MinioProperties;
+import com.huang.common.redis.RedisCacheSupport;
 import com.huang.model.entity.TrainingPlanItem;
 import com.huang.model.entity.VideoAsset;
 import com.huang.web.admin.dto.video.VideoAssetUpsertDTO;
@@ -22,8 +24,10 @@ import java.time.LocalDate;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.TimeUnit;
+import java.util.stream.Collectors;
 
 @Service
 public class VideoContentBizService {
@@ -32,15 +36,18 @@ public class VideoContentBizService {
     private final TrainingPlanItemMapper trainingPlanItemMapper;
     private final MinioClient minioClient;
     private final MinioProperties minioProperties;
+    private final RedisCacheSupport redisCacheSupport;
 
     public VideoContentBizService(VideoAssetMapper videoAssetMapper,
                                   TrainingPlanItemMapper trainingPlanItemMapper,
                                   MinioClient minioClient,
-                                  MinioProperties minioProperties) {
+                                  MinioProperties minioProperties,
+                                  RedisCacheSupport redisCacheSupport) {
         this.videoAssetMapper = videoAssetMapper;
         this.trainingPlanItemMapper = trainingPlanItemMapper;
         this.minioClient = minioClient;
         this.minioProperties = minioProperties;
+        this.redisCacheSupport = redisCacheSupport;
     }
 
     public List<VideoAsset> list(Integer status, String keyword) {
@@ -68,8 +75,13 @@ public class VideoContentBizService {
         if (exists == null) {
             return false;
         }
+        Set<Long> affectedPlanIds = findPlanIdsByVideoId(id);
         VideoAsset asset = buildAsset(id, dto);
-        return videoAssetMapper.updateById(asset) > 0;
+        boolean updated = videoAssetMapper.updateById(asset) > 0;
+        if (updated) {
+            clearPlanDetailCaches(affectedPlanIds);
+        }
+        return updated;
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -78,8 +90,13 @@ public class VideoContentBizService {
         if (exists == null) {
             return false;
         }
+        Set<Long> affectedPlanIds = findPlanIdsByVideoId(id);
         exists.setStatus(status);
-        return videoAssetMapper.updateById(exists) > 0;
+        boolean updated = videoAssetMapper.updateById(exists) > 0;
+        if (updated) {
+            clearPlanDetailCaches(affectedPlanIds);
+        }
+        return updated;
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -88,14 +105,19 @@ public class VideoContentBizService {
         if (exists == null) {
             return false;
         }
+        Set<Long> affectedPlanIds = findPlanIdsByVideoId(id);
         Long bindCount = trainingPlanItemMapper.selectCount(
                 new LambdaQueryWrapper<TrainingPlanItem>()
                         .eq(TrainingPlanItem::getVideoId, id)
         );
         if (bindCount != null && bindCount > 0) {
-            throw new IllegalStateException("当前视频仍绑定了训练计划项，请先解绑后再删除");
+            throw new IllegalStateException("褰撳墠瑙嗛浠嶇粦瀹氫簡璁粌璁″垝椤癸紝璇峰厛瑙ｇ粦鍚庡啀鍒犻櫎");
         }
-        return videoAssetMapper.deleteById(id) > 0;
+        boolean deleted = videoAssetMapper.deleteById(id) > 0;
+        if (deleted) {
+            clearPlanDetailCaches(affectedPlanIds);
+        }
+        return deleted;
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -109,7 +131,11 @@ public class VideoContentBizService {
             return false;
         }
         item.setVideoId(videoId);
-        return trainingPlanItemMapper.updateById(item) > 0;
+        boolean updated = trainingPlanItemMapper.updateById(item) > 0;
+        if (updated) {
+            clearPlanDetailCache(item.getPlanId());
+        }
+        return updated;
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -119,7 +145,11 @@ public class VideoContentBizService {
             return false;
         }
         item.setVideoId(null);
-        return trainingPlanItemMapper.updateById(item) > 0;
+        boolean updated = trainingPlanItemMapper.updateById(item) > 0;
+        if (updated) {
+            clearPlanDetailCache(item.getPlanId());
+        }
+        return updated;
     }
 
     private VideoAsset buildAsset(Long id, VideoAssetUpsertDTO dto) {
@@ -205,5 +235,30 @@ public class VideoContentBizService {
                         .expiry(2, TimeUnit.HOURS)
                         .build()
         );
+    }
+
+    private Set<Long> findPlanIdsByVideoId(Long videoId) {
+        return trainingPlanItemMapper.selectList(
+                        new LambdaQueryWrapper<TrainingPlanItem>()
+                                .eq(TrainingPlanItem::getVideoId, videoId)
+                ).stream()
+                .map(TrainingPlanItem::getPlanId)
+                .filter(planId -> planId != null && planId > 0)
+                .collect(Collectors.toSet());
+    }
+
+    private void clearPlanDetailCaches(Set<Long> planIds) {
+        if (planIds == null || planIds.isEmpty()) {
+            return;
+        }
+        for (Long planId : planIds) {
+            clearPlanDetailCache(planId);
+        }
+    }
+
+    private void clearPlanDetailCache(Long planId) {
+        if (planId != null) {
+            redisCacheSupport.safeDelete(RedisConstant.appPlanDetailStaticKey(planId));
+        }
     }
 }

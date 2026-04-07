@@ -1,6 +1,8 @@
 package com.huang.web.admin.service.biz;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.huang.common.constant.RedisConstant;
+import com.huang.common.redis.RedisCacheSupport;
 import com.huang.model.entity.Banner;
 import com.huang.web.admin.dto.banner.BannerUpsertDTO;
 import com.huang.web.admin.mapper.BannerMapper;
@@ -13,9 +15,11 @@ import java.util.List;
 public class AdminBannerBizService {
 
     private final BannerMapper bannerMapper;
+    private final RedisCacheSupport redisCacheSupport;
 
-    public AdminBannerBizService(BannerMapper bannerMapper) {
+    public AdminBannerBizService(BannerMapper bannerMapper, RedisCacheSupport redisCacheSupport) {
         this.bannerMapper = bannerMapper;
+        this.redisCacheSupport = redisCacheSupport;
     }
 
     public List<Banner> list(Integer status) {
@@ -33,6 +37,7 @@ public class AdminBannerBizService {
         Banner banner = new Banner();
         fill(banner, dto);
         bannerMapper.insert(banner);
+        clearBannerCache();
         return banner.getId();
     }
 
@@ -43,7 +48,11 @@ public class AdminBannerBizService {
             return false;
         }
         fill(banner, dto);
-        return bannerMapper.updateById(banner) > 0;
+        boolean updated = bannerMapper.updateById(banner) > 0;
+        if (updated) {
+            clearBannerCache();
+        }
+        return updated;
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -53,12 +62,20 @@ public class AdminBannerBizService {
             return false;
         }
         banner.setStatus(status);
-        return bannerMapper.updateById(banner) > 0;
+        boolean updated = bannerMapper.updateById(banner) > 0;
+        if (updated) {
+            clearBannerCache();
+        }
+        return updated;
     }
 
     @Transactional(rollbackFor = Exception.class)
     public boolean delete(Long id) {
-        return bannerMapper.deleteById(id) > 0;
+        boolean deleted = bannerMapper.deleteById(id) > 0;
+        if (deleted) {
+            clearBannerCache();
+        }
+        return deleted;
     }
 
     private void fill(Banner banner, BannerUpsertDTO dto) {
@@ -68,5 +85,8 @@ public class AdminBannerBizService {
         banner.setSort(dto.getSort());
         banner.setStatus(dto.getStatus());
     }
-}
 
+    private void clearBannerCache() {
+        redisCacheSupport.safeDelete(RedisConstant.APP_BANNER_ACTIVE_KEY);
+    }
+}

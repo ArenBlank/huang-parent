@@ -1,87 +1,106 @@
 package com.huang.common.utils;
 
 import com.huang.common.config.DevelopmentConfig;
+import com.huang.common.constant.RedisConstant;
+import com.huang.common.redis.RedisCacheSupport;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
 import java.util.concurrent.ThreadLocalRandom;
 
-/**
- * 短信验证码工具类
- * @author system
- * @since 2026-02-25
- */
 @Slf4j
 @Component
 public class SmsCodeUtil {
 
-    @Autowired
-    private DevelopmentConfig developmentConfig;
+    private final DevelopmentConfig developmentConfig;
+    private final RedisCacheSupport redisCacheSupport;
 
-    /**
-     * 发送短信验证码
-     * @param phone 手机号
-     * @param type 验证码类型
-     * @return 验证码（仅开发模式返回）
-     */
-    public String sendSmsCode(String phone, String type) {
-        if (developmentConfig.isEnabled()) {
-            log.info("【开发模式】向手机号 {} 发送 {} 类型验证码: {}", phone, type, developmentConfig.getFixedSmsCode());
-            return developmentConfig.getFixedSmsCode();
-        }
-        
-        // 生产环境下发送真实短信
-        String code = generateRandomCode();
-        // TODO: 调用第三方短信服务发送验证码
-        log.info("向手机号 {} 发送 {} 类型验证码", phone, type);
-        
-        return null; // 生产环境不返回验证码
+    public SmsCodeUtil(DevelopmentConfig developmentConfig, RedisCacheSupport redisCacheSupport) {
+        this.developmentConfig = developmentConfig;
+        this.redisCacheSupport = redisCacheSupport;
     }
 
-    /**
-     * 验证短信验证码
-     * @param phone 手机号
-     * @param code 验证码
-     * @param type 验证码类型
-     * @return 是否验证通过
-     */
+    public String sendSmsCode(String phone, String type) {
+        if (developmentConfig.isEnabled()) {
+            log.info("开发模式短信验证码: phone={}, type={}, code={}", phone, type, developmentConfig.getFixedSmsCode());
+            return developmentConfig.getFixedSmsCode();
+        }
+
+        String code = generateRandomCode();
+        cacheSmsCode(phone, type, code);
+        // TODO: 接入真实短信服务发送验证码
+        log.info("send sms code requested, phone={}, type={}", phone, type);
+        return null;
+    }
+
     public boolean verifySmsCode(String phone, String code, String type) {
         if (developmentConfig.isEnabled() && developmentConfig.isSkipSmsValidation()) {
             boolean isValid = developmentConfig.getFixedSmsCode().equals(code);
-            log.info("【开发模式】验证手机号 {} 的 {} 类型验证码 {}: {}", phone, type, code, isValid ? "通过" : "失败");
+            log.info("开发模式验证码校验: phone={}, type={}, success={}", phone, type, isValid);
             return isValid;
         }
-        
-        // 生产环境下从Redis或数据库验证
-        // TODO: 实现真实的验证码验证逻辑
-        log.info("验证手机号 {} 的 {} 类型验证码", phone, type);
-        
-        return false; // 临时返回，实际需要实现验证逻辑
-    }
 
-    /**
-     * 生成6位随机验证码
-     * @return 验证码
-     */
-    private String generateRandomCode() {
-        return String.format("%06d", ThreadLocalRandom.current().nextInt(0, 1000000));
-    }
+        if (!StringUtils.hasText(phone) || !StringUtils.hasText(code) || !StringUtils.hasText(type)) {
+            return false;
+        }
 
-    /**
-     * 检查验证码发送频率限制
-     * @param phone 手机号
-     * @param type 验证码类型
-     * @return 是否可以发送
-     */
-    public boolean canSendSms(String phone, String type) {
-        if (developmentConfig.isEnabled()) {
-            // 开发模式下不限制发送频率
+        String codeKey = RedisConstant.appSmsCodeKey(type, phone);
+        String cachedCode = redisCacheSupport.getString(codeKey);
+        boolean isValid = StringUtils.hasText(cachedCode) && cachedCode.equals(code);
+        if (isValid) {
+            redisCacheSupport.safeDelete(codeKey);
+            redisCacheSupport.safeDelete(RedisConstant.appSmsFailKey(type, phone));
             return true;
         }
-        
-        // 生产环境下检查发送频率限制
-        // TODO: 实现频率限制检查逻辑
-        return true;
+
+        increaseFailCount(phone, type);
+        log.info("verify sms code failed, phone={}, type={}", phone, type);
+        return false;
+    }
+
+    private String generateRandomCode() {
+        return String.format("%06d", ThreadLocalRandom.current().nextInt(0, 1_000_000));
+    }
+
+    public boolean canSendSms(String phone, String type) {
+        if (developmentConfig.isEnabled()) {
+            return true;
+        }
+        if (!StringUtils.hasText(phone) || !StringUtils.hasText(type)) {
+            return false;
+        }
+        return !StringUtils.hasText(redisCacheSupport.getString(RedisConstant.appSmsCooldownKey(type, phone)));
+    }
+
+    private void cacheSmsCode(String phone, String type, String code) {
+        if (!StringUtils.hasText(phone) || !StringUtils.hasText(type) || !StringUtils.hasText(code)) {
+            return;
+        }
+        redisCacheSupport.setString(
+                RedisConstant.appSmsCodeKey(type, phone),
+                code,
+                RedisConstant.APP_LOGIN_CODE_TTL_SEC
+        );
+        redisCacheSupport.setString(
+                RedisConstant.appSmsCooldownKey(type, phone),
+                "1",
+                RedisConstant.APP_LOGIN_CODE_RESEND_TIME_SEC
+        );
+        redisCacheSupport.safeDelete(RedisConstant.appSmsFailKey(type, phone));
+    }
+
+    private void increaseFailCount(String phone, String type) {
+        String failKey = RedisConstant.appSmsFailKey(type, phone);
+        String current = redisCacheSupport.getString(failKey);
+        int failCount = 0;
+        if (StringUtils.hasText(current)) {
+            try {
+                failCount = Integer.parseInt(current);
+            } catch (NumberFormatException ignore) {
+                failCount = 0;
+            }
+        }
+        redisCacheSupport.setString(failKey, String.valueOf(failCount + 1), RedisConstant.APP_LOGIN_CODE_TTL_SEC);
     }
 }

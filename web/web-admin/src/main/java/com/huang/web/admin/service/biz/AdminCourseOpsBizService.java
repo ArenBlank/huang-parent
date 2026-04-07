@@ -1,6 +1,8 @@
 package com.huang.web.admin.service.biz;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.huang.common.constant.RedisConstant;
+import com.huang.common.redis.RedisCacheSupport;
 import com.huang.model.entity.Course;
 import com.huang.model.entity.CourseSchedule;
 import com.huang.web.admin.dto.course.CourseScheduleCreateDTO;
@@ -19,13 +21,16 @@ public class AdminCourseOpsBizService {
     private final CourseMapper courseMapper;
     private final CourseScheduleMapper courseScheduleMapper;
     private final AdminPermissionScopeService adminPermissionScopeService;
+    private final RedisCacheSupport redisCacheSupport;
 
     public AdminCourseOpsBizService(CourseMapper courseMapper,
                                     CourseScheduleMapper courseScheduleMapper,
-                                    AdminPermissionScopeService adminPermissionScopeService) {
+                                    AdminPermissionScopeService adminPermissionScopeService,
+                                    RedisCacheSupport redisCacheSupport) {
         this.courseMapper = courseMapper;
         this.courseScheduleMapper = courseScheduleMapper;
         this.adminPermissionScopeService = adminPermissionScopeService;
+        this.redisCacheSupport = redisCacheSupport;
     }
 
     public List<Course> listCourses(Integer status, Long categoryId) {
@@ -45,6 +50,7 @@ public class AdminCourseOpsBizService {
         Course course = new Course();
         fillCourse(course, dto);
         courseMapper.insert(course);
+        clearCourseListCaches();
         return course.getId();
     }
 
@@ -57,7 +63,11 @@ public class AdminCourseOpsBizService {
         Long categoryId = dto.getCategoryId() == null ? exists.getCategoryId() : dto.getCategoryId();
         adminPermissionScopeService.assertCourseCategoryAccess(categoryId, "course:update", "courseId=" + id);
         fillCourse(exists, dto);
-        return courseMapper.updateById(exists) > 0;
+        boolean updated = courseMapper.updateById(exists) > 0;
+        if (updated) {
+            clearCourseListCaches();
+        }
+        return updated;
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -68,7 +78,11 @@ public class AdminCourseOpsBizService {
         }
         adminPermissionScopeService.assertCourseCategoryAccess(exists.getCategoryId(), "course:publish", "courseId=" + id);
         exists.setStatus(status);
-        return courseMapper.updateById(exists) > 0;
+        boolean updated = courseMapper.updateById(exists) > 0;
+        if (updated) {
+            clearCourseListCaches();
+        }
+        return updated;
     }
 
     public List<CourseSchedule> listSchedules(Long courseId, Integer status) {
@@ -125,5 +139,9 @@ public class AdminCourseOpsBizService {
         course.setDurationMin(dto.getDurationMin());
         course.setPrice(dto.getPrice());
         course.setStatus(dto.getStatus());
+    }
+
+    private void clearCourseListCaches() {
+        redisCacheSupport.deleteByPrefix(RedisConstant.APP_COURSE_LIST_PREFIX);
     }
 }

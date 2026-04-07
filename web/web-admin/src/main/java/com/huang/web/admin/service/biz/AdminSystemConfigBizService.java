@@ -1,6 +1,8 @@
 package com.huang.web.admin.service.biz;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.huang.common.constant.RedisConstant;
+import com.huang.common.redis.RedisCacheSupport;
 import com.huang.model.entity.SystemConfig;
 import com.huang.web.admin.dto.config.SystemConfigUpsertDTO;
 import com.huang.web.admin.mapper.SystemConfigMapper;
@@ -13,9 +15,11 @@ import java.util.List;
 public class AdminSystemConfigBizService {
 
     private final SystemConfigMapper systemConfigMapper;
+    private final RedisCacheSupport redisCacheSupport;
 
-    public AdminSystemConfigBizService(SystemConfigMapper systemConfigMapper) {
+    public AdminSystemConfigBizService(SystemConfigMapper systemConfigMapper, RedisCacheSupport redisCacheSupport) {
         this.systemConfigMapper = systemConfigMapper;
+        this.redisCacheSupport = redisCacheSupport;
     }
 
     public List<SystemConfig> list(String keyLike) {
@@ -35,6 +39,7 @@ public class AdminSystemConfigBizService {
         SystemConfig config = new SystemConfig();
         fill(config, dto);
         systemConfigMapper.insert(config);
+        redisCacheSupport.safeDelete(RedisConstant.appSysConfigKey(config.getConfigKey()));
         return config.getId();
     }
 
@@ -47,13 +52,27 @@ public class AdminSystemConfigBizService {
         if (existsByKey(dto.getConfigKey(), id)) {
             return false;
         }
+        String oldKey = exists.getConfigKey();
         fill(exists, dto);
-        return systemConfigMapper.updateById(exists) > 0;
+        boolean updated = systemConfigMapper.updateById(exists) > 0;
+        if (updated) {
+            redisCacheSupport.safeDelete(RedisConstant.appSysConfigKey(oldKey));
+            redisCacheSupport.safeDelete(RedisConstant.appSysConfigKey(exists.getConfigKey()));
+        }
+        return updated;
     }
 
     @Transactional(rollbackFor = Exception.class)
     public boolean delete(Long id) {
-        return systemConfigMapper.deleteById(id) > 0;
+        SystemConfig exists = systemConfigMapper.selectById(id);
+        if (exists == null) {
+            return false;
+        }
+        boolean deleted = systemConfigMapper.deleteById(id) > 0;
+        if (deleted) {
+            redisCacheSupport.safeDelete(RedisConstant.appSysConfigKey(exists.getConfigKey()));
+        }
+        return deleted;
     }
 
     private boolean existsByKey(String key, Long excludeId) {
@@ -72,4 +91,3 @@ public class AdminSystemConfigBizService {
         config.setRemark(dto.getRemark());
     }
 }
-
