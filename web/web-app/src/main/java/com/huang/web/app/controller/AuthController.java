@@ -1,5 +1,8 @@
 package com.huang.web.app.controller;
 
+import com.huang.common.config.DevelopmentConfig;
+import com.huang.common.constant.RedisConstant;
+import com.huang.common.guard.RateLimit;
 import com.huang.common.result.Result;
 import com.huang.common.utils.JwtUtil;
 import com.huang.common.utils.PasswordUtil;
@@ -23,7 +26,6 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -32,9 +34,6 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDateTime;
 
-/**
- * App authentication controller.
- */
 @Tag(name = "App认证", description = "用户注册、登录、验证码、重置密码")
 @Slf4j
 @RestController
@@ -42,19 +41,29 @@ import java.time.LocalDateTime;
 @Validated
 public class AuthController {
 
-    @Autowired
-    private SmsCodeUtil smsCodeUtil;
+    private final SmsCodeUtil smsCodeUtil;
+    private final UserCoreService userCoreService;
+    private final RoleCoreService roleCoreService;
+    private final UserRoleCoreService userRoleCoreService;
 
-    @Autowired
-    private UserCoreService userCoreService;
-
-    @Autowired
-    private RoleCoreService roleCoreService;
-
-    @Autowired
-    private UserRoleCoreService userRoleCoreService;
+    public AuthController(SmsCodeUtil smsCodeUtil,
+                          UserCoreService userCoreService,
+                          RoleCoreService roleCoreService,
+                          UserRoleCoreService userRoleCoreService) {
+        this.smsCodeUtil = smsCodeUtil;
+        this.userCoreService = userCoreService;
+        this.roleCoreService = roleCoreService;
+        this.userRoleCoreService = userRoleCoreService;
+    }
 
     @Operation(summary = "发送短信验证码", description = "发送注册、登录、重置密码验证码")
+    @RateLimit(
+            prefix = RedisConstant.APP_SMS_SEND_LIMIT_PREFIX,
+            key = "#dto.type + ':' + #dto.phone",
+            maxRequests = RedisConstant.SMS_SEND_RATE_LIMIT_MAX,
+            windowSec = RedisConstant.SMS_SEND_RATE_LIMIT_WINDOW_SEC,
+            message = "短信发送过于频繁，请稍后再试"
+    )
     @PostMapping("/sms-code/send")
     public Result<String> sendSmsCode(@Valid @RequestBody SmsCodeDTO dto) {
         log.info("发送短信验证码请求: phone={}, type={}", dto.getPhone(), dto.getType());
@@ -119,8 +128,8 @@ public class AuthController {
         vo.setPhone(user.getPhone());
         vo.setRegisterTime(LocalDateTime.now());
         vo.setAutoLogin(true);
-        vo.setAccessToken(JwtUtil.generateAppAccessToken(user.getId(), user.getUsername()));
-        vo.setRefreshToken(JwtUtil.generateAppRefreshToken(user.getId(), user.getUsername()));
+        vo.setAccessToken(JwtUtil.generateAppAccessToken(user.getId(), user.getUsername(), normalizeTokenVersion(user)));
+        vo.setRefreshToken(JwtUtil.generateAppRefreshToken(user.getId(), user.getUsername(), normalizeTokenVersion(user)));
         vo.setWelcomeMessage("注册成功，欢迎加入健身平台");
 
         log.info("用户注册成功: userId={}, username={}", vo.getUserId(), vo.getUsername());
@@ -128,6 +137,20 @@ public class AuthController {
     }
 
     @Operation(summary = "用户登录", description = "密码登录或短信验证码登录")
+    @RateLimit(
+            prefix = RedisConstant.APP_LOGIN_LIMIT_IP_PREFIX,
+            key = "#ip",
+            maxRequests = RedisConstant.LOGIN_RATE_LIMIT_MAX,
+            windowSec = RedisConstant.LOGIN_RATE_LIMIT_WINDOW_SEC,
+            message = "登录请求过于频繁，请稍后再试"
+    )
+    @RateLimit(
+            prefix = RedisConstant.APP_LOGIN_LIMIT_ACCOUNT_PREFIX,
+            key = "#dto.account",
+            maxRequests = RedisConstant.LOGIN_RATE_LIMIT_MAX,
+            windowSec = RedisConstant.LOGIN_RATE_LIMIT_WINDOW_SEC,
+            message = "登录请求过于频繁，请稍后再试"
+    )
     @PostMapping("/login")
     public Result<LoginVO> login(@Valid @RequestBody UserLoginDTO dto) {
         log.info("用户登录请求: account={}, loginType={}", dto.getAccount(), dto.getLoginType());
@@ -163,10 +186,10 @@ public class AuthController {
         vo.setUserInfo(userInfo);
         vo.setFirstLogin(false);
         vo.setNeedCompleteProfile(false);
-        vo.setAccessToken(JwtUtil.generateAppAccessToken(user.getId(), user.getUsername()));
-        vo.setRefreshToken(JwtUtil.generateAppRefreshToken(user.getId(), user.getUsername()));
-        vo.setAccessTokenExpire(LocalDateTime.now().plusDays(7));
-        vo.setRefreshTokenExpire(LocalDateTime.now().plusDays(30));
+        vo.setAccessToken(JwtUtil.generateAppAccessToken(user.getId(), user.getUsername(), normalizeTokenVersion(user)));
+        vo.setRefreshToken(JwtUtil.generateAppRefreshToken(user.getId(), user.getUsername(), normalizeTokenVersion(user)));
+        vo.setAccessTokenExpire(LocalDateTime.now().plusSeconds(JwtUtil.accessTokenExpireMs(JwtUtil.PLATFORM_APP) / 1000));
+        vo.setRefreshTokenExpire(LocalDateTime.now().plusSeconds(JwtUtil.refreshTokenExpireMs(JwtUtil.PLATFORM_APP) / 1000));
 
         log.info("用户登录成功: userId={}, username={}", userInfo.getId(), userInfo.getUsername());
         return Result.ok(vo);
@@ -178,16 +201,30 @@ public class AuthController {
         log.info("刷新令牌请求: refreshToken前缀={}",
                 dto.getRefreshToken().length() > 8 ? dto.getRefreshToken().substring(0, 8) + "..." : dto.getRefreshToken());
 
-        String newAccessToken = JwtUtil.refreshAccessToken(dto.getRefreshToken());
-        if (newAccessToken == null) {
+        var claims = JwtUtil.parseTokenSafely(dto.getRefreshToken());
+        if (claims == null || !JwtUtil.isRefreshToken(claims)) {
             return Result.fail("刷新令牌无效或已过期");
         }
+        Long userId = JwtUtil.getUserIdFromToken(dto.getRefreshToken());
+        User user = userId == null ? null : userCoreService.getById(userId);
+        if (user == null || user.getStatus() == null || user.getStatus() != 1) {
+            return Result.fail("刷新令牌无效或已过期");
+        }
+        if (normalizeTokenVersion(user) != JwtUtil.getTokenVersionFromClaims(claims)) {
+            return Result.fail("刷新令牌无效或已过期");
+        }
+        String newAccessToken = JwtUtil.generateAccessToken(
+                user.getId(),
+                user.getUsername(),
+                JwtUtil.getPlatformFromClaims(claims),
+                normalizeTokenVersion(user)
+        );
 
         RefreshTokenVO vo = new RefreshTokenVO();
         vo.setAccessToken(newAccessToken);
         vo.setRefreshToken(dto.getRefreshToken());
-        vo.setAccessTokenExpire(LocalDateTime.now().plusDays(7));
-        vo.setRefreshTokenExpire(LocalDateTime.now().plusDays(30));
+        vo.setAccessTokenExpire(LocalDateTime.now().plusSeconds(JwtUtil.accessTokenExpireMs(JwtUtil.getPlatformFromClaims(claims)) / 1000));
+        vo.setRefreshTokenExpire(LocalDateTime.now().plusSeconds(JwtUtil.refreshTokenExpireMs(JwtUtil.getPlatformFromClaims(claims)) / 1000));
 
         log.info("令牌刷新成功");
         return Result.ok(vo);
@@ -211,6 +248,7 @@ public class AuthController {
         }
 
         user.setPassword(PasswordUtil.encode(dto.getNewPassword()));
+        user.setTokenVersion(normalizeTokenVersion(user) + 1);
         userCoreService.updateById(user);
 
         log.info("密码重置成功: phone={}", dto.getPhone());
@@ -233,5 +271,9 @@ public class AuthController {
             return byPhone;
         }
         return userCoreService.getByUsername(account);
+    }
+
+    private int normalizeTokenVersion(User user) {
+        return user == null || user.getTokenVersion() == null || user.getTokenVersion() < 0 ? 0 : user.getTokenVersion();
     }
 }

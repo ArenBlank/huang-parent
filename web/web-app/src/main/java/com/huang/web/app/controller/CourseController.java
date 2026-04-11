@@ -1,7 +1,10 @@
 package com.huang.web.app.controller;
 
+import com.huang.common.constant.RedisConstant;
+import com.huang.common.guard.IdempotentSubmit;
 import com.huang.common.login.LoginUser;
 import com.huang.common.login.LoginUserHolder;
+import com.huang.common.guard.RateLimit;
 import com.huang.common.result.Result;
 import com.huang.web.app.dto.course.CourseEnrollDTO;
 import com.huang.web.app.dto.course.CourseRefundDTO;
@@ -41,13 +44,27 @@ public class CourseController {
     }
 
     @Operation(summary = "课程报名并下单")
+    @IdempotentSubmit(
+            prefix = RedisConstant.APP_COURSE_ENROLL_IDEMPOTENT_PREFIX,
+            key = "#userId + ':' + #dto.scheduleId",
+            ttlSec = RedisConstant.IDEMPOTENT_TTL_SEC,
+            message = "请勿重复提交报名请求"
+    )
+    @RateLimit(
+            prefix = RedisConstant.APP_COURSE_ENROLL_LIMIT_PREFIX,
+            key = "#userId",
+            maxRequests = RedisConstant.SENSITIVE_WRITE_RATE_LIMIT_MAX,
+            windowSec = RedisConstant.SENSITIVE_WRITE_RATE_LIMIT_WINDOW_SEC,
+            message = "报名请求过于频繁，请稍后再试"
+    )
     @PostMapping("/enroll")
     public Result<?> enroll(@Valid @RequestBody CourseEnrollDTO dto) {
         LoginUser loginUser = LoginUserHolder.getLoginUser();
         if (loginUser == null) {
             return Result.fail("未登录");
         }
-        var result = courseLearningBizService.enroll(loginUser.getUserId(), dto);
+        Long userId = loginUser.getUserId();
+        var result = courseLearningBizService.enroll(userId, dto);
         return result == null ? Result.fail("报名失败，排期可能已满或重复报名") : Result.ok(result);
     }
 

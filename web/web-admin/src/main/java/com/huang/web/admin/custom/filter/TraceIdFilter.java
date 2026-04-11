@@ -20,6 +20,7 @@ public class TraceIdFilter extends OncePerRequestFilter {
 
     private static final Logger log = LoggerFactory.getLogger(TraceIdFilter.class);
     private static final String TRACE_ID_HEADER = "X-Trace-Id";
+    private static final String INSTANCE_HEADER = "X-Admin-Instance";
     private static final String MDC_KEY = "traceId";
     private static final String MDC_USER_KEY = "userId";
 
@@ -41,6 +42,7 @@ public class TraceIdFilter extends OncePerRequestFilter {
             MDC.put(MDC_USER_KEY, String.valueOf(userId));
         }
         response.setHeader(TRACE_ID_HEADER, traceId);
+        response.setHeader(INSTANCE_HEADER, "web-admin:" + request.getLocalPort());
         long start = System.currentTimeMillis();
         try {
             filterChain.doFilter(request, response);

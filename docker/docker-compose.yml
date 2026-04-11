@@ -1,41 +1,27 @@
 services:
   mysql:
-    image: mysql:8.0
+    image: mysql:latest
     container_name: mysql-container-huang
     restart: unless-stopped
     command:
-      - --default-authentication-plugin=mysql_native_password
-      - --character-set-server=utf8mb4
-      - --collation-server=utf8mb4_unicode_ci
+      - mysqld
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-root}
-      MYSQL_DATABASE: ${MYSQL_DATABASE:-fitness_platform}
-      TZ: Asia/Shanghai
+      TZ: ${TZ:-Asia/Shanghai}
     ports:
-      - 127.0.0.1:${MYSQL_PORT:-3306}:3306
+      - ${MYSQL_PORT:-3306}:3306
     volumes:
-      - ./mysql/data:/var/lib/mysql
-      - ./mysql/init:/docker-entrypoint-initdb.d:ro
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-p${MYSQL_ROOT_PASSWORD:-root}"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
+      - mysql_data:/var/lib/mysql
 
   redis:
     image: redis:7.2-alpine3.21
     container_name: redis-container-huang
     restart: unless-stopped
-    command: ["redis-server", "--appendonly", "yes"]
+    command: ["--requirepass", "${REDIS_PASSWORD:-root}"]
     ports:
-      - 127.0.0.1:${REDIS_PORT:-6379}:6379
+      - ${REDIS_PORT:-6379}:6379
     volumes:
-      - ./redis/data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 10
+      - redis_data:/data
 
   minio:
     image: minio/minio:latest
@@ -45,27 +31,12 @@ services:
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-root}
       MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-rootroot}
-      TZ: Asia/Shanghai
+      TZ: ${TZ:-Asia/Shanghai}
     ports:
-      - 127.0.0.1:${MINIO_API_PORT:-9000}:9000
-      - 127.0.0.1:${MINIO_CONSOLE_PORT:-9001}:9001
+      - ${MINIO_API_PORT:-9000}:9000
+      - ${MINIO_CONSOLE_PORT:-9001}:9001
     volumes:
-      - ./minio/data:/data
-
-  minio-init:
-    image: minio/mc:latest
-    container_name: minio-init-huang
-    restart: "no"
-    depends_on:
-      - minio
-    entrypoint:
-      - /bin/sh
-      - -c
-      - >
-        until mc alias set local http://minio:9000 ${MINIO_ROOT_USER:-root} ${MINIO_ROOT_PASSWORD:-rootroot};
-        do echo "waiting for minio..."; sleep 2; done;
-        mc mb --ignore-existing local/${MINIO_BUCKET:-lease};
-        exit 0;
+      - minio_data:/data
 
   rabbitmq:
     image: rabbitmq:3.13-management-alpine
@@ -73,11 +44,13 @@ services:
     restart: unless-stopped
     environment:
       RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:-root}
-      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:-rootroot}
-      TZ: Asia/Shanghai
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:-root}
+      TZ: ${TZ:-Asia/Shanghai}
     ports:
-      - 127.0.0.1:${RABBITMQ_AMQP_PORT:-5672}:5672
-      - 127.0.0.1:${RABBITMQ_MANAGEMENT_PORT:-15672}:15672
+      - ${RABBITMQ_AMQP_PORT:-5672}:5672
+      - ${RABBITMQ_MANAGEMENT_PORT:-15672}:15672
+    volumes:
+      - rabbitmq_data:/var/lib/rabbitmq
 
   nginx:
     image: nginx:1.28.2-alpine
@@ -91,13 +64,28 @@ services:
       APP_DOMAIN: ${APP_DOMAIN:-app.localhost}
       ADMIN_DOMAIN: ${ADMIN_DOMAIN:-admin.localhost}
       FILES_DOMAIN: ${FILES_DOMAIN:-files.localhost}
-      HOST_APP_API: ${HOST_APP_API:-host.docker.internal:8081}
+      HOST_APP_API_1: ${HOST_APP_API_1:-host.docker.internal:8081}
+      HOST_APP_API_2: ${HOST_APP_API_2:-host.docker.internal:8082}
       HOST_ADMIN_API: ${HOST_ADMIN_API:-host.docker.internal:8080}
       HOST_MINIO_API: ${HOST_MINIO_API:-host.docker.internal:9000}
-      NGINX_ENVSUBST_FILTER: APP_DOMAIN|ADMIN_DOMAIN|FILES_DOMAIN|HOST_APP_API|HOST_ADMIN_API|HOST_MINIO_API
+      NGINX_ENVSUBST_FILTER: APP_DOMAIN|ADMIN_DOMAIN|FILES_DOMAIN|HOST_APP_API_1|HOST_APP_API_2|HOST_ADMIN_API|HOST_MINIO_API
     ports:
       - 80:80
     volumes:
       - ./nginx/templates:/etc/nginx/templates:ro
       - ../frontend/dist:/usr/share/nginx/admin:ro
       - ../frontend-app/dist:/usr/share/nginx/app:ro
+
+volumes:
+  mysql_data:
+    name: mysql_data
+    external: true
+  redis_data:
+    name: redis_data
+    external: true
+  minio_data:
+    name: minio_data
+    external: true
+  rabbitmq_data:
+    name: rabbitmq_data
+    external: true

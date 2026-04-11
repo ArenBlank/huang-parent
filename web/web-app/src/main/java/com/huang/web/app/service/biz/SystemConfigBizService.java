@@ -2,7 +2,7 @@ package com.huang.web.app.service.biz;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.huang.common.constant.RedisConstant;
-import com.huang.common.redis.RedisCacheSupport;
+import com.huang.common.redis.MultiLevelCacheSupport;
 import com.huang.model.entity.SystemConfig;
 import com.huang.web.app.mapper.SystemConfigMapper;
 import org.springframework.stereotype.Service;
@@ -19,11 +19,11 @@ import java.util.stream.Collectors;
 public class SystemConfigBizService {
 
     private final SystemConfigMapper systemConfigMapper;
-    private final RedisCacheSupport redisCacheSupport;
+    private final MultiLevelCacheSupport multiLevelCacheSupport;
 
-    public SystemConfigBizService(SystemConfigMapper systemConfigMapper, RedisCacheSupport redisCacheSupport) {
+    public SystemConfigBizService(SystemConfigMapper systemConfigMapper, MultiLevelCacheSupport multiLevelCacheSupport) {
         this.systemConfigMapper = systemConfigMapper;
-        this.redisCacheSupport = redisCacheSupport;
+        this.multiLevelCacheSupport = multiLevelCacheSupport;
     }
 
     public Map<String, String> mapByKeys(List<String> keys) {
@@ -42,7 +42,7 @@ public class SystemConfigBizService {
         List<String> redisKeys = orderedKeys.stream()
                 .map(RedisConstant::appSysConfigKey)
                 .toList();
-        List<String> cachedValues = redisCacheSupport.multiGet(redisKeys);
+        List<String> cachedValues = multiLevelCacheSupport.multiGet(redisKeys);
 
         Map<String, String> result = new LinkedHashMap<>();
         List<String> missingKeys = new ArrayList<>();
@@ -71,12 +71,12 @@ public class SystemConfigBizService {
         for (String key : missingKeys) {
             String configValue = dbResult.get(key);
             if (configValue == null) {
-                redisCacheSupport.cacheNull(RedisConstant.appSysConfigKey(key), RedisConstant.CACHE_NULL_TTL_SEC);
+                multiLevelCacheSupport.cacheNull(RedisConstant.appSysConfigKey(key), RedisConstant.CACHE_NULL_TTL_SEC);
             } else {
-                redisCacheSupport.setString(
+                multiLevelCacheSupport.setString(
                         RedisConstant.appSysConfigKey(key),
                         configValue,
-                        redisCacheSupport.ttlWithJitter(RedisConstant.APP_SYS_CONFIG_TTL_SEC, RedisConstant.JITTER_LONG_SEC)
+                        multiLevelCacheSupport.ttlWithJitter(RedisConstant.APP_SYS_CONFIG_TTL_SEC, RedisConstant.JITTER_LONG_SEC)
                 );
                 result.put(key, configValue);
             }

@@ -5,13 +5,18 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.huang.common.constant.RedisConstant;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.connection.RedisConnection;
+import org.springframework.data.redis.core.Cursor;
+import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.ScanOptions;
 import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
 
 import java.time.Duration;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Objects;
 import java.util.Set;
@@ -125,7 +130,7 @@ public class RedisCacheSupport {
             return;
         }
         try {
-            Set<String> keys = stringRedisTemplate.keys(prefix + "*");
+            Set<String> keys = scanKeysByPrefix(prefix);
             if (!CollectionUtils.isEmpty(keys)) {
                 stringRedisTemplate.delete(keys);
             }
@@ -176,6 +181,30 @@ public class RedisCacheSupport {
             log.warn("redis get failed, key={}", key, e);
             return null;
         }
+    }
+
+    private Set<String> scanKeysByPrefix(String prefix) {
+        return stringRedisTemplate.execute((RedisCallback<Set<String>>) connection -> doScan(connection, prefix));
+    }
+
+    private Set<String> doScan(RedisConnection connection, String prefix) {
+        Set<String> keys = new LinkedHashSet<>();
+        ScanOptions options = ScanOptions.scanOptions()
+                .match(prefix + "*")
+                .count(200)
+                .build();
+        try (Cursor<byte[]> cursor = connection.scan(options)) {
+            while (cursor.hasNext()) {
+                byte[] rawKey = cursor.next();
+                String key = stringRedisTemplate.getStringSerializer().deserialize(rawKey);
+                if (key != null) {
+                    keys.add(key);
+                }
+            }
+        } catch (Exception e) {
+            log.warn("redis scan failed, prefix={}", prefix, e);
+        }
+        return keys;
     }
 
     public record CacheValue<T>(boolean found, boolean nullValue, T value) {

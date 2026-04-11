@@ -5,7 +5,7 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.huang.common.constant.BizStatusConstant;
 import com.huang.common.constant.RedisConstant;
-import com.huang.common.redis.RedisCacheSupport;
+import com.huang.common.redis.MultiLevelCacheSupport;
 import com.huang.model.entity.Course;
 import com.huang.model.entity.CourseEnrollment;
 import com.huang.model.entity.CourseSchedule;
@@ -23,8 +23,11 @@ import com.huang.web.app.mapper.PaymentRecordMapper;
 import com.huang.web.app.mapper.RefundRecordMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.interceptor.TransactionAspectSupport;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
@@ -45,7 +48,7 @@ public class CourseLearningBizService {
     private final OrderItemMapper orderItemMapper;
     private final PaymentRecordMapper paymentRecordMapper;
     private final RefundRecordMapper refundRecordMapper;
-    private final RedisCacheSupport redisCacheSupport;
+    private final MultiLevelCacheSupport multiLevelCacheSupport;
 
     public CourseLearningBizService(CourseMapper courseMapper,
                                     CourseScheduleMapper courseScheduleMapper,
@@ -54,7 +57,7 @@ public class CourseLearningBizService {
                                     OrderItemMapper orderItemMapper,
                                     PaymentRecordMapper paymentRecordMapper,
                                     RefundRecordMapper refundRecordMapper,
-                                    RedisCacheSupport redisCacheSupport) {
+                                    MultiLevelCacheSupport multiLevelCacheSupport) {
         this.courseMapper = courseMapper;
         this.courseScheduleMapper = courseScheduleMapper;
         this.courseEnrollmentMapper = courseEnrollmentMapper;
@@ -62,12 +65,12 @@ public class CourseLearningBizService {
         this.orderItemMapper = orderItemMapper;
         this.paymentRecordMapper = paymentRecordMapper;
         this.refundRecordMapper = refundRecordMapper;
-        this.redisCacheSupport = redisCacheSupport;
+        this.multiLevelCacheSupport = multiLevelCacheSupport;
     }
 
     public List<Course> listCourses(Long categoryId) {
         String cacheKey = RedisConstant.appCourseListKey(categoryId);
-        var cached = redisCacheSupport.getJson(cacheKey, new TypeReference<List<Course>>() {});
+        var cached = multiLevelCacheSupport.getJson(cacheKey, new TypeReference<List<Course>>() {});
         if (cached.found()) {
             return cached.nullValue() ? List.of() : cached.value();
         }
@@ -79,10 +82,10 @@ public class CourseLearningBizService {
             wrapper.eq(Course::getCategoryId, categoryId);
         }
         List<Course> courses = courseMapper.selectList(wrapper);
-        redisCacheSupport.setJson(
+        multiLevelCacheSupport.setJson(
                 cacheKey,
                 courses,
-                redisCacheSupport.ttlWithJitter(RedisConstant.APP_COURSE_LIST_TTL_SEC, RedisConstant.JITTER_SHORT_SEC)
+                multiLevelCacheSupport.ttlWithJitter(RedisConstant.APP_COURSE_LIST_TTL_SEC, RedisConstant.JITTER_SHORT_SEC)
         );
         return courses;
     }
@@ -187,6 +190,14 @@ public class CourseLearningBizService {
         result.put("amount", orderInfo.getTotalAmount());
         success = true;
         return result;
+        } catch (DataIntegrityViolationException e) {
+            markCurrentTransactionRollbackOnly();
+            reason = "duplicate_enrollment_fallback";
+            log.info("COURSE_ENROLL duplicate fallback triggered, userId={} scheduleId={} message={}",
+                    userId,
+                    dto == null ? null : dto.getScheduleId(),
+                    e.getMessage());
+            return null;
         } finally {
             long costMs = System.currentTimeMillis() - start;
             log.info("COURSE_ENROLL userId={} scheduleId={} success={} enrollmentId={} reason={} costMs={}",
@@ -367,5 +378,11 @@ public class CourseLearningBizService {
     private String genNo(String prefix) {
         return prefix + LocalDateTime.now().toString().replace("-", "").replace(":", "").replace("T", "").replace(".", "")
                 + UUID.randomUUID().toString().replace("-", "").substring(0, 6);
+    }
+
+    private void markCurrentTransactionRollbackOnly() {
+        if (TransactionSynchronizationManager.isActualTransactionActive()) {
+            TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
+        }
     }
 }

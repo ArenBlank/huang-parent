@@ -3,12 +3,12 @@ name: CI
 on:
   workflow_dispatch:
   push:
-    branches: [ "**" ]
+    branches: ["**"]
     paths-ignore:
       - "**/*.md"
       - "doc/**"
   pull_request:
-    branches: [ "**" ]
+    branches: ["**"]
     paths-ignore:
       - "**/*.md"
       - "doc/**"
@@ -25,11 +25,19 @@ jobs:
         uses: actions/setup-java@v4
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: "17"
           cache: maven
 
-      - name: Compile modules
-        run: mvn -B -ntp -pl web/web-admin,web/web-app -am -DskipTests compile
+      - name: Package modules
+        run: mvn -B -ntp -pl web/web-admin,web/web-app -am -DskipTests package
+
+      - name: Upload jars
+        uses: actions/upload-artifact@v4
+        with:
+          name: packaged-jars
+          path: |
+            web/web-admin/target/*.jar
+            web/web-app/target/*.jar
 
   api-core-regression:
     runs-on: ubuntu-latest
@@ -128,11 +136,14 @@ jobs:
 
       - name: Run Postman core regression
         run: |
+          mkdir -p reports
           newman run tests/fitness-platform-core.postman_collection.json \
             -e tests/local.postman_environment.json \
             --working-dir "$GITHUB_WORKSPACE" \
             --env-var "videoFilePath=tests/assets/demo.mp4" \
-            --reporters cli
+            --reporters cli,junit,json \
+            --reporter-junit-export reports/core-junit.xml \
+            --reporter-json-export reports/core-report.json
 
       - name: Cleanup test data
         if: always()
@@ -156,7 +167,162 @@ jobs:
             admin.log
             app.log
 
+      - name: Upload core regression reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: core-regression-reports
+          path: reports/*
+
       - name: Cleanup MinIO
         if: always()
         run: |
           docker rm -f ci-minio || true
+
+  dual-instance-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1 -proot"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=20
+      redis:
+        image: redis:7.2-alpine
+        ports:
+          - 6379:6379
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+          cache: maven
+
+      - name: Install tools
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y mysql-client curl
+
+      - name: Init database
+        run: |
+          mysql -h 127.0.0.1 -P 3306 -uroot -proot -e "CREATE DATABASE IF NOT EXISTS fitness_platform DEFAULT CHARSET utf8mb4;"
+          mysql -h 127.0.0.1 -P 3306 -uroot -proot fitness_platform < fitness_platform.sql
+          mysql -h 127.0.0.1 -P 3306 -uroot -proot fitness_platform < tests/reset_test_data.sql
+
+      - name: Build
+        run: mvn -B -ntp -pl web/web-admin,web/web-app -am -DskipTests compile
+
+      - name: Install common/model to local maven repo
+        run: mvn -B -ntp -pl common,model -am -DskipTests install
+
+      - name: Start admin and dual app instances
+        run: |
+          nohup mvn -B -ntp -f web/web-admin/pom.xml -DskipTests spring-boot:run -Dspring-boot.run.arguments="--spring.data.redis.password=" > admin.log 2>&1 &
+          nohup mvn -B -ntp -f web/web-app/pom.xml -DskipTests spring-boot:run -Dspring-boot.run.arguments="--server.port=8081 --spring.data.redis.password=" > app-8081.log 2>&1 &
+          nohup mvn -B -ntp -f web/web-app/pom.xml -DskipTests spring-boot:run -Dspring-boot.run.arguments="--server.port=8082 --spring.data.redis.password=" > app-8082.log 2>&1 &
+
+      - name: Start nginx upstream
+        run: |
+          docker run -d --name ci-nginx --network host \
+            -v "$GITHUB_WORKSPACE/deploy/nginx/fitness.conf:/etc/nginx/conf.d/default.conf:ro" \
+            nginx:1.27-alpine
+
+      - name: Wait services up
+        run: |
+          for i in {1..180}; do
+            if curl -fsS http://127.0.0.1:8080/v3/api-docs >/dev/null \
+              && curl -fsS http://127.0.0.1:8081/v3/api-docs >/dev/null \
+              && curl -fsS http://127.0.0.1:8082/v3/api-docs >/dev/null \
+              && curl -fsS http://127.0.0.1/app/banner/list -H "Host: app.localhost" >/dev/null; then
+              echo "dual instance stack is up"
+              exit 0
+            fi
+            if (( i % 20 == 0 )); then
+              echo "still waiting... ${i}"
+              tail -n 30 admin.log || true
+              tail -n 30 app-8081.log || true
+              tail -n 30 app-8082.log || true
+              docker logs ci-nginx --tail 30 || true
+            fi
+            sleep 2
+          done
+          echo "services not ready in time"
+          exit 1
+
+      - name: Verify round robin
+        run: |
+          pwsh -ExecutionPolicy Bypass -File tests/check-dual-app-routing.ps1 \
+            -Url "http://localhost/app/banner/list" \
+            -HostHeader "app.localhost" \
+            -Requests 12 \
+            -MinDistinctInstances 2
+
+      - name: Acquire app token
+        run: |
+          LOGIN_JSON=$(curl -fsS http://127.0.0.1/app/auth/login \
+            -H "Host: app.localhost" \
+            -H "Content-Type: application/json" \
+            -d '{"account":"root","password":"root","loginType":"password"}')
+          APP_TOKEN=$(python3 -c "import json,sys; print(json.loads(sys.argv[1])['data']['accessToken'])" "$LOGIN_JSON")
+          echo "APP_TOKEN=$APP_TOKEN" >> "$GITHUB_ENV"
+
+      - name: Verify JWT across instances
+        run: |
+          pwsh -ExecutionPolicy Bypass -File tests/check-dual-app-routing.ps1 \
+            -Url "http://localhost/app/course/my/enrollments" \
+            -HostHeader "app.localhost" \
+            -Token "$APP_TOKEN" \
+            -Requests 6 \
+            -MinDistinctInstances 2
+
+      - name: Run concurrent enrollment smoke
+        run: |
+          BODY='{"scheduleId":2}'
+          pwsh -ExecutionPolicy Bypass -File tests/invoke-concurrent-requests.ps1 \
+            -Url "http://localhost/app/course/enroll" \
+            -HostHeader "app.localhost" \
+            -Body "$BODY" \
+            -Token "$APP_TOKEN" \
+            -Concurrency 6
+
+      - name: Assert enrollment results in database
+        run: |
+          ENROLL_COUNT=$(mysql -h 127.0.0.1 -P 3306 -uroot -proot -N -e "SELECT COUNT(*) FROM fitness_platform.course_enrollment WHERE user_id = 21 AND schedule_id = 2 AND is_deleted = 0;")
+          BOOKED_COUNT=$(mysql -h 127.0.0.1 -P 3306 -uroot -proot -N -e "SELECT booked_count FROM fitness_platform.course_schedule WHERE id = 2;")
+          echo "enroll_count=$ENROLL_COUNT"
+          echo "booked_count=$BOOKED_COUNT"
+          test "$ENROLL_COUNT" = "1"
+          test "$BOOKED_COUNT" = "1"
+
+      - name: Capture nginx logs
+        if: always()
+        run: docker logs ci-nginx > nginx.log 2>&1 || true
+
+      - name: Upload smoke logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dual-instance-smoke-logs
+          path: |
+            admin.log
+            app-8081.log
+            app-8082.log
+            nginx.log
+
+      - name: Cleanup stack
+        if: always()
+        run: |
+          docker rm -f ci-nginx || true
+          mysql -h 127.0.0.1 -P 3306 -uroot -proot fitness_platform < tests/reset_test_data.sql || true

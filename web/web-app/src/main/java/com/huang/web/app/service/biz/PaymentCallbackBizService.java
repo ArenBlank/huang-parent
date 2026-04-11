@@ -2,6 +2,8 @@ package com.huang.web.app.service.biz;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.huang.common.constant.BizStatusConstant;
+import com.huang.common.constant.RedisConstant;
+import com.huang.common.redis.RedisGuardSupport;
 import com.huang.model.entity.CoachBooking;
 import com.huang.model.entity.CourseEnrollment;
 import com.huang.model.entity.OrderInfo;
@@ -34,25 +36,30 @@ public class PaymentCallbackBizService {
     private final CourseEnrollmentMapper courseEnrollmentMapper;
     private final PaymentCallbackLogMapper paymentCallbackLogMapper;
     private final PaymentSignVerifier paymentSignVerifier;
+    private final RedisGuardSupport redisGuardSupport;
 
     public PaymentCallbackBizService(PaymentRecordMapper paymentRecordMapper,
                                      OrderInfoMapper orderInfoMapper,
                                      CoachBookingMapper coachBookingMapper,
                                      CourseEnrollmentMapper courseEnrollmentMapper,
                                      PaymentCallbackLogMapper paymentCallbackLogMapper,
-                                     PaymentSignVerifier paymentSignVerifier) {
+                                     PaymentSignVerifier paymentSignVerifier,
+                                     RedisGuardSupport redisGuardSupport) {
         this.paymentRecordMapper = paymentRecordMapper;
         this.orderInfoMapper = orderInfoMapper;
         this.coachBookingMapper = coachBookingMapper;
         this.courseEnrollmentMapper = courseEnrollmentMapper;
         this.paymentCallbackLogMapper = paymentCallbackLogMapper;
         this.paymentSignVerifier = paymentSignVerifier;
+        this.redisGuardSupport = redisGuardSupport;
     }
 
     @Transactional(rollbackFor = Exception.class)
     public String handleCallback(PayCallbackDTO dto, String payload) {
         long start = System.currentTimeMillis();
         String result = "fail";
+        String callbackGuardKey = null;
+        String callbackLockToken = null;
         try {
             PaymentCallbackLog log = baseLog(dto, payload);
 
@@ -80,6 +87,14 @@ public class PaymentCallbackBizService {
             }
 
             log.setOrderId(paymentRecord.getOrderId());
+            callbackGuardKey = RedisConstant.appPayCallbackPayNoGuardKey(paymentRecord.getPayNo());
+            callbackLockToken = redisGuardSupport.tryAcquireLock(callbackGuardKey, RedisConstant.PAY_CALLBACK_GUARD_TTL_SEC);
+            if (callbackLockToken == null) {
+                log.setProcessResult("IN_FLIGHT");
+                paymentCallbackLogMapper.insert(log);
+                result = "success";
+                return result;
+            }
             if (!"SUCCESS".equalsIgnoreCase(dto.getStatus())) {
                 log.setProcessResult("IGNORED");
                 log.setErrorMessage("STATUS_NOT_SUCCESS");
@@ -138,6 +153,7 @@ public class PaymentCallbackBizService {
                     dto == null ? null : dto.getStatus(),
                     result,
                     costMs);
+            redisGuardSupport.releaseLock(callbackGuardKey, callbackLockToken);
         }
     }
 

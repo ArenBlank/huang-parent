@@ -15,6 +15,7 @@ CREATE TABLE IF NOT EXISTS user (
   birth_date DATE DEFAULT NULL,
   status TINYINT NOT NULL DEFAULT 1,
   user_type VARCHAR(20) NOT NULL DEFAULT 'member',
+  token_version INT NOT NULL DEFAULT 0,
   create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   is_deleted TINYINT NOT NULL DEFAULT 0,
@@ -380,6 +381,24 @@ CREATE TABLE IF NOT EXISTS payment_callback_log (
   KEY idx_pay_callback_time (notified_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+CREATE TABLE IF NOT EXISTS task_run_log (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  task_code VARCHAR(64) NOT NULL,
+  task_name VARCHAR(128) NOT NULL,
+  trigger_mode VARCHAR(32) NOT NULL,
+  run_status VARCHAR(32) NOT NULL,
+  instance_id VARCHAR(64) DEFAULT NULL,
+  started_at DATETIME NOT NULL,
+  finished_at DATETIME DEFAULT NULL,
+  duration_ms BIGINT DEFAULT NULL,
+  affected_count INT DEFAULT NULL,
+  message VARCHAR(500) DEFAULT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  KEY idx_task_run_code_started (task_code, started_at),
+  KEY idx_task_run_status_started (run_status, started_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 CREATE TABLE IF NOT EXISTS banner (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
   title VARCHAR(100) NOT NULL,
@@ -457,7 +476,9 @@ INSERT INTO permission (permission_name, permission_code, module, status) VALUES
 ('User Role', 'user:role', 'user', 1),
 ('Refund Audit', 'refund:audit', 'payment', 1),
 ('Pay Callback Audit', 'pay:callback:audit', 'payment', 1),
-('Operation Log Read', 'operation:log:read', 'system', 1);
+('Operation Log Read', 'operation:log:read', 'system', 1),
+('Task Run Read', 'task:run:read', 'system', 1),
+('Task Run Trigger', 'task:run:trigger', 'system', 1);
 
 INSERT IGNORE INTO role_permission (role_id, permission_id)
 SELECT r.id, p.id FROM role r CROSS JOIN permission p WHERE r.role_code = 'ADMIN';
@@ -468,13 +489,13 @@ JOIN permission p ON p.permission_code IN (
   'banner:manage', 'notice:manage', 'system:config',
   'video:asset', 'video:upload', 'video:status', 'video:bind',
   'course:create', 'course:update', 'course:publish', 'course:schedule',
-  'operation:log:read'
+  'operation:log:read', 'task:run:read', 'task:run:trigger'
 ) WHERE r.role_code = 'OPS_ADMIN';
 
 INSERT IGNORE INTO role_permission (role_id, permission_id)
 SELECT r.id, p.id FROM role r
 JOIN permission p ON p.permission_code IN (
-  'coach:apply:audit', 'refund:audit', 'pay:callback:audit', 'operation:log:read'
+  'coach:apply:audit', 'refund:audit', 'pay:callback:audit', 'operation:log:read', 'task:run:read'
 ) WHERE r.role_code = 'AUDIT_ADMIN';
 
 INSERT IGNORE INTO role_course_category_scope (role_id, category_id)
@@ -501,7 +522,8 @@ INSERT IGNORE INTO user (id, username, password, nickname, email, phone, gender,
 
 INSERT IGNORE INTO user (id, username, password, nickname, email, phone, gender, birth_date, status, user_type) VALUES
 (21, 'root', 'root', 'Test Member', 'root@fitness.local', '13800000101', 1, '2000-01-01', 1, 'member'),
-(22, 'root_admin', 'root', 'Test Admin', 'root.admin@fitness.local', '13800000102', 1, '1990-01-01', 1, 'admin');
+(22, 'root_admin', 'root', 'Test Admin', 'root.admin@fitness.local', '13800000102', 1, '1990-01-01', 1, 'admin'),
+(101, 'root_member', 'root', 'Regression Member', 'root.member@fitness.local', '13800000103', 1, '2000-06-01', 1, 'member');
 
 INSERT IGNORE INTO user_role (id, user_id, role_id) VALUES
 (1, 1, 1),
@@ -520,6 +542,9 @@ SELECT 21, id FROM role WHERE role_code = 'MEMBER';
 
 INSERT IGNORE INTO user_role (user_id, role_id)
 SELECT 22, id FROM role WHERE role_code = 'ADMIN';
+
+INSERT IGNORE INTO user_role (user_id, role_id)
+SELECT 101, id FROM role WHERE role_code = 'MEMBER';
 
 INSERT IGNORE INTO coach_profile (id, user_id, bio, expertise, years, price, rating, cert_status, status) VALUES
 (1, 2, '国家职业健身教练，擅长减脂增肌与动作矫正', '减脂,增肌,力量训练', 5, 199.00, 4.80, 1, 1);

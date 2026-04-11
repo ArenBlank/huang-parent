@@ -2,7 +2,7 @@ package com.huang.web.admin.service.biz;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.huang.common.constant.RedisConstant;
-import com.huang.common.redis.RedisCacheSupport;
+import com.huang.common.redis.MultiLevelCacheSupport;
 import com.huang.model.entity.Notice;
 import com.huang.web.admin.dto.notice.NoticeUpsertDTO;
 import com.huang.web.admin.mapper.NoticeMapper;
@@ -16,11 +16,11 @@ import java.util.List;
 public class AdminNoticeBizService {
 
     private final NoticeMapper noticeMapper;
-    private final RedisCacheSupport redisCacheSupport;
+    private final MultiLevelCacheSupport multiLevelCacheSupport;
 
-    public AdminNoticeBizService(NoticeMapper noticeMapper, RedisCacheSupport redisCacheSupport) {
+    public AdminNoticeBizService(NoticeMapper noticeMapper, MultiLevelCacheSupport multiLevelCacheSupport) {
         this.noticeMapper = noticeMapper;
-        this.redisCacheSupport = redisCacheSupport;
+        this.multiLevelCacheSupport = multiLevelCacheSupport;
     }
 
     public List<Notice> list(Integer status) {
@@ -94,6 +94,6 @@ public class AdminNoticeBizService {
     }
 
     private void clearNoticeCaches() {
-        redisCacheSupport.deleteByPrefix(RedisConstant.APP_NOTICE_PUBLISHED_PREFIX);
+        multiLevelCacheSupport.sharedEvictByPrefix(RedisConstant.APP_NOTICE_PUBLISHED_PREFIX);
     }
 }

@@ -3,11 +3,19 @@
 ## 1. 准备
 - 确保中间件与服务已启动：
   - admin: `http://localhost:8080`
-  - app: `http://localhost:8081`
+  - app-1: `http://localhost:8081`
+  - app-2: `http://localhost:8082`
+  - nginx app entry: `http://app.localhost`
+- 如果本机还没配置 `app.localhost` / `admin.localhost` 到 `127.0.0.1`：
+  - 辅助脚本可直接走 `http://localhost`，再带 `Host` 头模拟域名转发
+  - 也可以在系统 `hosts` 中添加
+    - `127.0.0.1 app.localhost`
+    - `127.0.0.1 admin.localhost`
+    - `127.0.0.1 files.localhost`
 - 默认使用仓库内测试文件：`tests/assets/demo.mp4`
 - 如需改为本机文件，修改 `tests/local.postman_environment.json` 中的 `videoFilePath`。
 - 默认账号变量：
-  - 用户端：`account=member_chen`，`password=$2a$10$demoMemberPasswordHash`
+  - 用户端：`account=root_member`，`password=root`
   - 管理端：`adminAccount=admin`，`adminPassword=$2a$10$demoAdminPasswordHash`
   - 运营管理员：`opsAdminAccount=ops_admin`，`opsAdminPassword=ops_admin_123`
   - 审核管理员：`auditAdminAccount=audit_admin`，`auditAdminPassword=audit_admin_123`
@@ -97,7 +105,33 @@ UPDATE coach_schedule SET booked_count = 0, status = 1 WHERE id IN (1,2);
 - 上传报文件不存在：
   - 检查 `videoFilePath` 是否有效（本机绝对路径或 `tests/assets/demo.mp4`）。
 
-
-
-
+## 7. 双实例与并发辅助脚本
+- 轮询验证双实例是否生效：
+```powershell
+powershell -ExecutionPolicy Bypass -File tests/check-dual-app-routing.ps1
+```
+- 如果未配置本机 `hosts`，上面的默认参数已可直接使用；如需显式指定：
+```powershell
+powershell -ExecutionPolicy Bypass -File tests/check-dual-app-routing.ps1 `
+  -Url "http://localhost/app/banner/list" `
+  -HostHeader "app.localhost"
+```
+- 如果想验证受保护接口跨实例访问，可直接附带 token，并要求至少命中两个实例：
+```powershell
+powershell -ExecutionPolicy Bypass -File tests/check-dual-app-routing.ps1 `
+  -Url "http://localhost/app/course/my/enrollments" `
+  -HostHeader "app.localhost" `
+  -Token "<jwt>" `
+  -MinDistinctInstances 2
+```
+- 通用并发请求脚本：
+```powershell
+$body = '{"scheduleId":1}'
+powershell -ExecutionPolicy Bypass -File tests/invoke-concurrent-requests.ps1 `
+  -Url "http://localhost/app/course/enroll" `
+  -HostHeader "app.localhost" `
+  -Body $body `
+  -Token "<jwt>" `
+  -Concurrency 10
+```
 

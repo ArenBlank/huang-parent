@@ -3,13 +3,11 @@ package com.huang.web.admin.service.biz;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.huang.common.login.LoginUser;
 import com.huang.common.login.LoginUserHolder;
+import com.huang.common.utils.RequestIpUtil;
 import com.huang.model.entity.OperationLog;
 import com.huang.web.admin.mapper.OperationLogMapper;
-import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.web.context.request.RequestContextHolder;
-import org.springframework.web.context.request.ServletRequestAttributes;
 
 import java.util.List;
 
@@ -33,7 +31,7 @@ public class AdminOperationLogBizService {
             logRow.setModule(trim(module, 50));
             logRow.setAction(trim(action, 50));
             logRow.setDetail(trim(detail, 500));
-            logRow.setIp(trim(resolveClientIp(), 50));
+            logRow.setIp(trim(RequestIpUtil.resolveClientIp(), 50));
             logRow.setSuccess(success ? 1 : 0);
             operationLogMapper.insert(logRow);
         } catch (Exception ex) {
@@ -59,20 +57,6 @@ public class AdminOperationLogBizService {
             wrapper.eq(OperationLog::getOperatorId, operatorId);
         }
         return operationLogMapper.selectList(wrapper);
-    }
-
-    private String resolveClientIp() {
-        ServletRequestAttributes attributes = (ServletRequestAttributes) RequestContextHolder.getRequestAttributes();
-        if (attributes == null) {
-            return "N/A";
-        }
-        HttpServletRequest request = attributes.getRequest();
-        String xff = request.getHeader("X-Forwarded-For");
-        if (xff != null && !xff.isBlank()) {
-            String[] parts = xff.split(",");
-            return parts[0].trim();
-        }
-        return request.getRemoteAddr();
     }
 
     private String trim(String value, int maxLength) {

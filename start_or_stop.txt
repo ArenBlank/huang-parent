@@ -1,21 +1,27 @@
 ﻿# 启动外部中间件容器
 # 如果你的 Docker Desktop 容器名不同，请自行替换
-docker start mysql-container-huang redis-container-huang minio-container-huang nginx-container-huang rabbitmq-container-huang
+cd docker
+docker compose up -d
+
+# MinIO bucket 推荐用一次性容器初始化，不再保留 exited 的 minio-init 服务
+docker run --rm --entrypoint /bin/sh --network container:minio-container-huang minio/mc:latest -c "until mc alias set local http://127.0.0.1:9000 root rootroot; do sleep 2; done; mc mb --ignore-existing local/lease"
 
 docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
 
 # 停止外部中间件容器
-docker stop mysql-container-huang redis-container-huang minio-container-huang nginx-container-huang rabbitmq-container-huang
+cd docker
+docker compose stop
 
 # 先构建公共模块（当 model/common 有改动时执行）
 mvn -pl common,model -am -DskipTests install
 
 # 从子模块 pom 启动 admin/app，避免在父工程执行 spring-boot:run 报错
-Start-Process powershell -ArgumentList '-NoExit','-Command','mvn -f web/web-admin/pom.xml spring-boot:run'
-Start-Process powershell -ArgumentList '-NoExit','-Command','mvn -f web/web-app/pom.xml spring-boot:run'
+Start-Process powershell -ArgumentList '-NoExit','-Command','$env:ADMIN_PORT="8080"; mvn -f web/web-admin/pom.xml spring-boot:run'
+Start-Process powershell -ArgumentList '-NoExit','-Command','$env:APP_PORT="8081"; mvn -f web/web-app/pom.xml spring-boot:run'
+Start-Process powershell -ArgumentList '-NoExit','-Command','$env:APP_PORT="8082"; mvn -f web/web-app/pom.xml spring-boot:run'
 
-# 按端口 8080/8081 快速关闭 admin/app
-Get-NetTCPConnection -LocalPort 8080,8081 -State Listen -ErrorAction SilentlyContinue |
+# 按端口 8080/8081/8082 快速关闭 admin/app
+Get-NetTCPConnection -LocalPort 8080,8081,8082 -State Listen -ErrorAction SilentlyContinue |
 Select-Object -ExpandProperty OwningProcess -Unique |
 ForEach-Object { Stop-Process -Id $_ -Force }
 

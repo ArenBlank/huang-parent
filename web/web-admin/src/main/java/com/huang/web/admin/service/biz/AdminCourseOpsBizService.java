@@ -2,7 +2,7 @@ package com.huang.web.admin.service.biz;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.huang.common.constant.RedisConstant;
-import com.huang.common.redis.RedisCacheSupport;
+import com.huang.common.redis.MultiLevelCacheSupport;
 import com.huang.model.entity.Course;
 import com.huang.model.entity.CourseSchedule;
 import com.huang.web.admin.dto.course.CourseScheduleCreateDTO;
@@ -21,16 +21,16 @@ public class AdminCourseOpsBizService {
     private final CourseMapper courseMapper;
     private final CourseScheduleMapper courseScheduleMapper;
     private final AdminPermissionScopeService adminPermissionScopeService;
-    private final RedisCacheSupport redisCacheSupport;
+    private final MultiLevelCacheSupport multiLevelCacheSupport;
 
     public AdminCourseOpsBizService(CourseMapper courseMapper,
                                     CourseScheduleMapper courseScheduleMapper,
                                     AdminPermissionScopeService adminPermissionScopeService,
-                                    RedisCacheSupport redisCacheSupport) {
+                                    MultiLevelCacheSupport multiLevelCacheSupport) {
         this.courseMapper = courseMapper;
         this.courseScheduleMapper = courseScheduleMapper;
         this.adminPermissionScopeService = adminPermissionScopeService;
-        this.redisCacheSupport = redisCacheSupport;
+        this.multiLevelCacheSupport = multiLevelCacheSupport;
     }
 
     public List<Course> listCourses(Integer status, Long categoryId) {
@@ -113,6 +113,7 @@ public class AdminCourseOpsBizService {
         schedule.setBookedCount(0);
         schedule.setStatus(dto.getStatus());
         courseScheduleMapper.insert(schedule);
+        clearCourseListCaches();
         return schedule.getId();
     }
 
@@ -127,7 +128,11 @@ public class AdminCourseOpsBizService {
             adminPermissionScopeService.assertCourseCategoryAccess(course.getCategoryId(), "course:schedule", "scheduleId=" + id);
         }
         schedule.setStatus(status);
-        return courseScheduleMapper.updateById(schedule) > 0;
+        boolean updated = courseScheduleMapper.updateById(schedule) > 0;
+        if (updated) {
+            clearCourseListCaches();
+        }
+        return updated;
     }
 
     private void fillCourse(Course course, CourseUpsertDTO dto) {
@@ -142,6 +147,6 @@ public class AdminCourseOpsBizService {
     }
 
     private void clearCourseListCaches() {
-        redisCacheSupport.deleteByPrefix(RedisConstant.APP_COURSE_LIST_PREFIX);
+        multiLevelCacheSupport.sharedEvictByPrefix(RedisConstant.APP_COURSE_LIST_PREFIX);
     }
 }

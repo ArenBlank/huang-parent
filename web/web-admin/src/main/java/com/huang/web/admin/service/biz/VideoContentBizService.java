@@ -3,7 +3,7 @@ package com.huang.web.admin.service.biz;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.huang.common.constant.RedisConstant;
 import com.huang.common.minio.MinioProperties;
-import com.huang.common.redis.RedisCacheSupport;
+import com.huang.common.redis.MultiLevelCacheSupport;
 import com.huang.model.entity.TrainingPlanItem;
 import com.huang.model.entity.VideoAsset;
 import com.huang.web.admin.dto.video.VideoAssetUpsertDTO;
@@ -36,18 +36,18 @@ public class VideoContentBizService {
     private final TrainingPlanItemMapper trainingPlanItemMapper;
     private final MinioClient minioClient;
     private final MinioProperties minioProperties;
-    private final RedisCacheSupport redisCacheSupport;
+    private final MultiLevelCacheSupport multiLevelCacheSupport;
 
     public VideoContentBizService(VideoAssetMapper videoAssetMapper,
                                   TrainingPlanItemMapper trainingPlanItemMapper,
                                   MinioClient minioClient,
                                   MinioProperties minioProperties,
-                                  RedisCacheSupport redisCacheSupport) {
+                                  MultiLevelCacheSupport multiLevelCacheSupport) {
         this.videoAssetMapper = videoAssetMapper;
         this.trainingPlanItemMapper = trainingPlanItemMapper;
         this.minioClient = minioClient;
         this.minioProperties = minioProperties;
-        this.redisCacheSupport = redisCacheSupport;
+        this.multiLevelCacheSupport = multiLevelCacheSupport;
     }
 
     public List<VideoAsset> list(Integer status, String keyword) {
@@ -258,7 +258,7 @@ public class VideoContentBizService {
 
     private void clearPlanDetailCache(Long planId) {
         if (planId != null) {
-            redisCacheSupport.safeDelete(RedisConstant.appPlanDetailStaticKey(planId));
+            multiLevelCacheSupport.sharedEvict(RedisConstant.appPlanDetailStaticKey(planId));
         }
     }
 }

@@ -1,3 +1,8 @@
+upstream app_backend {
+    server ${HOST_APP_API_1};
+    server ${HOST_APP_API_2};
+}
+
 server {
     listen 80 default_server;
     listen [::]:80 default_server;
@@ -13,7 +18,7 @@ server {
     }
 
     location /app/ {
-        proxy_pass http://${HOST_APP_API}/app/;
+        proxy_pass http://app_backend/app/;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;

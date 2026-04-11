@@ -2,7 +2,7 @@ package com.huang.web.admin.service.biz;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.huang.common.constant.RedisConstant;
-import com.huang.common.redis.RedisCacheSupport;
+import com.huang.common.redis.MultiLevelCacheSupport;
 import com.huang.model.entity.Banner;
 import com.huang.web.admin.dto.banner.BannerUpsertDTO;
 import com.huang.web.admin.mapper.BannerMapper;
@@ -15,11 +15,11 @@ import java.util.List;
 public class AdminBannerBizService {
 
     private final BannerMapper bannerMapper;
-    private final RedisCacheSupport redisCacheSupport;
+    private final MultiLevelCacheSupport multiLevelCacheSupport;
 
-    public AdminBannerBizService(BannerMapper bannerMapper, RedisCacheSupport redisCacheSupport) {
+    public AdminBannerBizService(BannerMapper bannerMapper, MultiLevelCacheSupport multiLevelCacheSupport) {
         this.bannerMapper = bannerMapper;
-        this.redisCacheSupport = redisCacheSupport;
+        this.multiLevelCacheSupport = multiLevelCacheSupport;
     }
 
     public List<Banner> list(Integer status) {
@@ -87,6 +87,6 @@ public class AdminBannerBizService {
     }
 
     private void clearBannerCache() {
-        redisCacheSupport.safeDelete(RedisConstant.APP_BANNER_ACTIVE_KEY);
+        multiLevelCacheSupport.sharedEvict(RedisConstant.APP_BANNER_ACTIVE_KEY);
     }
 }

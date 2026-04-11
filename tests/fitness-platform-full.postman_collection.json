@@ -14,8 +14,11 @@
                                                   "const now = new Date();",
                                                   "const currentDate = now.toISOString().slice(0, 10);",
                                                   "const checkinDate = new Date(now.getTime() + 86400000).toISOString().slice(0, 10);",
+                                                  "const profileNonce = now.getTime().toString().slice(-8);",
                                                   "pm.collectionVariables.set(\u0027currentDate\u0027, currentDate);",
-                                                  "pm.collectionVariables.set(\u0027checkinDate\u0027, checkinDate);"
+                                                  "pm.collectionVariables.set(\u0027checkinDate\u0027, checkinDate);",
+                                                  "pm.collectionVariables.set(\u0027autotestPhone\u0027, \u0027139\u0027 + profileNonce);",
+                                                  "pm.collectionVariables.set(\u0027autotestEmail\u0027, \u0027autotest+\u0027 + profileNonce + \u0027@example.com\u0027);"
                                               ]
                                  }
                   }
@@ -3936,7 +3939,7 @@
                                                 ],
                                      "body":  {
                                                   "mode":  "raw",
-                                                  "raw":  "{\"nickname\":\"AutoNick\",\"email\":\"autotest@example.com\",\"phone\":\"13800138000\"}"
+                                                  "raw":  "{\"nickname\":\"AutoNick\",\"email\":\"{{autotestEmail}}\",\"phone\":\"{{autotestPhone}}\"}"
                                               },
                                      "url":  "{{appBaseUrl}}/app/profile/info"
                                  },
@@ -4190,5 +4193,4 @@
                      }
                  ]
 }
-
 

@@ -5,6 +5,7 @@ import com.huang.common.login.LoginUser;
 import com.huang.common.login.LoginUserHolder;
 import com.huang.common.result.ResultCodeEnum;
 import com.huang.common.utils.JwtUtil;
+import com.huang.model.entity.User;
 import com.huang.web.admin.constant.AdminRoleCode;
 import com.huang.web.admin.custom.annotation.RequireAdminPermission;
 import com.huang.web.admin.custom.annotation.RequireAdminRole;
@@ -12,6 +13,7 @@ import com.huang.web.admin.custom.config.AdminPermissionProperties;
 import com.huang.web.admin.service.biz.AdminOperationLogBizService;
 import com.huang.web.admin.service.core.AdminPermissionDbService;
 import com.huang.web.admin.service.core.AdminRoleCoreService;
+import com.huang.web.admin.service.UserService;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -22,6 +24,7 @@ import org.springframework.web.servlet.HandlerInterceptor;
 
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.Objects;
 import java.util.Set;
 
 @Component
@@ -31,15 +34,18 @@ public class AuthenticationInterceptor implements HandlerInterceptor {
     private final AdminPermissionProperties adminPermissionProperties;
     private final AdminOperationLogBizService adminOperationLogBizService;
     private final AdminPermissionDbService adminPermissionDbService;
+    private final UserService userService;
 
     public AuthenticationInterceptor(AdminRoleCoreService adminRoleCoreService,
                                      AdminPermissionProperties adminPermissionProperties,
                                      AdminOperationLogBizService adminOperationLogBizService,
-                                     AdminPermissionDbService adminPermissionDbService) {
+                                     AdminPermissionDbService adminPermissionDbService,
+                                     UserService userService) {
         this.adminRoleCoreService = adminRoleCoreService;
         this.adminPermissionProperties = adminPermissionProperties;
         this.adminOperationLogBizService = adminOperationLogBizService;
         this.adminPermissionDbService = adminPermissionDbService;
+        this.userService = userService;
     }
 
     @Override
@@ -63,6 +69,17 @@ public class AuthenticationInterceptor implements HandlerInterceptor {
         Long userId = claims.get("userId", Long.class);
         String username = claims.get("username", String.class);
         if (userId == null || !StringUtils.hasText(username)) {
+            throw new HuangException(ResultCodeEnum.TOKEN_INVALID);
+        }
+
+        User user = userService.getById(userId);
+        if (user == null || user.getStatus() == null || user.getStatus() != 1) {
+            throw new HuangException(ResultCodeEnum.ADMIN_LOGIN_AUTH);
+        }
+        if (!"admin".equalsIgnoreCase(user.getUserType())) {
+            throw new HuangException(ResultCodeEnum.ADMIN_ACCESS_FORBIDDEN);
+        }
+        if (!Objects.equals(normalizeTokenVersion(user.getTokenVersion()), JwtUtil.getTokenVersionFromClaims(claims))) {
             throw new HuangException(ResultCodeEnum.TOKEN_INVALID);
         }
 
@@ -131,5 +148,9 @@ public class AuthenticationInterceptor implements HandlerInterceptor {
         String method = request.getMethod();
         String detailText = "method=" + method + ", uri=" + uri + (detail == null ? "" : (", " + detail));
         adminOperationLogBizService.record("authz", action, detailText, false);
+    }
+
+    private int normalizeTokenVersion(Integer tokenVersion) {
+        return tokenVersion == null || tokenVersion < 0 ? 0 : tokenVersion;
     }
 }

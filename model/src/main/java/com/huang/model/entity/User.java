@@ -58,4 +58,8 @@ public class User extends BaseEntity {
     @Schema(description = "用户类型：member/coach/admin")
     @TableField(value = "user_type")
     private String userType;
+
+    @Schema(description = "令牌版本号，用于强制旧 token 失效")
+    @TableField(value = "token_version")
+    private Integer tokenVersion;
 }

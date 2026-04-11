@@ -1,6 +1,40 @@
 ﻿-- Reset occupancy and pending records for local regression reruns
 USE fitness_platform;
 
+SET @token_version_exists := (
+  SELECT COUNT(*)
+  FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'user'
+    AND COLUMN_NAME = 'token_version'
+);
+SET @token_version_ddl := IF(
+  @token_version_exists = 0,
+  'ALTER TABLE user ADD COLUMN token_version INT NOT NULL DEFAULT 0',
+  'SELECT 1'
+);
+PREPARE stmt FROM @token_version_ddl;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+CREATE TABLE IF NOT EXISTS task_run_log (
+  id BIGINT PRIMARY KEY AUTO_INCREMENT,
+  task_code VARCHAR(64) NOT NULL,
+  task_name VARCHAR(128) NOT NULL,
+  trigger_mode VARCHAR(32) NOT NULL,
+  run_status VARCHAR(32) NOT NULL,
+  instance_id VARCHAR(64) DEFAULT NULL,
+  started_at DATETIME NOT NULL,
+  finished_at DATETIME DEFAULT NULL,
+  duration_ms BIGINT DEFAULT NULL,
+  affected_count INT DEFAULT NULL,
+  message VARCHAR(500) DEFAULT NULL,
+  created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  KEY idx_task_run_code_started (task_code, started_at),
+  KEY idx_task_run_status_started (run_status, started_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 -- ensure user_profile table exists (for app profile fields)
 CREATE TABLE IF NOT EXISTS user_profile (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
@@ -69,6 +103,7 @@ WHERE cs.is_deleted = 0;
 DELETE FROM banner WHERE title LIKE 'AutoTest Banner%';
 DELETE FROM notice WHERE title LIKE 'AutoTest Notice%';
 DELETE FROM system_config WHERE config_key LIKE 'autotest.%';
+DELETE FROM task_run_log;
 
 -- restore the regression member accounts used by tests and UI walkthroughs
 INSERT INTO user (id, username, password, nickname, email, phone, gender, birth_date, status, user_type)
@@ -82,7 +117,8 @@ ON DUPLICATE KEY UPDATE
   gender = VALUES(gender),
   birth_date = VALUES(birth_date),
   status = VALUES(status),
-  user_type = VALUES(user_type);
+  user_type = VALUES(user_type),
+  token_version = 0;
 
 INSERT INTO user (id, username, password, nickname, email, phone, gender, birth_date, status, user_type)
 VALUES (3, 'member_chen', '$2a$10$demoMemberPasswordHash', '陈同学', 'member.chen@fitness.local', '13800000003', 2, '2002-09-09', 1, 'member')
@@ -95,15 +131,51 @@ ON DUPLICATE KEY UPDATE
   gender = VALUES(gender),
   birth_date = VALUES(birth_date),
   status = VALUES(status),
-  user_type = VALUES(user_type);
+  user_type = VALUES(user_type),
+  token_version = 0;
 
 -- simple login accounts for local dev
-INSERT IGNORE INTO user (id, username, password, nickname, email, phone, gender, birth_date, status, user_type) VALUES
-(21, 'root', 'root', 'Test Member', 'root@fitness.local', '13800000101', 1, '2000-01-01', 1, 'member'),
-(22, 'root_admin', 'root', 'Test Admin', 'root.admin@fitness.local', '13800000102', 1, '1990-01-01', 1, 'admin');
+INSERT INTO user (id, username, password, nickname, email, phone, gender, birth_date, status, user_type, token_version)
+VALUES (21, 'root', 'root', 'Test Member', 'root@fitness.local', '13800000101', 1, '2000-01-01', 1, 'member', 0)
+ON DUPLICATE KEY UPDATE
+  password = VALUES(password),
+  nickname = VALUES(nickname),
+  email = VALUES(email),
+  phone = VALUES(phone),
+  gender = VALUES(gender),
+  birth_date = VALUES(birth_date),
+  status = VALUES(status),
+  user_type = VALUES(user_type),
+  token_version = 0;
+
+INSERT INTO user (id, username, password, nickname, email, phone, gender, birth_date, status, user_type, token_version)
+VALUES (22, 'root_admin', 'root', 'Test Admin', 'root.admin@fitness.local', '13800000102', 1, '1990-01-01', 1, 'admin', 0)
+ON DUPLICATE KEY UPDATE
+  password = VALUES(password),
+  nickname = VALUES(nickname),
+  email = VALUES(email),
+  phone = VALUES(phone),
+  gender = VALUES(gender),
+  birth_date = VALUES(birth_date),
+  status = VALUES(status),
+  user_type = VALUES(user_type),
+  token_version = 0;
+
+INSERT INTO user (id, username, password, nickname, email, phone, gender, birth_date, status, user_type, token_version)
+VALUES (101, 'root_member', 'root', 'Regression Member', 'root.member@fitness.local', '13800000103', 1, '2000-06-01', 1, 'member', 0)
+ON DUPLICATE KEY UPDATE
+  password = VALUES(password),
+  nickname = VALUES(nickname),
+  email = VALUES(email),
+  phone = VALUES(phone),
+  gender = VALUES(gender),
+  birth_date = VALUES(birth_date),
+  status = VALUES(status),
+  user_type = VALUES(user_type),
+  token_version = 0;
 
 -- restore demo user-role relations for repeatable RBAC regression
-DELETE FROM user_role WHERE user_id IN (1,2,3,4,11,12,21,22);
+DELETE FROM user_role WHERE user_id IN (1,2,3,4,11,12,21,22,101);
 INSERT IGNORE INTO user_role (user_id, role_id) SELECT 1, id FROM role WHERE role_code = 'ADMIN';
 INSERT IGNORE INTO user_role (user_id, role_id) SELECT 2, id FROM role WHERE role_code = 'COACH';
 INSERT IGNORE INTO user_role (user_id, role_id) SELECT 3, id FROM role WHERE role_code = 'MEMBER';
@@ -112,6 +184,7 @@ INSERT IGNORE INTO user_role (user_id, role_id) SELECT 11, id FROM role WHERE ro
 INSERT IGNORE INTO user_role (user_id, role_id) SELECT 12, id FROM role WHERE role_code = 'AUDIT_ADMIN';
 INSERT IGNORE INTO user_role (user_id, role_id) SELECT 21, id FROM role WHERE role_code = 'MEMBER';
 INSERT IGNORE INTO user_role (user_id, role_id) SELECT 22, id FROM role WHERE role_code = 'ADMIN';
+INSERT IGNORE INTO user_role (user_id, role_id) SELECT 101, id FROM role WHERE role_code = 'MEMBER';
 
 -- ensure permission data for regression (idempotent)
 INSERT IGNORE INTO permission (permission_name, permission_code, module, status) VALUES
@@ -131,7 +204,9 @@ INSERT IGNORE INTO permission (permission_name, permission_code, module, status)
 ('User Role', 'user:role', 'user', 1),
 ('Refund Audit', 'refund:audit', 'payment', 1),
 ('Pay Callback Audit', 'pay:callback:audit', 'payment', 1),
-('Operation Log Read', 'operation:log:read', 'system', 1);
+('Operation Log Read', 'operation:log:read', 'system', 1),
+('Task Run Read', 'task:run:read', 'system', 1),
+('Task Run Trigger', 'task:run:trigger', 'system', 1);
 
 INSERT IGNORE INTO role_permission (role_id, permission_id)
 SELECT r.id, p.id FROM role r CROSS JOIN permission p WHERE r.role_code = 'ADMIN';
@@ -142,13 +217,13 @@ JOIN permission p ON p.permission_code IN (
   'banner:manage', 'notice:manage', 'system:config',
   'video:asset', 'video:upload', 'video:status', 'video:bind',
   'course:create', 'course:update', 'course:publish', 'course:schedule',
-  'operation:log:read'
+  'operation:log:read', 'task:run:read', 'task:run:trigger'
 ) WHERE r.role_code = 'OPS_ADMIN';
 
 INSERT IGNORE INTO role_permission (role_id, permission_id)
 SELECT r.id, p.id FROM role r
 JOIN permission p ON p.permission_code IN (
-  'coach:apply:audit', 'refund:audit', 'pay:callback:audit', 'operation:log:read'
+  'coach:apply:audit', 'refund:audit', 'pay:callback:audit', 'operation:log:read', 'task:run:read'
 ) WHERE r.role_code = 'AUDIT_ADMIN';
 
 -- ensure role 1 course category scope exists (category 1) for regression

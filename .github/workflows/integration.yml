@@ -3,7 +3,7 @@ name: Integration
 on:
   workflow_dispatch:
   pull_request:
-    branches: [ "**" ]
+    branches: ["**"]
   push:
     branches:
       - main
@@ -109,13 +109,16 @@ jobs:
 
       - name: Run Postman full regression
         run: |
+          mkdir -p reports
           newman run tests/fitness-platform-full.postman_collection.json \
             -e tests/local.postman_environment.json \
             --working-dir "$GITHUB_WORKSPACE" \
             --env-var "videoFilePath=tests/assets/demo.mp4" \
             --env-var "paymentSignMode=hmac" \
             --env-var "paymentSignSecret=ci-pay-secret" \
-            --reporters cli
+            --reporters cli,junit,json \
+            --reporter-junit-export reports/full-junit.xml \
+            --reporter-json-export reports/full-report.json
 
       - name: Cleanup test data
         if: always()
@@ -134,10 +137,17 @@ jobs:
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: app-logs
+          name: full-regression-logs
           path: |
             admin.log
             app.log
+
+      - name: Upload full regression reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: full-regression-reports
+          path: reports/*
 
       - name: Cleanup MinIO
         if: always()

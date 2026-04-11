@@ -3,7 +3,7 @@ package com.huang.web.app.service.biz;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.huang.common.constant.RedisConstant;
-import com.huang.common.redis.RedisCacheSupport;
+import com.huang.common.redis.MultiLevelCacheSupport;
 import com.huang.model.entity.TrainingPlan;
 import com.huang.model.entity.TrainingPlanItem;
 import com.huang.model.entity.TrainingPlanSubscribe;
@@ -38,7 +38,7 @@ public class PlanBizService {
     private final TrainingPlanSubscribeMapper trainingPlanSubscribeMapper;
     private final VideoAssetMapper videoAssetMapper;
     private final MinioClient minioClient;
-    private final RedisCacheSupport redisCacheSupport;
+    private final MultiLevelCacheSupport multiLevelCacheSupport;
 
     @Value("${minio.public-endpoint:http://files.localhost}")
     private String minioPublicEndpoint;
@@ -51,13 +51,13 @@ public class PlanBizService {
                           TrainingPlanSubscribeMapper trainingPlanSubscribeMapper,
                           VideoAssetMapper videoAssetMapper,
                           ObjectProvider<MinioClient> minioClientProvider,
-                          RedisCacheSupport redisCacheSupport) {
+                          MultiLevelCacheSupport multiLevelCacheSupport) {
         this.trainingPlanMapper = trainingPlanMapper;
         this.trainingPlanItemMapper = trainingPlanItemMapper;
         this.trainingPlanSubscribeMapper = trainingPlanSubscribeMapper;
         this.videoAssetMapper = videoAssetMapper;
         this.minioClient = minioClientProvider.getIfAvailable();
-        this.redisCacheSupport = redisCacheSupport;
+        this.multiLevelCacheSupport = multiLevelCacheSupport;
     }
 
     public List<Map<String, Object>> listActivePlans(Long userId) {
@@ -133,7 +133,7 @@ public class PlanBizService {
     }
 
     private List<PlanListStaticView> loadActivePlanStatics() {
-        var cached = redisCacheSupport.getJson(
+        var cached = multiLevelCacheSupport.getJson(
                 RedisConstant.APP_PLAN_LIST_ACTIVE_KEY,
                 new TypeReference<List<PlanListStaticView>>() {}
         );
@@ -157,24 +157,24 @@ public class PlanBizService {
                         plan.getStatus()
                 ))
                 .toList();
-        redisCacheSupport.setJson(
+        multiLevelCacheSupport.setJson(
                 RedisConstant.APP_PLAN_LIST_ACTIVE_KEY,
                 rows,
-                redisCacheSupport.ttlWithJitter(RedisConstant.APP_PLAN_LIST_TTL_SEC, RedisConstant.JITTER_SHORT_SEC)
+                multiLevelCacheSupport.ttlWithJitter(RedisConstant.APP_PLAN_LIST_TTL_SEC, RedisConstant.JITTER_SHORT_SEC)
         );
         return rows;
     }
 
     private PlanDetailStaticCache getStaticPlanDetail(Long planId) {
         String cacheKey = RedisConstant.appPlanDetailStaticKey(planId);
-        var cached = redisCacheSupport.getJson(cacheKey, new TypeReference<PlanDetailStaticCache>() {});
+        var cached = multiLevelCacheSupport.getJson(cacheKey, new TypeReference<PlanDetailStaticCache>() {});
         if (cached.found()) {
             return cached.nullValue() ? null : cached.value();
         }
 
         String lockKey = RedisConstant.appPlanDetailLockKey(planId);
-        String lockToken = redisCacheSupport.newLockToken();
-        boolean locked = redisCacheSupport.tryLock(lockKey, lockToken, RedisConstant.CACHE_LOCK_TTL_SEC);
+        String lockToken = multiLevelCacheSupport.newLockToken();
+        boolean locked = multiLevelCacheSupport.tryLock(lockKey, lockToken, RedisConstant.CACHE_LOCK_TTL_SEC);
         if (!locked) {
             PlanDetailStaticCache retried = waitForStaticPlanCache(cacheKey);
             if (retried != null) {
@@ -184,24 +184,24 @@ public class PlanBizService {
         }
 
         try {
-            var secondRead = redisCacheSupport.getJson(cacheKey, new TypeReference<PlanDetailStaticCache>() {});
+            var secondRead = multiLevelCacheSupport.getJson(cacheKey, new TypeReference<PlanDetailStaticCache>() {});
             if (secondRead.found()) {
                 return secondRead.nullValue() ? null : secondRead.value();
             }
 
             PlanDetailStaticCache loaded = loadStaticPlanDetailFromDb(planId);
             if (loaded == null) {
-                redisCacheSupport.cacheNull(cacheKey, RedisConstant.CACHE_NULL_TTL_SEC);
+                multiLevelCacheSupport.cacheNull(cacheKey, RedisConstant.CACHE_NULL_TTL_SEC);
                 return null;
             }
-            redisCacheSupport.setJson(
+            multiLevelCacheSupport.setJson(
                     cacheKey,
                     loaded,
-                    redisCacheSupport.ttlWithJitter(RedisConstant.APP_PLAN_DETAIL_TTL_SEC, RedisConstant.JITTER_SHORT_SEC)
+                    multiLevelCacheSupport.ttlWithJitter(RedisConstant.APP_PLAN_DETAIL_TTL_SEC, RedisConstant.JITTER_SHORT_SEC)
             );
             return loaded;
         } finally {
-            redisCacheSupport.unlock(lockKey, lockToken);
+            multiLevelCacheSupport.unlock(lockKey, lockToken);
         }
     }
 
@@ -213,7 +213,7 @@ public class PlanBizService {
                 Thread.currentThread().interrupt();
                 break;
             }
-            var cached = redisCacheSupport.getJson(cacheKey, new TypeReference<PlanDetailStaticCache>() {});
+            var cached = multiLevelCacheSupport.getJson(cacheKey, new TypeReference<PlanDetailStaticCache>() {});
             if (!cached.found()) {
                 continue;
             }

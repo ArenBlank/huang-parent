@@ -2,6 +2,8 @@ package com.huang.web.app.service.biz;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.huang.common.constant.BizStatusConstant;
+import com.huang.common.constant.RedisConstant;
+import com.huang.common.redis.RedisGuardSupport;
 import com.huang.model.entity.CoachBooking;
 import com.huang.model.entity.CoachReview;
 import com.huang.model.entity.CoachSchedule;
@@ -18,9 +20,11 @@ import com.huang.web.app.mapper.OrderItemMapper;
 import com.huang.web.app.mapper.PaymentRecordMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.interceptor.TransactionAspectSupport;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -29,7 +33,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import java.util.concurrent.TimeUnit;
 
 @Service
 public class BookingBizService {
@@ -42,7 +45,7 @@ public class BookingBizService {
     private final OrderInfoMapper orderInfoMapper;
     private final OrderItemMapper orderItemMapper;
     private final PaymentRecordMapper paymentRecordMapper;
-    private final RedisTemplate<String, Object> redisTemplate;
+    private final RedisGuardSupport redisGuardSupport;
 
     public BookingBizService(CoachScheduleMapper coachScheduleMapper,
                              CoachBookingMapper coachBookingMapper,
@@ -50,14 +53,14 @@ public class BookingBizService {
                              OrderInfoMapper orderInfoMapper,
                              OrderItemMapper orderItemMapper,
                              PaymentRecordMapper paymentRecordMapper,
-                             RedisTemplate<String, Object> redisTemplate) {
+                             RedisGuardSupport redisGuardSupport) {
         this.coachScheduleMapper = coachScheduleMapper;
         this.coachBookingMapper = coachBookingMapper;
         this.coachReviewMapper = coachReviewMapper;
         this.orderInfoMapper = orderInfoMapper;
         this.orderItemMapper = orderItemMapper;
         this.paymentRecordMapper = paymentRecordMapper;
-        this.redisTemplate = redisTemplate;
+        this.redisGuardSupport = redisGuardSupport;
     }
 
     public List<CoachSchedule> listSchedule(Long userId, Long coachId, LocalDate date) {
@@ -72,7 +75,6 @@ public class BookingBizService {
             wrapper.eq(CoachSchedule::getScheduleDate, date);
         }
         if (userId != null) {
-            // Hide schedules already booked by current user, avoiding guaranteed duplicate failures.
             wrapper.apply(
                     "NOT EXISTS (SELECT 1 FROM coach_booking cb WHERE cb.schedule_id = coach_schedule.id AND cb.user_id = {0})",
                     userId
@@ -100,7 +102,6 @@ public class BookingBizService {
                 return null;
             }
 
-            // Atomic update protects capacity under concurrent booking requests.
             int updated = coachScheduleMapper.reserveSlot(schedule.getId());
             if (updated == 0) {
                 reason = "schedule_full";
@@ -155,6 +156,14 @@ public class BookingBizService {
             result.put("amount", orderInfo.getTotalAmount());
             success = true;
             return result;
+        } catch (DataIntegrityViolationException e) {
+            markCurrentTransactionRollbackOnly();
+            reason = "duplicate_booking_fallback";
+            log.info("BOOKING_CREATE duplicate fallback triggered, userId={} scheduleId={} message={}",
+                    userId,
+                    dto == null ? null : dto.getScheduleId(),
+                    e.getMessage());
+            return null;
         } finally {
             long costMs = System.currentTimeMillis() - start;
             log.info("BOOKING_CREATE userId={} scheduleId={} success={} bookingId={} reason={} costMs={}",
@@ -171,12 +180,10 @@ public class BookingBizService {
     public boolean markPaySuccess(Long bookingId, Long userId) {
         long start = System.currentTimeMillis();
         boolean success = false;
-        String callbackKey = "pay:callback:booking:" + bookingId;
+        String callbackKey = RedisConstant.appPayCallbackBookingGuardKey(bookingId);
         try {
             try {
-                // Use Redis short lock to reduce repeated callback processing.
-                Boolean first = redisTemplate.opsForValue().setIfAbsent(callbackKey, "1", 10, TimeUnit.MINUTES);
-                if (Boolean.FALSE.equals(first)) {
+                if (!redisGuardSupport.tryAcquireIdempotent(callbackKey, RedisConstant.PAY_CALLBACK_GUARD_TTL_SEC)) {
                     success = true;
                     return true;
                 }
@@ -198,7 +205,6 @@ public class BookingBizService {
             }
 
             String idempotencyKey = "CALLBACK_" + paymentRecord.getPayNo();
-            // DB-level idempotency still protects when Redis lock is missed.
             if (idempotencyKey.equals(paymentRecord.getCallbackIdempotencyKey())
                     || BizStatusConstant.PayStatus.PAID.equals(paymentRecord.getPayStatus())) {
                 success = true;
@@ -252,7 +258,6 @@ public class BookingBizService {
         if (!BizStatusConstant.BookingStatus.COMPLETED.equals(booking.getBookingStatus())) {
             return false;
         }
-        // Review can only be submitted once per booking.
         CoachReview existed = coachReviewMapper.selectOne(
                 new LambdaQueryWrapper<CoachReview>()
                         .eq(CoachReview::getBookingId, dto.getBookingId())
@@ -281,5 +286,11 @@ public class BookingBizService {
     private String genNo(String prefix) {
         return prefix + LocalDateTime.now().toString().replace("-", "").replace(":", "").replace("T", "").replace(".", "")
                 + UUID.randomUUID().toString().replace("-", "").substring(0, 6);
+    }
+
+    private void markCurrentTransactionRollbackOnly() {
+        if (TransactionSynchronizationManager.isActualTransactionActive()) {
+            TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
+        }
     }
 }

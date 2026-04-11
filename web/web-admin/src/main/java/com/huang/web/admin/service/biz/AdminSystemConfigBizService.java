@@ -2,7 +2,7 @@ package com.huang.web.admin.service.biz;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.huang.common.constant.RedisConstant;
-import com.huang.common.redis.RedisCacheSupport;
+import com.huang.common.redis.MultiLevelCacheSupport;
 import com.huang.model.entity.SystemConfig;
 import com.huang.web.admin.dto.config.SystemConfigUpsertDTO;
 import com.huang.web.admin.mapper.SystemConfigMapper;
@@ -15,11 +15,11 @@ import java.util.List;
 public class AdminSystemConfigBizService {
 
     private final SystemConfigMapper systemConfigMapper;
-    private final RedisCacheSupport redisCacheSupport;
+    private final MultiLevelCacheSupport multiLevelCacheSupport;
 
-    public AdminSystemConfigBizService(SystemConfigMapper systemConfigMapper, RedisCacheSupport redisCacheSupport) {
+    public AdminSystemConfigBizService(SystemConfigMapper systemConfigMapper, MultiLevelCacheSupport multiLevelCacheSupport) {
         this.systemConfigMapper = systemConfigMapper;
-        this.redisCacheSupport = redisCacheSupport;
+        this.multiLevelCacheSupport = multiLevelCacheSupport;
     }
 
     public List<SystemConfig> list(String keyLike) {
@@ -39,7 +39,7 @@ public class AdminSystemConfigBizService {
         SystemConfig config = new SystemConfig();
         fill(config, dto);
         systemConfigMapper.insert(config);
-        redisCacheSupport.safeDelete(RedisConstant.appSysConfigKey(config.getConfigKey()));
+        multiLevelCacheSupport.sharedEvict(RedisConstant.appSysConfigKey(config.getConfigKey()));
         return config.getId();
     }
 
@@ -56,8 +56,8 @@ public class AdminSystemConfigBizService {
         fill(exists, dto);
         boolean updated = systemConfigMapper.updateById(exists) > 0;
         if (updated) {
-            redisCacheSupport.safeDelete(RedisConstant.appSysConfigKey(oldKey));
-            redisCacheSupport.safeDelete(RedisConstant.appSysConfigKey(exists.getConfigKey()));
+            multiLevelCacheSupport.sharedEvict(RedisConstant.appSysConfigKey(oldKey));
+            multiLevelCacheSupport.sharedEvict(RedisConstant.appSysConfigKey(exists.getConfigKey()));
         }
         return updated;
     }
@@ -70,7 +70,7 @@ public class AdminSystemConfigBizService {
         }
         boolean deleted = systemConfigMapper.deleteById(id) > 0;
         if (deleted) {
-            redisCacheSupport.safeDelete(RedisConstant.appSysConfigKey(exists.getConfigKey()));
+            multiLevelCacheSupport.sharedEvict(RedisConstant.appSysConfigKey(exists.getConfigKey()));
         }
         return deleted;
     }

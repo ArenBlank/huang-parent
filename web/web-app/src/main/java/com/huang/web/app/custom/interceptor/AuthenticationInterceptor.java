@@ -5,6 +5,8 @@ import com.huang.common.login.LoginUser;
 import com.huang.common.login.LoginUserHolder;
 import com.huang.common.result.ResultCodeEnum;
 import com.huang.common.utils.JwtUtil;
+import com.huang.model.entity.User;
+import com.huang.web.app.service.core.UserCoreService;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -12,6 +14,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 import org.springframework.web.servlet.HandlerInterceptor;
+
+import java.util.Objects;
 
 /**
  * App端JWT认证拦截器
@@ -21,7 +25,13 @@ import org.springframework.web.servlet.HandlerInterceptor;
 @Slf4j
 @Component
 public class AuthenticationInterceptor implements HandlerInterceptor {
-    
+
+    private final UserCoreService userCoreService;
+
+    public AuthenticationInterceptor(UserCoreService userCoreService) {
+        this.userCoreService = userCoreService;
+    }
+
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
         String requestURI = request.getRequestURI();
@@ -45,14 +55,28 @@ public class AuthenticationInterceptor implements HandlerInterceptor {
         
         try {
             Claims claims = JwtUtil.parseToken(token);
-            Long userId = claims.get("userId", Long.class);
-            String username = claims.get("username", String.class);
-            
+            String platform = JwtUtil.getPlatformFromClaims(claims);
+            if (!JwtUtil.PLATFORM_APP.equalsIgnoreCase(platform)) {
+                throw new HuangException(ResultCodeEnum.TOKEN_INVALID);
+            }
+            Long userId = claims.get(JwtUtil.CLAIM_USER_ID, Long.class);
+            String username = claims.get(JwtUtil.CLAIM_USERNAME, String.class);
+
             if (userId == null || !StringUtils.hasText(username)) {
                 log.warn("JWT token中缺少必要的用户信息: {}", requestURI);
                 throw new HuangException(ResultCodeEnum.TOKEN_INVALID);
             }
-            
+
+            User user = userCoreService.getById(userId);
+            if (user == null || user.getStatus() == null || user.getStatus() != 1) {
+                log.warn("JWT认证失败，用户不存在或已禁用: userId={}", userId);
+                throw new HuangException(ResultCodeEnum.APP_LOGIN_AUTH);
+            }
+            if (!Objects.equals(normalizeTokenVersion(user.getTokenVersion()), JwtUtil.getTokenVersionFromClaims(claims))) {
+                log.warn("JWT认证失败，tokenVersion不匹配: userId={}", userId);
+                throw new HuangException(ResultCodeEnum.TOKEN_INVALID);
+            }
+
             LoginUserHolder.setLoginUser(new LoginUser(userId, username));
             log.debug("JWT认证成功，用户ID: {}, 用户名: {}", userId, username);
             
@@ -70,5 +94,9 @@ public class AuthenticationInterceptor implements HandlerInterceptor {
     @Override
     public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) throws Exception {
         LoginUserHolder.clear();
+    }
+
+    private int normalizeTokenVersion(Integer tokenVersion) {
+        return tokenVersion == null || tokenVersion < 0 ? 0 : tokenVersion;
     }
 }

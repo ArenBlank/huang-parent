@@ -1,6 +1,7 @@
 package com.huang.web.app.service.biz;
 
 import com.huang.common.constant.RedisConstant;
+import com.huang.common.redis.MultiLevelCacheSupport;
 import com.huang.common.redis.RedisCacheSupport;
 import com.huang.model.entity.TrainingPlan;
 import com.huang.model.entity.TrainingPlanItem;
@@ -55,7 +56,7 @@ class PlanBizServiceTest {
     private MinioClient minioClient;
 
     @Mock
-    private RedisCacheSupport redisCacheSupport;
+    private MultiLevelCacheSupport multiLevelCacheSupport;
 
     private PlanBizService planBizService;
 
@@ -68,7 +69,7 @@ class PlanBizServiceTest {
                 trainingPlanSubscribeMapper,
                 videoAssetMapper,
                 minioClientProvider,
-                redisCacheSupport
+                multiLevelCacheSupport
         );
         ReflectionTestUtils.setField(planBizService, "minioPublicEndpoint", "http://files.localhost");
         ReflectionTestUtils.setField(planBizService, "minioBucketName", "fitness-platform");
@@ -83,11 +84,11 @@ class PlanBizServiceTest {
         subscribe.setStatus(1);
         subscribe.setStartDate(LocalDate.of(2026, 4, 7));
 
-        when(redisCacheSupport.getJson(eq(RedisConstant.APP_PLAN_LIST_ACTIVE_KEY), any(com.fasterxml.jackson.core.type.TypeReference.class)))
+        when(multiLevelCacheSupport.getJson(eq(RedisConstant.APP_PLAN_LIST_ACTIVE_KEY), any(com.fasterxml.jackson.core.type.TypeReference.class)))
                 .thenReturn(RedisCacheSupport.CacheValue.miss());
         when(trainingPlanMapper.selectList(any())).thenReturn(List.of(plan));
         when(trainingPlanSubscribeMapper.selectList(any())).thenReturn(List.of(subscribe));
-        when(redisCacheSupport.ttlWithJitter(RedisConstant.APP_PLAN_LIST_TTL_SEC, RedisConstant.JITTER_SHORT_SEC))
+        when(multiLevelCacheSupport.ttlWithJitter(RedisConstant.APP_PLAN_LIST_TTL_SEC, RedisConstant.JITTER_SHORT_SEC))
                 .thenReturn(RedisConstant.APP_PLAN_LIST_TTL_SEC);
 
         List<Map<String, Object>> result = planBizService.listActivePlans(99L);
@@ -98,7 +99,7 @@ class PlanBizServiceTest {
                 .containsEntry("title", "Plan A")
                 .containsEntry("subscribed", true)
                 .containsEntry("startDate", LocalDate.of(2026, 4, 7));
-        verify(redisCacheSupport).setJson(eq(RedisConstant.APP_PLAN_LIST_ACTIVE_KEY), any(), eq(RedisConstant.APP_PLAN_LIST_TTL_SEC));
+        verify(multiLevelCacheSupport).setJson(eq(RedisConstant.APP_PLAN_LIST_ACTIVE_KEY), any(), eq(RedisConstant.APP_PLAN_LIST_TTL_SEC));
     }
 
     @Test
@@ -130,17 +131,17 @@ class PlanBizServiceTest {
         subscribe.setStartDate(LocalDate.of(2026, 4, 8));
 
         String cacheKey = RedisConstant.appPlanDetailStaticKey(2L);
-        when(redisCacheSupport.getJson(eq(cacheKey), any(com.fasterxml.jackson.core.type.TypeReference.class)))
+        when(multiLevelCacheSupport.getJson(eq(cacheKey), any(com.fasterxml.jackson.core.type.TypeReference.class)))
                 .thenReturn(RedisCacheSupport.CacheValue.miss(), RedisCacheSupport.CacheValue.miss());
-        when(redisCacheSupport.newLockToken()).thenReturn("lock-token");
-        when(redisCacheSupport.tryLock(RedisConstant.appPlanDetailLockKey(2L), "lock-token", RedisConstant.CACHE_LOCK_TTL_SEC))
+        when(multiLevelCacheSupport.newLockToken()).thenReturn("lock-token");
+        when(multiLevelCacheSupport.tryLock(RedisConstant.appPlanDetailLockKey(2L), "lock-token", RedisConstant.CACHE_LOCK_TTL_SEC))
                 .thenReturn(true);
         when(trainingPlanMapper.selectById(2L)).thenReturn(plan);
         when(trainingPlanItemMapper.selectList(any())).thenReturn(List.of(item));
         when(videoAssetMapper.selectBatchIds(any())).thenReturn(List.of(videoAsset));
         when(trainingPlanSubscribeMapper.selectOne(any())).thenReturn(subscribe);
         when(minioClient.getPresignedObjectUrl(any(GetPresignedObjectUrlArgs.class))).thenReturn("https://signed/video");
-        when(redisCacheSupport.ttlWithJitter(RedisConstant.APP_PLAN_DETAIL_TTL_SEC, RedisConstant.JITTER_SHORT_SEC))
+        when(multiLevelCacheSupport.ttlWithJitter(RedisConstant.APP_PLAN_DETAIL_TTL_SEC, RedisConstant.JITTER_SHORT_SEC))
                 .thenReturn(RedisConstant.APP_PLAN_DETAIL_TTL_SEC);
 
         Map<String, Object> detail = planBizService.getPlanDetail(2L, 101L);
@@ -157,8 +158,8 @@ class PlanBizServiceTest {
                 .containsEntry("videoId", 7L)
                 .containsEntry("title", "Squat Demo")
                 .containsEntry("playUrl", "https://signed/video");
-        verify(redisCacheSupport).setJson(eq(cacheKey), any(), eq(RedisConstant.APP_PLAN_DETAIL_TTL_SEC));
-        verify(redisCacheSupport).unlock(RedisConstant.appPlanDetailLockKey(2L), "lock-token");
+        verify(multiLevelCacheSupport).setJson(eq(cacheKey), any(), eq(RedisConstant.APP_PLAN_DETAIL_TTL_SEC));
+        verify(multiLevelCacheSupport).unlock(RedisConstant.appPlanDetailLockKey(2L), "lock-token");
     }
 
     @Test
@@ -171,7 +172,7 @@ class PlanBizServiceTest {
         subscribe.setStartDate(LocalDate.of(2026, 4, 9));
 
         String cacheKey = RedisConstant.appPlanDetailStaticKey(3L);
-        when(redisCacheSupport.getJson(eq(cacheKey), any(com.fasterxml.jackson.core.type.TypeReference.class)))
+        when(multiLevelCacheSupport.getJson(eq(cacheKey), any(com.fasterxml.jackson.core.type.TypeReference.class)))
                 .thenReturn(RedisCacheSupport.CacheValue.hit(cachedStatic));
         when(trainingPlanSubscribeMapper.selectOne(any())).thenReturn(subscribe);
         when(minioClient.getPresignedObjectUrl(any(GetPresignedObjectUrlArgs.class))).thenReturn("https://signed/cached");

@@ -3,7 +3,7 @@ package com.huang.web.admin.service.biz;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.huang.common.constant.RedisConstant;
-import com.huang.common.redis.RedisCacheSupport;
+import com.huang.common.redis.MultiLevelCacheSupport;
 import com.huang.model.entity.TrainingPlan;
 import com.huang.model.entity.TrainingPlanItem;
 import com.huang.model.entity.VideoAsset;
@@ -33,20 +33,20 @@ public class AdminTrainingPlanBizService {
     private final TrainingPlanSubscribeMapper trainingPlanSubscribeMapper;
     private final TrainingRecordMapper trainingRecordMapper;
     private final VideoAssetMapper videoAssetMapper;
-    private final RedisCacheSupport redisCacheSupport;
+    private final MultiLevelCacheSupport multiLevelCacheSupport;
 
     public AdminTrainingPlanBizService(TrainingPlanMapper trainingPlanMapper,
                                        TrainingPlanItemMapper trainingPlanItemMapper,
                                        TrainingPlanSubscribeMapper trainingPlanSubscribeMapper,
                                        TrainingRecordMapper trainingRecordMapper,
                                        VideoAssetMapper videoAssetMapper,
-                                       RedisCacheSupport redisCacheSupport) {
+                                       MultiLevelCacheSupport multiLevelCacheSupport) {
         this.trainingPlanMapper = trainingPlanMapper;
         this.trainingPlanItemMapper = trainingPlanItemMapper;
         this.trainingPlanSubscribeMapper = trainingPlanSubscribeMapper;
         this.trainingRecordMapper = trainingRecordMapper;
         this.videoAssetMapper = videoAssetMapper;
-        this.redisCacheSupport = redisCacheSupport;
+        this.multiLevelCacheSupport = multiLevelCacheSupport;
     }
 
     public List<Map<String, Object>> listPlans(Integer status) {
@@ -287,12 +287,12 @@ public class AdminTrainingPlanBizService {
     }
 
     private void clearPlanListCache() {
-        redisCacheSupport.safeDelete(RedisConstant.APP_PLAN_LIST_ACTIVE_KEY);
+        multiLevelCacheSupport.sharedEvict(RedisConstant.APP_PLAN_LIST_ACTIVE_KEY);
     }
 
     private void clearPlanDetailCache(Long planId) {
         if (planId != null) {
-            redisCacheSupport.safeDelete(RedisConstant.appPlanDetailStaticKey(planId));
+            multiLevelCacheSupport.sharedEvict(RedisConstant.appPlanDetailStaticKey(planId));
         }
     }
 }

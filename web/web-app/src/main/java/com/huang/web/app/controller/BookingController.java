@@ -1,5 +1,8 @@
 package com.huang.web.app.controller;
 
+import com.huang.common.constant.RedisConstant;
+import com.huang.common.guard.IdempotentSubmit;
+import com.huang.common.guard.RateLimit;
 import com.huang.common.login.LoginUser;
 import com.huang.common.login.LoginUserHolder;
 import com.huang.common.result.Result;
@@ -39,13 +42,27 @@ public class BookingController {
     }
 
     @Operation(summary = "创建预约订单")
+    @IdempotentSubmit(
+            prefix = RedisConstant.APP_BOOKING_CREATE_IDEMPOTENT_PREFIX,
+            key = "#userId + ':' + #dto.scheduleId",
+            ttlSec = RedisConstant.IDEMPOTENT_TTL_SEC,
+            message = "请勿重复提交预约请求"
+    )
+    @RateLimit(
+            prefix = RedisConstant.APP_BOOKING_CREATE_LIMIT_PREFIX,
+            key = "#userId",
+            maxRequests = RedisConstant.SENSITIVE_WRITE_RATE_LIMIT_MAX,
+            windowSec = RedisConstant.SENSITIVE_WRITE_RATE_LIMIT_WINDOW_SEC,
+            message = "预约请求过于频繁，请稍后再试"
+    )
     @PostMapping("/create")
     public Result<?> create(@Valid @RequestBody CreateBookingDTO dto) {
         LoginUser loginUser = LoginUserHolder.getLoginUser();
         if (loginUser == null) {
             return Result.fail("未登录");
         }
-        var result = bookingBizService.createBooking(loginUser.getUserId(), dto);
+        Long userId = loginUser.getUserId();
+        var result = bookingBizService.createBooking(userId, dto);
         return result == null
                 ? Result.fail("预约失败，档期可能已满或已预约")
                 : Result.ok(result);

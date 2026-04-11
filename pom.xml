@@ -7,6 +7,8 @@
     <groupId>com.huang</groupId>
     <artifactId>huang-parent</artifactId>
     <version>1.0-SNAPSHOT</version>
+    <name>运动健康管理平台后端工程</name>
+    <description>基于 Spring Boot、MySQL、Redis、Nginx 和 MinIO 的工程型单体后端项目，支持 admin 单实例与 app 双实例部署。</description>
     <packaging>pom</packaging>
     <modules>
         <module>common</module>
@@ -33,6 +35,7 @@
         <minio.version>8.2.0</minio.version>
         <knife4j.version>4.1.0</knife4j.version>
         <aliyun.sms.version>2.0.23</aliyun.sms.version>
+        <caffeine.version>3.1.8</caffeine.version>
     </properties>
 
     <!--配置dependencyManagement统一管理依赖版本-->
@@ -96,6 +99,12 @@
                 <groupId>com.aliyun</groupId>
                 <artifactId>dysmsapi20170525</artifactId>
                 <version>${aliyun.sms.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.github.ben-manes.caffeine</groupId>
+                <artifactId>caffeine</artifactId>
+                <version>${caffeine.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
