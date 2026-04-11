@@ -50,14 +50,15 @@ for ($i = 1; $i -le $Requests; $i++) {
     $response = Invoke-WithRetry -MaxAttempts $RetryCount -DelayMs $RetryDelayMs -Action {
         Invoke-WebRequest -Uri $Url -Method Get -Headers $headers -UseBasicParsing
     }
-    $instance = $response.Headers["X-App-Instance"]
+    $instanceHeader = $response.Headers["X-App-Instance"]
+    $instance = @($instanceHeader | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) }) | Select-Object -First 1
     if ([string]::IsNullOrWhiteSpace($instance)) {
         $instance = "missing-header"
     }
     if (-not $instanceStats.ContainsKey($instance)) {
         $instanceStats[$instance] = 0
     }
-    $instanceStats[$instance]++
+    $instanceStats[$instance] = [int]$instanceStats[$instance] + 1
     Write-Host ("[{0}/{1}] status={2} instance={3}" -f $i, $Requests, $response.StatusCode, $instance)
 }
 
