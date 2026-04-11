@@ -1,168 +1,228 @@
-﻿# API接口清单与示例
+# API 接口清单与示例
 
 ## 1. 鉴权说明
-- `/app/auth/**` 与 `/admin/auth/login` 为免登录接口。
-- 其余 `/app/**`、`/admin/**` 接口默认需要 JWT。
+
+- `/app/auth/**` 与 `/admin/auth/login` 为免登录接口
+- `/admin/auth/refresh-token` 使用 refresh token 调用，不依赖现有 access token
+- 其余 `/app/**`、`/admin/**` 接口默认需要 JWT
 - Header 示例：`Authorization: Bearer <accessToken>`
 
-## 2. App端接口（核心）
-1. `POST /app/auth/login`：用户登录
-2. `POST /app/plan/subscribe`：订阅训练计划
-3. `POST /app/record/checkin`：训练打卡
-4. `GET /app/booking/schedule/list`：教练档期列表
-5. `POST /app/booking/create`：创建预约订单
-6. `GET /app/order/detail?orderId=xxx`：订单详情（含明细）
-7. `POST /app/pay/callback`：支付回调（第三方异步通知）
-8. `POST /app/pay/mock-notify`：支付回调（模拟）
-9. `GET /app/plan/{planId}`：计划详情（含视频）
-10. `GET /app/course/list`：课程列表
-11. `POST /app/course/enroll`：课程报名并下单
-12. `POST /app/course/refund`：课程退款申请
-13. `GET /app/course/my/enrollments`：我的报名记录
-14. `POST /app/coach/apply`：提交教练申请
-15. `GET /app/coach/my-application`：我的教练申请
-16. `GET /app/banner/list`：首页Banner列表
-17. `GET /app/notice/list`：公告列表
-18. `GET /app/system-config/map?keys=site_name&keys=xxx`：按key批量读配置
-## 3. Admin端接口（核心）
-1. `POST /admin/auth/login`：管理员登录
-2. `GET /admin/dashboard/summary`：看板汇总
-3. `GET /admin/ops/booking/list`：预约列表
-4. `POST /admin/ops/booking/complete`：授课完成
-5. `POST /admin/ops/booking/close-timeout`：关闭超时未支付预约
-6. `POST /admin/video/upload`：上传视频到 MinIO
-7. `POST /admin/video`：新增视频素材
-8. `PUT /admin/video/bind-plan-item`：计划项绑定视频
-9. `POST /admin/course`：创建课程
-10. `PUT /admin/course/{id}/status`：上架/下架课程
-11. `POST /admin/course/schedule`：创建课程排期
-12. `GET /admin/ops/order/detail?orderId=xxx`：订单详情（含明细）
-13. `GET /admin/role-permission/permissions`：权限清单
-14. `GET /admin/role-permission/role/{roleId}/permissions`：角色权限列表
-15. `POST /admin/role-permission/assign`：角色权限分配
-16. `GET /admin/role/{roleId}/course-category-scope`：课程类目范围
-17. `PUT /admin/role/{roleId}/course-category-scope`：更新课程类目范围
-18. `PUT /admin/role/course-category-scope/batch`：批量更新课程类目范围
-19. `GET /admin/refund/list`：退款审计列表
-20. `GET /admin/pay/callback/list`：支付回调审计列表
-21. `GET /admin/coach-apply/list`：教练申请列表
-22. `POST /admin/coach-apply/audit`：教练申请审核
-23. `GET /admin/operation-log/list`：操作日志列表
-24. `GET /admin/banner/list`：Banner列表
-25. `POST /admin/banner`：新增Banner
-26. `PUT /admin/banner/{id}`：更新Banner
-27. `PUT /admin/banner/{id}/status`：更新Banner状态
-28. `DELETE /admin/banner/{id}`：删除Banner
-29. `GET /admin/notice/list`：公告列表
-30. `POST /admin/notice`：新增公告
-31. `PUT /admin/notice/{id}`：更新公告
-32. `PUT /admin/notice/{id}/status`：更新公告状态
-33. `DELETE /admin/notice/{id}`：删除公告
-34. `GET /admin/system-config/list`：系统配置列表
-35. `POST /admin/system-config`：新增系统配置
-36. `PUT /admin/system-config/{id}`：更新系统配置
-37. `DELETE /admin/system-config/{id}`：删除系统配置
+## 2. App 端核心接口
 
-1. `POST /admin/auth/login`：管理员登录
-2. `GET /admin/dashboard/summary`：看板汇总
-3. `GET /admin/ops/booking/list`：预约列表
-4. `POST /admin/ops/booking/complete`：授课完成
-5. `POST /admin/ops/booking/close-timeout`：关闭超时未支付预约
-6. `POST /admin/video/upload`：上传视频到 MinIO
-7. `POST /admin/video`：新增视频素材
-8. `PUT /admin/video/bind-plan-item`：计划项绑定视频
-9. `POST /admin/course`：创建课程
-10. `PUT /admin/course/{id}/status`：上架/下架课程
-11. `POST /admin/course/schedule`：创建课程排期
-12. `GET /admin/ops/order/detail?orderId=xxx`：订单详情（含明细）
-13. `GET /admin/role-permission/permissions`：权限清单
-14. `GET /admin/role-permission/role/{roleId}/permissions`：角色权限列表
-15. `POST /admin/role-permission/assign`：角色权限分配
-16. `GET /admin/role/{roleId}/course-category-scope`：课程类目范围
-17. `PUT /admin/role/{roleId}/course-category-scope`：更新课程类目范围
-18. `PUT /admin/role/course-category-scope/batch`：批量更新课程类目范围
-19. `GET /admin/refund/list`：退款审计列表
-20. `GET /admin/pay/callback/list`：支付回调审计列表
-21. `GET /admin/coach-apply/list`：教练申请列表
-22. `POST /admin/coach-apply/audit`：教练申请审核
-23. `GET /admin/operation-log/list`：操作日志列表
-24. `GET /admin/banner/list`：Banner列表
-25. `POST /admin/banner`：新增Banner
-26. `PUT /admin/banner/{id}`：更新Banner
-27. `PUT /admin/banner/{id}/status`：更新Banner状态
-28. `DELETE /admin/banner/{id}`：删除Banner
-29. `GET /admin/notice/list`：公告列表
-30. `POST /admin/notice`：新增公告
-31. `PUT /admin/notice/{id}`：更新公告
-32. `PUT /admin/notice/{id}/status`：更新公告状态
-33. `DELETE /admin/notice/{id}`：删除公告
-34. `GET /admin/system-config/list`：系统配置列表
-35. `POST /admin/system-config`：新增系统配置
-36. `PUT /admin/system-config/{id}`：更新系统配置
-37. `DELETE /admin/system-config/{id}`：删除系统配置
+### 2.1 认证
 
-## 4. 快速联调顺序
-1. 登录获取 app/admin token
-2. app 订阅计划并打卡
-3. app 创建预约，调用 mock 支付回调
-4. admin 关闭超时单或完成授课
-5. admin 上传视频并绑定计划项
-6. app 查看计划详情，确认 `items[].video.playUrl`
-7. app 课程报名、mock 支付、退款
-8. 可选：切换为 HMAC 模式调用 `/app/pay/callback`
-9. admin 查询退款审计与操作日志
+- `POST /app/auth/sms-code/send`
+- `POST /app/auth/register`
+- `POST /app/auth/login`
+- `POST /app/auth/refresh-token`
+- `POST /app/auth/forget-password`
+- `POST /app/auth/logout`
 
-## 5. 示例请求
+### 2.2 训练计划与打卡
 
-### 5.1 用户登录
-```bash
-curl -X POST "http://localhost:8081/app/auth/login" \
-  -H "Content-Type: application/json" \
-  -d "{\"account\":\"member_chen\",\"password\":\"123456\",\"loginType\":\"password\"}"
+- `GET /app/plan/list`
+- `GET /app/plan/{planId}`
+- `POST /app/plan/subscribe`
+- `POST /app/record/checkin`
+- `GET /app/record/my/list`
+- `GET /app/record/my/weekly-stat`
+
+### 2.3 教练预约
+
+- `GET /app/booking/schedule/list`
+- `POST /app/booking/create`
+- `POST /app/booking/pay-success`
+- `POST /app/booking/complete`
+- `POST /app/booking/review`
+- `GET /app/booking/my/list`
+
+### 2.4 课程学习
+
+- `GET /app/course/list`
+- `GET /app/course/{courseId}/schedule/list`
+- `POST /app/course/enroll`
+- `POST /app/course/pay-success`
+- `POST /app/course/cancel-unpaid`
+- `POST /app/course/refund`
+- `GET /app/course/my/enrollments`
+
+### 2.5 支付与订单
+
+- `POST /app/pay/callback`
+- `POST /app/pay/mock-notify`
+- `GET /app/order/my/list`
+- `GET /app/order/detail`
+
+### 2.6 个人资料与运营内容
+
+- `GET /app/profile/info`
+- `PUT /app/profile/info`
+- `POST /app/profile/avatar/upload`
+- `PUT /app/profile/password`
+- `POST /app/coach/apply`
+- `GET /app/coach/my-application`
+- `GET /app/banner/list`
+- `GET /app/notice/list`
+- `GET /app/system-config/map`
+
+## 3. Admin 端核心接口
+
+### 3.1 认证与看板
+
+- `POST /admin/auth/login`
+- `POST /admin/auth/refresh-token`
+- `GET /admin/dashboard/summary`
+
+### 3.2 任务中心
+
+- `GET /admin/task-run/page`
+- `GET /admin/task-run/summary`
+- `POST /admin/task-run/{taskCode}/trigger`
+
+### 3.3 预约与订单运营
+
+- `GET /admin/ops/booking/list`
+- `POST /admin/ops/booking/complete`
+- `POST /admin/ops/booking/close-timeout`
+- `GET /admin/ops/order/list`
+- `GET /admin/ops/order/detail`
+
+### 3.4 课程管理
+
+- `GET /admin/course/list`
+- `POST /admin/course`
+- `PUT /admin/course/{id}`
+- `PUT /admin/course/{id}/status`
+- `GET /admin/course/schedule/list`
+- `POST /admin/course/schedule`
+- `PUT /admin/course/schedule/{id}/status`
+- `GET /admin/course-category/list`
+
+### 3.5 训练计划与视频素材
+
+- `GET /admin/training-plan/list`
+- `GET /admin/training-plan/{planId}`
+- `POST /admin/training-plan`
+- `PUT /admin/training-plan/{id}`
+- `DELETE /admin/training-plan/{id}`
+- `POST /admin/training-plan/{planId}/item`
+- `PUT /admin/training-plan/item/{itemId}`
+- `DELETE /admin/training-plan/item/{itemId}`
+- `GET /admin/video/list`
+- `POST /admin/video/upload`
+- `POST /admin/video`
+- `PUT /admin/video/{id}`
+- `PUT /admin/video/{id}/status`
+- `DELETE /admin/video/{id}`
+- `PUT /admin/video/bind-plan-item`
+- `PUT /admin/video/unbind-plan-item/{planItemId}`
+
+### 3.6 运营内容
+
+- `GET /admin/banner/list`
+- `POST /admin/banner`
+- `PUT /admin/banner/{id}`
+- `PUT /admin/banner/{id}/status`
+- `DELETE /admin/banner/{id}`
+- `GET /admin/notice/list`
+- `POST /admin/notice`
+- `PUT /admin/notice/{id}`
+- `PUT /admin/notice/{id}/status`
+- `DELETE /admin/notice/{id}`
+- `GET /admin/system-config/list`
+- `POST /admin/system-config`
+- `PUT /admin/system-config/{id}`
+- `DELETE /admin/system-config/{id}`
+
+### 3.7 审计与审核
+
+- `GET /admin/refund/list`
+- `GET /admin/pay/callback/list`
+- `GET /admin/coach-apply/list`
+- `GET /admin/coach-apply/{profileId}`
+- `POST /admin/coach-apply/audit`
+- `GET /admin/operation-log/list`
+
+### 3.8 权限与用户角色
+
+- `GET /admin/permission/matrix`
+- `POST /admin/permission/matrix/sync`
+- `GET /admin/role-permission/permissions`
+- `GET /admin/role-permission/role/{roleId}/permissions`
+- `POST /admin/role-permission/assign`
+- `GET /admin/role/list`
+- `GET /admin/role/detail/{roleId}`
+- `PUT /admin/role/status`
+- `GET /admin/role/available`
+- `GET /admin/role/{roleId}/course-category-scope`
+- `PUT /admin/role/{roleId}/course-category-scope`
+- `PUT /admin/role/course-category-scope/batch`
+- `GET /admin/user/list`
+- `GET /admin/user/detail/{userId}`
+- `PUT /admin/user/status`
+- `POST /admin/user/assign-roles`
+- `GET /admin/user-role/list`
+- `GET /admin/user-role/user/{userId}/roles`
+- `GET /admin/user-role/role/{roleId}/users`
+- `POST /admin/user-role/batch-assign`
+- `DELETE /admin/user-role/{userId}/role/{roleId}`
+
+## 4. 典型接口示例
+
+### 4.1 App 登录
+
+```http
+POST /app/auth/login
+Content-Type: application/json
+
+{
+  "account": "root_member",
+  "password": "root",
+  "loginType": "password"
+}
 ```
 
-### 5.2 上传视频到MinIO
-```bash
-curl -X POST "http://localhost:8080/admin/video/upload" \
-  -H "Authorization: Bearer <adminToken>" \
-  -F "file=@D:/videos/squat.mp4"
+### 4.2 Admin 刷新令牌
+
+```http
+POST /admin/auth/refresh-token
+Content-Type: application/json
+
+{
+  "refreshToken": "eyJ..."
+}
 ```
 
-### 5.3 创建视频素材
-```bash
-curl -X POST "http://localhost:8080/admin/video" \
-  -H "Authorization: Bearer <adminToken>" \
-  -H "Content-Type: application/json" \
-  -d "{
-    \"title\":\"深蹲教学-初级\",
-    \"sourceSite\":\"pexels\",
-    \"licenseType\":\"Pexels License\",
-    \"durationSec\":45,
-    \"tags\":\"squat,legs,beginner\",
-    \"minioPath\":\"videos/upload/20260228/abc.mp4\",
-    \"status\":1
-  }"
+### 4.3 课程报名
+
+```http
+POST /app/course/enroll
+Authorization: Bearer <accessToken>
+Content-Type: application/json
+
+{
+  "scheduleId": 1
+}
 ```
 
-### 5.4 查询操作日志
-```bash
-curl -X GET "http://localhost:8080/admin/operation-log/list?module=course&limit=20" \
-  -H "Authorization: Bearer <adminToken>"
+### 4.4 手动触发任务
+
+```http
+POST /admin/task-run/BOOKING_TIMEOUT_CLOSE/trigger
+Authorization: Bearer <adminAccessToken>
 ```
 
-### 5.5 支付回调（HMAC验签示例）
-payload 规则：`payNo|tradeNo|status|amount`  
-签名：`HmacSHA256(payload, secret)` 的 Hex 值
+## 5. 当前接口特点
 
-```bash
-curl -X POST "http://localhost:8081/app/pay/callback" \
-  -H "Content-Type: application/json" \
-  -d "{
-    \"payNo\":\"PAY123\",
-    \"tradeNo\":\"HMAC123456\",
-    \"status\":\"SUCCESS\",
-    \"amount\":199.00,
-    \"sign\":\"<HMAC_HEX>\"
-  }"
-```
+- App/Admin 统一走 JWT
+- App/Admin 都支持 refresh token
+- 敏感写接口已接入限流/短幂等
+- App 读接口中的静态低频内容已接入多级缓存
+- Admin 写接口中的缓存失效链路已接入 Redis Pub/Sub 广播
 
+## 6. 推荐查看方式
+
+- 接口调试：Knife4j
+- 自动化验证：Postman / Newman
+- 双实例验证：`tests/check-dual-app-routing.ps1`
+- 并发验证：`tests/invoke-concurrent-requests.ps1`
