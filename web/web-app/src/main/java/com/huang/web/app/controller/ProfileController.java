@@ -8,6 +8,7 @@ import com.huang.model.entity.User;
 import com.huang.model.entity.UserProfile;
 import com.huang.web.app.dto.profile.PasswordUpdateDTO;
 import com.huang.web.app.dto.profile.ProfileUpdateDTO;
+import com.huang.web.app.service.biz.auth.AppAuthCacheService;
 import com.huang.web.app.service.core.UserCoreService;
 import com.huang.web.app.service.core.UserProfileCoreService;
 import com.huang.web.app.vo.profile.AvatarUploadVO;
@@ -49,15 +50,18 @@ public class ProfileController {
 
     private final UserCoreService userCoreService;
     private final UserProfileCoreService userProfileCoreService;
+    private final AppAuthCacheService appAuthCacheService;
     private final MinioClient minioClient;
     private final MinioProperties minioProperties;
 
     public ProfileController(UserCoreService userCoreService,
                              UserProfileCoreService userProfileCoreService,
+                             AppAuthCacheService appAuthCacheService,
                              ObjectProvider<MinioClient> minioClientProvider,
                              MinioProperties minioProperties) {
         this.userCoreService = userCoreService;
         this.userProfileCoreService = userProfileCoreService;
+        this.appAuthCacheService = appAuthCacheService;
         this.minioClient = minioClientProvider.getIfAvailable();
         this.minioProperties = minioProperties;
     }
@@ -202,7 +206,12 @@ public class ProfileController {
             return Result.fail("Old password is incorrect");
         }
         user.setPassword(PasswordUtil.encode(dto.getNewPassword()));
-        userCoreService.updateById(user);
+        user.setTokenVersion(normalizeTokenVersion(user.getTokenVersion()) + 1);
+        boolean updated = userCoreService.updateById(user);
+        if (!updated) {
+            return Result.fail("Password update failed");
+        }
+        appAuthCacheService.evict(currentUserId);
         return Result.ok("Password updated");
     }
 
@@ -280,44 +289,40 @@ public class ProfileController {
         return StringUtils.hasText(file.getContentType()) ? file.getContentType() : "application/octet-stream";
     }
 
-    private void ensureBucketExists() throws Exception {
-        String bucket = minioProperties.getBucketName();
-        boolean exists = minioClient.bucketExists(BucketExistsArgs.builder().bucket(bucket).build());
-        if (!exists) {
-            minioClient.makeBucket(MakeBucketArgs.builder().bucket(bucket).build());
-        }
-    }
-
     private String resolveAvatarUrl(String avatar) {
         if (!StringUtils.hasText(avatar)) {
             return avatar;
         }
-        if (avatar.startsWith("http://") || avatar.startsWith("https://") || avatar.startsWith("/")) {
+        if (!StringUtils.hasText(minioProperties.getBucketName()) || minioClient == null) {
             return avatar;
         }
-        if (minioClient != null && StringUtils.hasText(minioProperties.getBucketName())) {
-            try {
-                return minioClient.getPresignedObjectUrl(
-                        GetPresignedObjectUrlArgs.builder()
-                                .method(Method.GET)
-                                .bucket(minioProperties.getBucketName())
-                                .object(avatar)
-                                .expiry(7, TimeUnit.DAYS)
-                                .build()
-                );
-            } catch (Exception e) {
-                log.warn("resolve avatar url failed, avatar={}", avatar, e);
-            }
+        try {
+            return minioClient.getPresignedObjectUrl(
+                    GetPresignedObjectUrlArgs.builder()
+                            .bucket(minioProperties.getBucketName())
+                            .object(avatar)
+                            .method(Method.GET)
+                            .expiry(30, TimeUnit.MINUTES)
+                            .build()
+            );
+        } catch (Exception e) {
+            log.warn("resolve avatar url failed, object={}", avatar, e);
+            return avatar;
         }
-        String endpoint = StringUtils.hasText(minioProperties.getPublicEndpoint())
-                ? minioProperties.getPublicEndpoint()
-                : "http://files.localhost";
-        if (StringUtils.hasText(endpoint) && StringUtils.hasText(minioProperties.getBucketName())) {
-            String safeEndpoint = endpoint.endsWith("/")
-                    ? endpoint.substring(0, endpoint.length() - 1)
-                    : endpoint;
-            return safeEndpoint + "/" + minioProperties.getBucketName() + "/" + avatar;
+    }
+
+    private void ensureBucketExists() throws Exception {
+        boolean exists = minioClient.bucketExists(BucketExistsArgs.builder()
+                .bucket(minioProperties.getBucketName())
+                .build());
+        if (!exists) {
+            minioClient.makeBucket(MakeBucketArgs.builder()
+                    .bucket(minioProperties.getBucketName())
+                    .build());
         }
-        return avatar;
+    }
+
+    private int normalizeTokenVersion(Integer tokenVersion) {
+        return tokenVersion == null || tokenVersion < 0 ? 0 : tokenVersion;
     }
 }

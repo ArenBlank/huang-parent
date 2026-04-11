@@ -6,6 +6,8 @@ import com.huang.model.entity.RoleCourseCategoryScope;
 import com.huang.web.admin.dto.role.RoleCourseCategoryScopeItemDTO;
 import com.huang.web.admin.mapper.RoleCourseCategoryScopeMapper;
 import com.huang.web.admin.service.RoleService;
+import com.huang.web.admin.service.biz.auth.AdminRoleAclChangedEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -18,11 +20,14 @@ public class AdminRoleScopeBizService {
 
     private final RoleService roleService;
     private final RoleCourseCategoryScopeMapper roleCourseCategoryScopeMapper;
+    private final ApplicationEventPublisher applicationEventPublisher;
 
     public AdminRoleScopeBizService(RoleService roleService,
-                                    RoleCourseCategoryScopeMapper roleCourseCategoryScopeMapper) {
+                                    RoleCourseCategoryScopeMapper roleCourseCategoryScopeMapper,
+                                    ApplicationEventPublisher applicationEventPublisher) {
         this.roleService = roleService;
         this.roleCourseCategoryScopeMapper = roleCourseCategoryScopeMapper;
+        this.applicationEventPublisher = applicationEventPublisher;
     }
 
     public List<Long> listCourseCategoryScope(Long roleId) {
@@ -41,20 +46,19 @@ public class AdminRoleScopeBizService {
         if (role == null) {
             return false;
         }
-        // physical delete to avoid unique constraint conflicts with logical delete
         roleCourseCategoryScopeMapper.deleteByRoleIdPhysical(roleId);
-        if (categoryIds == null || categoryIds.isEmpty()) {
-            return true;
-        }
-        for (Long categoryId : categoryIds) {
-            if (categoryId == null) {
-                continue;
+        if (categoryIds != null) {
+            for (Long categoryId : categoryIds) {
+                if (categoryId == null) {
+                    continue;
+                }
+                RoleCourseCategoryScope scope = new RoleCourseCategoryScope();
+                scope.setRoleId(roleId);
+                scope.setCategoryId(categoryId);
+                roleCourseCategoryScopeMapper.insert(scope);
             }
-            RoleCourseCategoryScope scope = new RoleCourseCategoryScope();
-            scope.setRoleId(roleId);
-            scope.setCategoryId(categoryId);
-            roleCourseCategoryScopeMapper.insert(scope);
         }
+        applicationEventPublisher.publishEvent(new AdminRoleAclChangedEvent(roleId, "role_scope_update"));
         return true;
     }
 

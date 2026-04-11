@@ -8,6 +8,8 @@ import com.huang.web.admin.dto.role.RolePermissionAssignDTO;
 import com.huang.web.admin.mapper.PermissionMapper;
 import com.huang.web.admin.mapper.RolePermissionMapper;
 import com.huang.web.admin.service.RoleService;
+import com.huang.web.admin.service.biz.auth.AdminRoleAclChangedEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -25,13 +27,16 @@ public class AdminRolePermissionBizService {
     private final RoleService roleService;
     private final RolePermissionMapper rolePermissionMapper;
     private final PermissionMapper permissionMapper;
+    private final ApplicationEventPublisher applicationEventPublisher;
 
     public AdminRolePermissionBizService(RoleService roleService,
                                          RolePermissionMapper rolePermissionMapper,
-                                         PermissionMapper permissionMapper) {
+                                         PermissionMapper permissionMapper,
+                                         ApplicationEventPublisher applicationEventPublisher) {
         this.roleService = roleService;
         this.rolePermissionMapper = rolePermissionMapper;
         this.permissionMapper = permissionMapper;
+        this.applicationEventPublisher = applicationEventPublisher;
     }
 
     public List<Permission> listPermissions() {
@@ -78,16 +83,19 @@ public class AdminRolePermissionBizService {
         if ("replace".equals(operation)) {
             rolePermissionMapper.deleteByRoleIdPhysical(dto.getRoleId());
             insertRolePermissions(dto.getRoleId(), permIds);
+            applicationEventPublisher.publishEvent(new AdminRoleAclChangedEvent(dto.getRoleId(), "role_permission_replace"));
             return true;
         }
         if ("add".equals(operation)) {
             insertRolePermissions(dto.getRoleId(), permIds);
+            applicationEventPublisher.publishEvent(new AdminRoleAclChangedEvent(dto.getRoleId(), "role_permission_add"));
             return true;
         }
         if ("remove".equals(operation)) {
             if (!permIds.isEmpty()) {
                 rolePermissionMapper.deleteByRoleIdAndPermIdsPhysical(dto.getRoleId(), permIds);
             }
+            applicationEventPublisher.publishEvent(new AdminRoleAclChangedEvent(dto.getRoleId(), "role_permission_remove"));
             return true;
         }
         return false;

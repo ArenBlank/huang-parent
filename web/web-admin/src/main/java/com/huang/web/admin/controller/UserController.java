@@ -2,16 +2,16 @@ package com.huang.web.admin.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.huang.common.result.Result;
+import com.huang.model.entity.User;
 import com.huang.web.admin.constant.AdminRoleCode;
-import com.huang.web.admin.custom.aop.OperationLog;
 import com.huang.web.admin.custom.annotation.RequireAdminPermission;
 import com.huang.web.admin.custom.annotation.RequireAdminRole;
-import com.huang.model.entity.User;
-import com.huang.model.entity.UserRole;
+import com.huang.web.admin.custom.aop.OperationLog;
 import com.huang.web.admin.dto.user.UserRoleAssignDTO;
 import com.huang.web.admin.dto.user.UserStatusUpdateDTO;
-import com.huang.web.admin.service.UserRoleService;
 import com.huang.web.admin.service.UserService;
+import com.huang.web.admin.service.biz.auth.AdminUserAuthBizService;
+import com.huang.web.admin.service.biz.auth.AdminUserRoleBindingBizService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -19,21 +19,25 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@Tag(name = "Admin用户管理", description = "用户查询与状态维护")
+@Tag(name = "Admin User Management", description = "User query and maintenance")
 @RestController
 @RequestMapping("/admin/user")
 @RequireAdminRole(AdminRoleCode.ADMIN)
 public class UserController {
 
     private final UserService userService;
-    private final UserRoleService userRoleService;
+    private final AdminUserAuthBizService adminUserAuthBizService;
+    private final AdminUserRoleBindingBizService adminUserRoleBindingBizService;
 
-    public UserController(UserService userService, UserRoleService userRoleService) {
+    public UserController(UserService userService,
+                          AdminUserAuthBizService adminUserAuthBizService,
+                          AdminUserRoleBindingBizService adminUserRoleBindingBizService) {
         this.userService = userService;
-        this.userRoleService = userRoleService;
+        this.adminUserAuthBizService = adminUserAuthBizService;
+        this.adminUserRoleBindingBizService = adminUserRoleBindingBizService;
     }
 
-    @Operation(summary = "用户列表")
+    @Operation(summary = "List users")
     @GetMapping("/list")
     @RequireAdminPermission({"user:read"})
     public Result<List<User>> list(@RequestParam(required = false) Integer status,
@@ -51,42 +55,34 @@ public class UserController {
         return Result.ok(userService.list(wrapper));
     }
 
-    @Operation(summary = "用户详情")
+    @Operation(summary = "User detail")
     @GetMapping("/detail/{userId}")
     @RequireAdminPermission({"user:read"})
     public Result<User> detail(@PathVariable Long userId) {
         User user = userService.getById(userId);
-        return user == null ? Result.fail("用户不存在") : Result.ok(user);
+        return user == null ? Result.fail("User not found") : Result.ok(user);
     }
 
-    @Operation(summary = "更新用户状态")
+    @Operation(summary = "Update user status")
     @PutMapping("/status")
     @RequireAdminPermission({"user:status"})
     @OperationLog(module = "user", action = "update_status", detail = "admin update user status")
     public Result<String> updateStatus(@Valid @RequestBody UserStatusUpdateDTO dto) {
         User user = userService.getById(dto.getUserId());
         if (user == null) {
-            return Result.fail("用户不存在");
+            return Result.fail("User not found");
         }
-        user.setStatus(dto.getStatus());
-        return userService.updateById(user) ? Result.ok("更新成功") : Result.fail("更新失败");
+        return adminUserAuthBizService.updateStatus(dto) ? Result.ok("Update success") : Result.fail("Update failed");
     }
 
-    @Operation(summary = "给用户分配角色")
+    @Operation(summary = "Assign user roles")
     @PostMapping("/assign-roles")
     @RequireAdminPermission({"user:role"})
     @OperationLog(module = "user_role", action = "assign", detail = "admin assign roles to user")
     public Result<String> assignRoles(@Valid @RequestBody UserRoleAssignDTO dto) {
         if (userService.getById(dto.getUserId()) == null) {
-            return Result.fail("用户不存在");
+            return Result.fail("User not found");
         }
-        userRoleService.remove(new LambdaQueryWrapper<UserRole>().eq(UserRole::getUserId, dto.getUserId()));
-        for (Long roleId : dto.getRoleIds()) {
-            UserRole ur = new UserRole();
-            ur.setUserId(dto.getUserId());
-            ur.setRoleId(roleId);
-            userRoleService.save(ur);
-        }
-        return Result.ok("分配成功");
+        return adminUserRoleBindingBizService.assignRoles(dto) ? Result.ok("Assign success") : Result.fail("Assign failed");
     }
 }

@@ -2,13 +2,14 @@ package com.huang.web.admin.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.huang.common.result.Result;
+import com.huang.model.entity.UserRole;
 import com.huang.web.admin.constant.AdminRoleCode;
-import com.huang.web.admin.custom.aop.OperationLog;
 import com.huang.web.admin.custom.annotation.RequireAdminPermission;
 import com.huang.web.admin.custom.annotation.RequireAdminRole;
-import com.huang.model.entity.UserRole;
+import com.huang.web.admin.custom.aop.OperationLog;
 import com.huang.web.admin.dto.userrole.BatchRoleAssignDTO;
 import com.huang.web.admin.service.UserRoleService;
+import com.huang.web.admin.service.biz.auth.AdminUserRoleBindingBizService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
@@ -16,85 +17,58 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@Tag(name = "Admin用户角色关系", description = "用户与角色关联关系维护")
+@Tag(name = "Admin User Role Binding", description = "User role binding management")
 @RestController
 @RequestMapping("/admin/user-role")
 @RequireAdminRole(AdminRoleCode.ADMIN)
 public class UserRoleController {
 
     private final UserRoleService userRoleService;
+    private final AdminUserRoleBindingBizService adminUserRoleBindingBizService;
 
-    public UserRoleController(UserRoleService userRoleService) {
+    public UserRoleController(UserRoleService userRoleService,
+                              AdminUserRoleBindingBizService adminUserRoleBindingBizService) {
         this.userRoleService = userRoleService;
+        this.adminUserRoleBindingBizService = adminUserRoleBindingBizService;
     }
 
-    @Operation(summary = "用户角色关系列表")
+    @Operation(summary = "List user-role bindings")
     @GetMapping("/list")
     @RequireAdminPermission({"user:role"})
     public Result<List<UserRole>> list() {
         return Result.ok(userRoleService.list(new LambdaQueryWrapper<UserRole>().orderByDesc(UserRole::getId)));
     }
 
-    @Operation(summary = "查询用户角色")
+    @Operation(summary = "List roles by user")
     @GetMapping("/user/{userId}/roles")
     @RequireAdminPermission({"user:role"})
     public Result<List<UserRole>> userRoles(@PathVariable Long userId) {
         return Result.ok(userRoleService.list(new LambdaQueryWrapper<UserRole>().eq(UserRole::getUserId, userId)));
     }
 
-    @Operation(summary = "查询角色用户")
+    @Operation(summary = "List users by role")
     @GetMapping("/role/{roleId}/users")
     @RequireAdminPermission({"user:role"})
     public Result<List<UserRole>> roleUsers(@PathVariable Long roleId) {
         return Result.ok(userRoleService.list(new LambdaQueryWrapper<UserRole>().eq(UserRole::getRoleId, roleId)));
     }
 
-    @Operation(summary = "批量分配角色")
+    @Operation(summary = "Batch assign roles")
     @PostMapping("/batch-assign")
     @RequireAdminPermission({"user:role"})
     @OperationLog(module = "user_role", action = "batch_assign", detail = "admin batch assign roles")
     public Result<String> batchAssign(@Valid @RequestBody BatchRoleAssignDTO dto) {
-        String operation = dto.getOperation() == null ? "replace" : dto.getOperation().trim().toLowerCase();
-        for (Long userId : dto.getUserIds()) {
-            if ("replace".equals(operation)) {
-                userRoleService.remove(new LambdaQueryWrapper<UserRole>().eq(UserRole::getUserId, userId));
-                for (Long roleId : dto.getRoleIds()) {
-                    UserRole ur = new UserRole();
-                    ur.setUserId(userId);
-                    ur.setRoleId(roleId);
-                    userRoleService.save(ur);
-                }
-            } else if ("add".equals(operation)) {
-                for (Long roleId : dto.getRoleIds()) {
-                    long count = userRoleService.count(new LambdaQueryWrapper<UserRole>()
-                            .eq(UserRole::getUserId, userId)
-                            .eq(UserRole::getRoleId, roleId));
-                    if (count == 0) {
-                        UserRole ur = new UserRole();
-                        ur.setUserId(userId);
-                        ur.setRoleId(roleId);
-                        userRoleService.save(ur);
-                    }
-                }
-            } else if ("remove".equals(operation)) {
-                userRoleService.remove(new LambdaQueryWrapper<UserRole>()
-                        .eq(UserRole::getUserId, userId)
-                        .in(UserRole::getRoleId, dto.getRoleIds()));
-            } else {
-                return Result.fail("operation 仅支持 replace/add/remove");
-            }
-        }
-        return Result.ok("处理成功");
+        return adminUserRoleBindingBizService.batchAssign(dto)
+                ? Result.ok("Success")
+                : Result.fail("operation only supports replace/add/remove");
     }
 
-    @Operation(summary = "删除用户角色关联")
+    @Operation(summary = "Remove user-role binding")
     @DeleteMapping("/{userId}/role/{roleId}")
     @RequireAdminPermission({"user:role"})
     @OperationLog(module = "user_role", action = "remove", detail = "admin remove user role")
     public Result<String> remove(@PathVariable Long userId, @PathVariable Long roleId) {
-        boolean ok = userRoleService.remove(new LambdaQueryWrapper<UserRole>()
-                .eq(UserRole::getUserId, userId)
-                .eq(UserRole::getRoleId, roleId));
-        return ok ? Result.ok("删除成功") : Result.fail("关联不存在");
+        boolean ok = adminUserRoleBindingBizService.removeRole(userId, roleId);
+        return ok ? Result.ok("Remove success") : Result.fail("Binding not found");
     }
 }

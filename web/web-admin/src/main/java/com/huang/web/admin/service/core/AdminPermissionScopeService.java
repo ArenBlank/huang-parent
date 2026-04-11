@@ -12,6 +12,8 @@ import com.huang.model.entity.RoleCourseCategoryScope;
 import com.huang.web.admin.mapper.RoleCourseCategoryScopeMapper;
 import com.huang.web.admin.service.RoleService;
 import com.huang.web.admin.service.biz.AdminOperationLogBizService;
+import com.huang.web.admin.service.biz.auth.AdminAuthView;
+import com.huang.web.admin.service.biz.auth.AdminAuthViewHolder;
 import org.springframework.stereotype.Service;
 
 import java.util.HashSet;
@@ -44,6 +46,23 @@ public class AdminPermissionScopeService {
         LoginUser loginUser = LoginUserHolder.getLoginUser();
         if (loginUser == null) {
             return;
+        }
+        AdminAuthView authView = AdminAuthViewHolder.get();
+        if (authView != null) {
+            if (authView.adminAll()) {
+                return;
+            }
+            Set<Long> allowed = authView.allowedCourseCategoryIds();
+            if (allowed == null || allowed.isEmpty()) {
+                return;
+            }
+            if (allowed.contains(ALL_CATEGORY) || allowed.contains(categoryId)) {
+                return;
+            }
+            String actionLabel = (action == null || action.isBlank()) ? "course" : action;
+            String detailLabel = "categoryId=" + categoryId + (detail == null ? "" : (", " + detail));
+            adminOperationLogBizService.record("authz", actionLabel, detailLabel, false);
+            throw new HuangException(ResultCodeEnum.ADMIN_ACCESS_FORBIDDEN);
         }
         Set<String> roleCodes = loginUser.getRoleCodes();
         if (adminPermissionProperties.isAdminAll() && roleCodes.contains(AdminRoleCode.ADMIN)) {

@@ -5,8 +5,8 @@ import com.huang.common.login.LoginUser;
 import com.huang.common.login.LoginUserHolder;
 import com.huang.common.result.ResultCodeEnum;
 import com.huang.common.utils.JwtUtil;
-import com.huang.model.entity.User;
-import com.huang.web.app.service.core.UserCoreService;
+import com.huang.web.app.service.biz.auth.AppAuthCacheService;
+import com.huang.web.app.service.biz.auth.AppAuthSnapshot;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -17,42 +17,33 @@ import org.springframework.web.servlet.HandlerInterceptor;
 
 import java.util.Objects;
 
-/**
- * App端JWT认证拦截器
- * @author system
- * @since 2026-02-25
- */
 @Slf4j
 @Component
 public class AuthenticationInterceptor implements HandlerInterceptor {
 
-    private final UserCoreService userCoreService;
+    private final AppAuthCacheService appAuthCacheService;
 
-    public AuthenticationInterceptor(UserCoreService userCoreService) {
-        this.userCoreService = userCoreService;
+    public AuthenticationInterceptor(AppAuthCacheService appAuthCacheService) {
+        this.appAuthCacheService = appAuthCacheService;
     }
 
     @Override
     public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
         String requestURI = request.getRequestURI();
-        log.info("App端JWT认证拦截器处理请求: {}", requestURI);
-        
-        // 获取Authorization header或access-token header
+        log.info("App JWT authentication intercepting request: {}", requestURI);
+
         String token = request.getHeader("Authorization");
         if (!StringUtils.hasText(token)) {
             token = request.getHeader("access-token");
         }
-        
-        // 处理Bearer前缀
         if (StringUtils.hasText(token) && token.startsWith("Bearer ")) {
             token = token.substring(7);
         }
-        
         if (!StringUtils.hasText(token)) {
-            log.warn("请求缺少JWT token: {}", requestURI);
+            log.warn("Request missing JWT token: {}", requestURI);
             throw new HuangException(ResultCodeEnum.APP_LOGIN_AUTH);
         }
-        
+
         try {
             Claims claims = JwtUtil.parseToken(token);
             String platform = JwtUtil.getPlatformFromClaims(claims);
@@ -61,32 +52,29 @@ public class AuthenticationInterceptor implements HandlerInterceptor {
             }
             Long userId = claims.get(JwtUtil.CLAIM_USER_ID, Long.class);
             String username = claims.get(JwtUtil.CLAIM_USERNAME, String.class);
-
             if (userId == null || !StringUtils.hasText(username)) {
-                log.warn("JWT token中缺少必要的用户信息: {}", requestURI);
+                log.warn("JWT token missing required user info: {}", requestURI);
                 throw new HuangException(ResultCodeEnum.TOKEN_INVALID);
             }
 
-            User user = userCoreService.getById(userId);
-            if (user == null || user.getStatus() == null || user.getStatus() != 1) {
-                log.warn("JWT认证失败，用户不存在或已禁用: userId={}", userId);
+            AppAuthSnapshot snapshot = appAuthCacheService.getOrLoad(userId);
+            if (snapshot == null || snapshot.status() == null || snapshot.status() != 1) {
+                log.warn("JWT auth failed because user is missing or disabled: userId={}", userId);
                 throw new HuangException(ResultCodeEnum.APP_LOGIN_AUTH);
             }
-            if (!Objects.equals(normalizeTokenVersion(user.getTokenVersion()), JwtUtil.getTokenVersionFromClaims(claims))) {
-                log.warn("JWT认证失败，tokenVersion不匹配: userId={}", userId);
+            if (!Objects.equals(normalizeTokenVersion(snapshot.tokenVersion()), JwtUtil.getTokenVersionFromClaims(claims))) {
+                log.warn("JWT auth failed because tokenVersion does not match: userId={}", userId);
                 throw new HuangException(ResultCodeEnum.TOKEN_INVALID);
             }
 
             LoginUserHolder.setLoginUser(new LoginUser(userId, username));
-            log.debug("JWT认证成功，用户ID: {}, 用户名: {}", userId, username);
-            
+            log.debug("JWT auth succeeded, userId={}, username={}", userId, username);
             return true;
-            
         } catch (HuangException e) {
-            log.warn("JWT认证失败: {} - {}", requestURI, e.getMessage());
+            log.warn("JWT auth failed: {} - {}", requestURI, e.getMessage());
             throw e;
         } catch (Exception e) {
-            log.error("JWT认证异常: {} - {}", requestURI, e.getMessage(), e);
+            log.error("JWT auth error: {} - {}", requestURI, e.getMessage(), e);
             throw new HuangException(ResultCodeEnum.TOKEN_INVALID);
         }
     }

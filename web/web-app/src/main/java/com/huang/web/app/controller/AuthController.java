@@ -15,6 +15,7 @@ import com.huang.web.app.dto.auth.RefreshTokenDTO;
 import com.huang.web.app.dto.auth.SmsCodeDTO;
 import com.huang.web.app.dto.auth.UserLoginDTO;
 import com.huang.web.app.dto.auth.UserRegisterDTO;
+import com.huang.web.app.service.biz.auth.AppAuthCacheService;
 import com.huang.web.app.service.core.RoleCoreService;
 import com.huang.web.app.service.core.UserCoreService;
 import com.huang.web.app.service.core.UserRoleCoreService;
@@ -34,7 +35,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.time.LocalDateTime;
 
-@Tag(name = "App认证", description = "用户注册、登录、验证码、重置密码")
+@Tag(name = "App Auth", description = "Register, login, refresh token and password reset")
 @Slf4j
 @RestController
 @RequestMapping("/app/auth")
@@ -45,60 +46,63 @@ public class AuthController {
     private final UserCoreService userCoreService;
     private final RoleCoreService roleCoreService;
     private final UserRoleCoreService userRoleCoreService;
+    private final AppAuthCacheService appAuthCacheService;
 
     public AuthController(SmsCodeUtil smsCodeUtil,
                           UserCoreService userCoreService,
                           RoleCoreService roleCoreService,
-                          UserRoleCoreService userRoleCoreService) {
+                          UserRoleCoreService userRoleCoreService,
+                          AppAuthCacheService appAuthCacheService) {
         this.smsCodeUtil = smsCodeUtil;
         this.userCoreService = userCoreService;
         this.roleCoreService = roleCoreService;
         this.userRoleCoreService = userRoleCoreService;
+        this.appAuthCacheService = appAuthCacheService;
     }
 
-    @Operation(summary = "发送短信验证码", description = "发送注册、登录、重置密码验证码")
+    @Operation(summary = "Send SMS code", description = "Send SMS code for register, login or password reset")
     @RateLimit(
             prefix = RedisConstant.APP_SMS_SEND_LIMIT_PREFIX,
             key = "#dto.type + ':' + #dto.phone",
             maxRequests = RedisConstant.SMS_SEND_RATE_LIMIT_MAX,
             windowSec = RedisConstant.SMS_SEND_RATE_LIMIT_WINDOW_SEC,
-            message = "短信发送过于频繁，请稍后再试"
+            message = "SMS requests are too frequent, please try again later"
     )
     @PostMapping("/sms-code/send")
     public Result<String> sendSmsCode(@Valid @RequestBody SmsCodeDTO dto) {
-        log.info("发送短信验证码请求: phone={}, type={}", dto.getPhone(), dto.getType());
+        log.info("send sms code request: phone={}, type={}", dto.getPhone(), dto.getType());
 
         if (!smsCodeUtil.canSendSms(dto.getPhone(), dto.getType())) {
-            return Result.fail("发送过于频繁，请稍后再试");
+            return Result.fail("SMS requests are too frequent, please try again later");
         }
 
         String code = smsCodeUtil.sendSmsCode(dto.getPhone(), dto.getType());
         if (code != null) {
-            return Result.ok("验证码发送成功，开发模式验证码: " + code);
+            return Result.ok("SMS code sent successfully, dev code: " + code);
         }
-        return Result.ok("验证码发送成功");
+        return Result.ok("SMS code sent successfully");
     }
 
-    @Operation(summary = "用户注册", description = "新用户注册")
+    @Operation(summary = "Register user", description = "Register a new member")
     @PostMapping("/register")
     public Result<RegisterVO> register(@Valid @RequestBody UserRegisterDTO dto) {
-        log.info("用户注册请求: username={}, phone={}", dto.getUsername(), dto.getPhone());
+        log.info("register request: username={}, phone={}", dto.getUsername(), dto.getPhone());
 
         if (!dto.getPassword().equals(dto.getConfirmPassword())) {
-            return Result.fail("两次输入的密码不一致");
+            return Result.fail("Passwords do not match");
         }
         if (!smsCodeUtil.verifySmsCode(dto.getPhone(), dto.getSmsCode(), "register")) {
-            return Result.fail("验证码错误或已失效");
+            return Result.fail("SMS code is invalid or expired");
         }
 
         if (userCoreService.existsByUsername(dto.getUsername())) {
-            return Result.fail("用户名已存在");
+            return Result.fail("Username already exists");
         }
         if (userCoreService.existsByPhone(dto.getPhone())) {
-            return Result.fail("手机号已注册");
+            return Result.fail("Phone number already registered");
         }
         if (dto.getEmail() != null && !dto.getEmail().isBlank() && userCoreService.existsByEmail(dto.getEmail())) {
-            return Result.fail("邮箱已注册");
+            return Result.fail("Email already registered");
         }
 
         User user = new User();
@@ -130,46 +134,45 @@ public class AuthController {
         vo.setAutoLogin(true);
         vo.setAccessToken(JwtUtil.generateAppAccessToken(user.getId(), user.getUsername(), normalizeTokenVersion(user)));
         vo.setRefreshToken(JwtUtil.generateAppRefreshToken(user.getId(), user.getUsername(), normalizeTokenVersion(user)));
-        vo.setWelcomeMessage("注册成功，欢迎加入健身平台");
+        vo.setWelcomeMessage("Register success");
 
-        log.info("用户注册成功: userId={}, username={}", vo.getUserId(), vo.getUsername());
+        log.info("register success: userId={}, username={}", vo.getUserId(), vo.getUsername());
         return Result.ok(vo);
     }
 
-    @Operation(summary = "用户登录", description = "密码登录或短信验证码登录")
+    @Operation(summary = "User login", description = "Password login or SMS login")
     @RateLimit(
             prefix = RedisConstant.APP_LOGIN_LIMIT_IP_PREFIX,
             key = "#ip",
             maxRequests = RedisConstant.LOGIN_RATE_LIMIT_MAX,
             windowSec = RedisConstant.LOGIN_RATE_LIMIT_WINDOW_SEC,
-            message = "登录请求过于频繁，请稍后再试"
+            message = "Login requests are too frequent, please try again later"
     )
     @RateLimit(
             prefix = RedisConstant.APP_LOGIN_LIMIT_ACCOUNT_PREFIX,
             key = "#dto.account",
             maxRequests = RedisConstant.LOGIN_RATE_LIMIT_MAX,
             windowSec = RedisConstant.LOGIN_RATE_LIMIT_WINDOW_SEC,
-            message = "登录请求过于频繁，请稍后再试"
+            message = "Login requests are too frequent, please try again later"
     )
     @PostMapping("/login")
     public Result<LoginVO> login(@Valid @RequestBody UserLoginDTO dto) {
-        log.info("用户登录请求: account={}, loginType={}", dto.getAccount(), dto.getLoginType());
+        log.info("login request: account={}, loginType={}", dto.getAccount(), dto.getLoginType());
 
         if ("sms".equals(dto.getLoginType())
                 && !smsCodeUtil.verifySmsCode(dto.getAccount(), dto.getSmsCode(), "login")) {
-            return Result.fail("验证码错误或已失效");
+            return Result.fail("SMS code is invalid or expired");
         }
 
         User user = findByAccount(dto.getAccount());
         if (user == null) {
-            return Result.fail("账号不存在");
+            return Result.fail("Account not found");
         }
         if (user.getStatus() == null || user.getStatus() != 1) {
-            return Result.fail("账号已禁用");
+            return Result.fail("Account disabled");
         }
-
         if ("password".equals(dto.getLoginType()) && !PasswordUtil.matches(dto.getPassword(), user.getPassword())) {
-            return Result.fail("账号或密码错误");
+            return Result.fail("Invalid account or password");
         }
 
         LoginVO vo = new LoginVO();
@@ -191,28 +194,28 @@ public class AuthController {
         vo.setAccessTokenExpire(LocalDateTime.now().plusSeconds(JwtUtil.accessTokenExpireMs(JwtUtil.PLATFORM_APP) / 1000));
         vo.setRefreshTokenExpire(LocalDateTime.now().plusSeconds(JwtUtil.refreshTokenExpireMs(JwtUtil.PLATFORM_APP) / 1000));
 
-        log.info("用户登录成功: userId={}, username={}", userInfo.getId(), userInfo.getUsername());
+        log.info("login success: userId={}, username={}", userInfo.getId(), userInfo.getUsername());
         return Result.ok(vo);
     }
 
-    @Operation(summary = "刷新令牌", description = "使用 refresh token 获取新的 access token")
+    @Operation(summary = "Refresh token", description = "Use refresh token to get a new access token")
     @PostMapping("/refresh-token")
     public Result<RefreshTokenVO> refreshToken(@Valid @RequestBody RefreshTokenDTO dto) {
-        log.info("刷新令牌请求: refreshToken前缀={}",
-                dto.getRefreshToken().length() > 8 ? dto.getRefreshToken().substring(0, 8) + "..." : dto.getRefreshToken());
+        log.info("refresh token request");
 
         var claims = JwtUtil.parseTokenSafely(dto.getRefreshToken());
         if (claims == null || !JwtUtil.isRefreshToken(claims)) {
-            return Result.fail("刷新令牌无效或已过期");
+            return Result.fail("Refresh token is invalid or expired");
         }
         Long userId = JwtUtil.getUserIdFromToken(dto.getRefreshToken());
         User user = userId == null ? null : userCoreService.getById(userId);
         if (user == null || user.getStatus() == null || user.getStatus() != 1) {
-            return Result.fail("刷新令牌无效或已过期");
+            return Result.fail("Refresh token is invalid or expired");
         }
         if (normalizeTokenVersion(user) != JwtUtil.getTokenVersionFromClaims(claims)) {
-            return Result.fail("刷新令牌无效或已过期");
+            return Result.fail("Refresh token is invalid or expired");
         }
+
         String newAccessToken = JwtUtil.generateAccessToken(
                 user.getId(),
                 user.getUsername(),
@@ -226,40 +229,44 @@ public class AuthController {
         vo.setAccessTokenExpire(LocalDateTime.now().plusSeconds(JwtUtil.accessTokenExpireMs(JwtUtil.getPlatformFromClaims(claims)) / 1000));
         vo.setRefreshTokenExpire(LocalDateTime.now().plusSeconds(JwtUtil.refreshTokenExpireMs(JwtUtil.getPlatformFromClaims(claims)) / 1000));
 
-        log.info("令牌刷新成功");
+        log.info("refresh token success");
         return Result.ok(vo);
     }
 
-    @Operation(summary = "忘记密码", description = "通过短信验证码重置密码")
+    @Operation(summary = "Forget password", description = "Reset password using SMS code")
     @PostMapping("/forget-password")
     public Result<String> forgetPassword(@Valid @RequestBody ForgetPasswordDTO dto) {
-        log.info("忘记密码请求: phone={}", dto.getPhone());
+        log.info("forget password request: phone={}", dto.getPhone());
 
         if (!dto.getNewPassword().equals(dto.getConfirmPassword())) {
-            return Result.fail("两次输入的密码不一致");
+            return Result.fail("Passwords do not match");
         }
         if (!smsCodeUtil.verifySmsCode(dto.getPhone(), dto.getSmsCode(), "reset_password")) {
-            return Result.fail("验证码错误或已失效");
+            return Result.fail("SMS code is invalid or expired");
         }
 
         User user = userCoreService.getByPhone(dto.getPhone());
         if (user == null) {
-            return Result.fail("手机号未注册");
+            return Result.fail("Phone number is not registered");
         }
 
         user.setPassword(PasswordUtil.encode(dto.getNewPassword()));
         user.setTokenVersion(normalizeTokenVersion(user) + 1);
-        userCoreService.updateById(user);
+        boolean updated = userCoreService.updateById(user);
+        if (!updated) {
+            return Result.fail("Password reset failed");
+        }
+        appAuthCacheService.evict(user.getId());
 
-        log.info("密码重置成功: phone={}", dto.getPhone());
-        return Result.ok("密码重置成功");
+        log.info("forget password success: phone={}", dto.getPhone());
+        return Result.ok("Password reset success");
     }
 
-    @Operation(summary = "退出登录", description = "用户退出登录")
+    @Operation(summary = "Logout", description = "User logout")
     @PostMapping("/logout")
     public Result<String> logout() {
-        log.info("用户退出登录成功");
-        return Result.ok("退出登录成功");
+        log.info("logout success");
+        return Result.ok("Logout success");
     }
 
     private User findByAccount(String account) {

@@ -36,8 +36,7 @@ spring:
 
 mybatis-plus:
   mapper-locations:
-    - classpath*:mapper/UserMapper.xml
-    - classpath*:mapper/RoleMapper.xml
+    - classpath*:mapper/*.xml
   configuration:
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
 

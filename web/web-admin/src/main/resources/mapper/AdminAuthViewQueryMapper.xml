@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.huang.web.admin.mapper.AdminAuthViewQueryMapper">
+
+    <select id="selectActiveRolesByUserId" resultType="com.huang.model.entity.Role">
+        SELECT DISTINCT
+            r.id,
+            r.role_name AS roleName,
+            r.role_code AS roleCode,
+            r.status
+        FROM user_role ur
+        INNER JOIN role r ON r.id = ur.role_id
+        WHERE ur.user_id = #{userId}
+          AND ur.is_deleted = 0
+          AND r.is_deleted = 0
+          AND r.status = 1
+        ORDER BY r.id ASC
+    </select>
+
+    <select id="selectPermissionCodesByRoleIds" resultType="java.lang.String">
+        SELECT DISTINCT
+            p.permission_code
+        FROM role_permission rp
+        INNER JOIN permission p ON p.id = rp.permission_id
+        WHERE rp.is_deleted = 0
+          AND p.is_deleted = 0
+          AND p.status = 1
+          <if test="roleIds != null and roleIds.size() > 0">
+              AND rp.role_id IN
+              <foreach collection="roleIds" item="roleId" open="(" separator="," close=")">
+                  #{roleId}
+              </foreach>
+          </if>
+          <if test="roleIds == null or roleIds.size() == 0">
+              AND 1 = 0
+          </if>
+        ORDER BY p.permission_code ASC
+    </select>
+
+    <select id="selectCategoryIdsByRoleIds" resultType="java.lang.Long">
+        SELECT DISTINCT
+            rccs.category_id
+        FROM role_course_category_scope rccs
+        WHERE rccs.is_deleted = 0
+          <if test="roleIds != null and roleIds.size() > 0">
+              AND rccs.role_id IN
+              <foreach collection="roleIds" item="roleId" open="(" separator="," close=")">
+                  #{roleId}
+              </foreach>
+          </if>
+          <if test="roleIds == null or roleIds.size() == 0">
+              AND 1 = 0
+          </if>
+        ORDER BY rccs.category_id ASC
+    </select>
+
+</mapper>

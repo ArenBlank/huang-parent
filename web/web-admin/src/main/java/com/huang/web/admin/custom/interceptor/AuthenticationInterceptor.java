@@ -5,15 +5,14 @@ import com.huang.common.login.LoginUser;
 import com.huang.common.login.LoginUserHolder;
 import com.huang.common.result.ResultCodeEnum;
 import com.huang.common.utils.JwtUtil;
-import com.huang.model.entity.User;
 import com.huang.web.admin.constant.AdminRoleCode;
 import com.huang.web.admin.custom.annotation.RequireAdminPermission;
 import com.huang.web.admin.custom.annotation.RequireAdminRole;
 import com.huang.web.admin.custom.config.AdminPermissionProperties;
 import com.huang.web.admin.service.biz.AdminOperationLogBizService;
-import com.huang.web.admin.service.core.AdminPermissionDbService;
-import com.huang.web.admin.service.core.AdminRoleCoreService;
-import com.huang.web.admin.service.UserService;
+import com.huang.web.admin.service.biz.auth.AdminAuthCacheService;
+import com.huang.web.admin.service.biz.auth.AdminAuthView;
+import com.huang.web.admin.service.biz.auth.AdminAuthViewHolder;
 import io.jsonwebtoken.Claims;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -23,29 +22,22 @@ import org.springframework.web.method.HandlerMethod;
 import org.springframework.web.servlet.HandlerInterceptor;
 
 import java.util.Arrays;
-import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 
 @Component
 public class AuthenticationInterceptor implements HandlerInterceptor {
 
-    private final AdminRoleCoreService adminRoleCoreService;
+    private final AdminAuthCacheService adminAuthCacheService;
     private final AdminPermissionProperties adminPermissionProperties;
     private final AdminOperationLogBizService adminOperationLogBizService;
-    private final AdminPermissionDbService adminPermissionDbService;
-    private final UserService userService;
 
-    public AuthenticationInterceptor(AdminRoleCoreService adminRoleCoreService,
+    public AuthenticationInterceptor(AdminAuthCacheService adminAuthCacheService,
                                      AdminPermissionProperties adminPermissionProperties,
-                                     AdminOperationLogBizService adminOperationLogBizService,
-                                     AdminPermissionDbService adminPermissionDbService,
-                                     UserService userService) {
-        this.adminRoleCoreService = adminRoleCoreService;
+                                     AdminOperationLogBizService adminOperationLogBizService) {
+        this.adminAuthCacheService = adminAuthCacheService;
         this.adminPermissionProperties = adminPermissionProperties;
         this.adminOperationLogBizService = adminOperationLogBizService;
-        this.adminPermissionDbService = adminPermissionDbService;
-        this.userService = userService;
     }
 
     @Override
@@ -72,20 +64,22 @@ public class AuthenticationInterceptor implements HandlerInterceptor {
             throw new HuangException(ResultCodeEnum.TOKEN_INVALID);
         }
 
-        User user = userService.getById(userId);
-        if (user == null || user.getStatus() == null || user.getStatus() != 1) {
+        AdminAuthView authView = adminAuthCacheService.getOrLoad(userId);
+        if (authView == null || authView.status() == null || authView.status() != 1) {
             throw new HuangException(ResultCodeEnum.ADMIN_LOGIN_AUTH);
         }
-        if (!"admin".equalsIgnoreCase(user.getUserType())) {
+        if (!"admin".equalsIgnoreCase(authView.userType())) {
             throw new HuangException(ResultCodeEnum.ADMIN_ACCESS_FORBIDDEN);
         }
-        if (!Objects.equals(normalizeTokenVersion(user.getTokenVersion()), JwtUtil.getTokenVersionFromClaims(claims))) {
+        if (!Objects.equals(normalizeTokenVersion(authView.tokenVersion()), JwtUtil.getTokenVersionFromClaims(claims))) {
             throw new HuangException(ResultCodeEnum.TOKEN_INVALID);
         }
 
-        Set<String> roleCodes = adminRoleCoreService.getRoleCodes(userId);
-        LoginUser loginUser = new LoginUser(userId, username, roleCodes);
+        String resolvedUsername = StringUtils.hasText(authView.username()) ? authView.username() : username;
+        Set<String> roleCodes = authView.roleCodes();
+        LoginUser loginUser = new LoginUser(userId, resolvedUsername, roleCodes);
         LoginUserHolder.setLoginUser(loginUser);
+        AdminAuthViewHolder.set(authView);
 
         if (!(handler instanceof HandlerMethod handlerMethod)) {
             return true;
@@ -104,7 +98,7 @@ public class AuthenticationInterceptor implements HandlerInterceptor {
         if (requireAdminPermission == null) {
             requireAdminPermission = handlerMethod.getBeanType().getAnnotation(RequireAdminPermission.class);
         }
-        if (requireAdminPermission != null && !hasPermission(roleCodes, requireAdminPermission.value())) {
+        if (requireAdminPermission != null && !hasPermission(authView, requireAdminPermission.value())) {
             recordAccessDenied("perm_deny", request, "required=" + Arrays.toString(requireAdminPermission.value()));
             throw new HuangException(ResultCodeEnum.ADMIN_ACCESS_FORBIDDEN);
         }
@@ -115,22 +109,26 @@ public class AuthenticationInterceptor implements HandlerInterceptor {
     @Override
     public void afterCompletion(HttpServletRequest request, HttpServletResponse response, Object handler, Exception ex) throws Exception {
         LoginUserHolder.clear();
+        AdminAuthViewHolder.clear();
     }
 
-    private boolean hasPermission(Set<String> roleCodes, String[] required) {
+    private boolean hasPermission(AdminAuthView authView, String[] required) {
         if (required == null || required.length == 0) {
             return true;
         }
+        if (authView == null) {
+            return false;
+        }
+        Set<String> roleCodes = authView.roleCodes();
         if (roleCodes == null || roleCodes.isEmpty()) {
             return false;
         }
-        if (adminPermissionProperties.isAdminAll() && roleCodes.contains(AdminRoleCode.ADMIN)) {
+        if (authView.adminAll() || (adminPermissionProperties.isAdminAll() && roleCodes.contains(AdminRoleCode.ADMIN))) {
             return true;
         }
-        Set<String> allowed = new HashSet<>();
-        allowed.addAll(adminPermissionDbService.permissionsForRoleCodes(roleCodes));
-        for (String roleCode : roleCodes) {
-            allowed.addAll(adminPermissionProperties.permissionsFor(roleCode));
+        Set<String> allowed = authView.permissionCodes();
+        if (allowed == null || allowed.isEmpty()) {
+            return false;
         }
         if (allowed.contains("*")) {
             return true;
