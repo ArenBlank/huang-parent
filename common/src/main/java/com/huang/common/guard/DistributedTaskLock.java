@@ -1,22 +1,17 @@
 package com.huang.common.guard;
 
 import java.lang.annotation.ElementType;
-import java.lang.annotation.Repeatable;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
 @Target(ElementType.METHOD)
 @Retention(RetentionPolicy.RUNTIME)
-@Repeatable(IdempotentSubmits.class)
-public @interface IdempotentSubmit {
-    String prefix();
+public @interface DistributedTaskLock {
 
-    String key();
+    String taskCode();
 
-    long ttlSec();
-
-    String message() default "\u8bf7\u52ff\u91cd\u590d\u63d0\u4ea4";
+    long ttlSec() default 300L;
 
     boolean failOpen() default false;
 }

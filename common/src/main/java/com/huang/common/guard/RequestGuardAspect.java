@@ -4,6 +4,7 @@ import com.huang.common.login.LoginUser;
 import com.huang.common.login.LoginUserHolder;
 import com.huang.common.redis.RedisGuardSupport;
 import com.huang.common.result.Result;
+import com.huang.common.result.ResultCodeEnum;
 import com.huang.common.utils.RequestIpUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
@@ -31,6 +32,8 @@ import java.util.Collection;
 @Component
 public class RequestGuardAspect {
 
+    private static final String SYSTEM_BUSY_MESSAGE = "\u7cfb\u7edf\u7e41\u5fd9\uff0c\u8bf7\u7a0d\u540e\u91cd\u8bd5";
+
     private final RedisGuardSupport redisGuardSupport;
     private final ExpressionParser expressionParser = new SpelExpressionParser();
     private final ParameterNameDiscoverer parameterNameDiscoverer = new DefaultParameterNameDiscoverer();
@@ -43,7 +46,8 @@ public class RequestGuardAspect {
     public Object applyGuards(ProceedingJoinPoint joinPoint) throws Throwable {
         Method method = ((MethodSignature) joinPoint.getSignature()).getMethod();
         Collection<RateLimit> rateLimits = AnnotatedElementUtils.getMergedRepeatableAnnotations(method, RateLimit.class);
-        Collection<IdempotentSubmit> idempotentSubmits = AnnotatedElementUtils.getMergedRepeatableAnnotations(method, IdempotentSubmit.class);
+        Collection<IdempotentSubmit> idempotentSubmits =
+                AnnotatedElementUtils.getMergedRepeatableAnnotations(method, IdempotentSubmit.class);
         if (CollectionUtils.isEmpty(rateLimits) && CollectionUtils.isEmpty(idempotentSubmits)) {
             return joinPoint.proceed();
         }
@@ -56,13 +60,21 @@ public class RequestGuardAspect {
                 if (key == null) {
                     continue;
                 }
-                boolean allowed = redisGuardSupport.allowByFixedWindow(
+                RedisGuardSupport.GuardDecision decision = redisGuardSupport.fixedWindowDecision(
                         rateLimit.prefix() + key,
                         rateLimit.maxRequests(),
                         rateLimit.windowSec()
                 );
-                if (!allowed) {
+                if (decision == RedisGuardSupport.GuardDecision.BLOCK) {
                     return Result.fail(rateLimit.message());
+                }
+                if (decision == RedisGuardSupport.GuardDecision.DEGRADED) {
+                    if (rateLimit.failOpen()) {
+                        log.warn("rate limit guard degraded to fail-open, method={}, key={}",
+                                method.getName(), rateLimit.prefix() + key);
+                        continue;
+                    }
+                    return Result.fail(ResultCodeEnum.SERVICE_ERROR.getCode(), SYSTEM_BUSY_MESSAGE);
                 }
             }
         }
@@ -73,12 +85,17 @@ public class RequestGuardAspect {
                 if (key == null) {
                     continue;
                 }
-                boolean allowed = redisGuardSupport.tryAcquireIdempotent(
+                RedisGuardSupport.GuardDecision decision = redisGuardSupport.idempotentDecision(
                         idempotentSubmit.prefix() + key,
                         idempotentSubmit.ttlSec()
                 );
-                if (!allowed) {
+                if (decision == RedisGuardSupport.GuardDecision.BLOCK) {
                     return Result.fail(idempotentSubmit.message());
+                }
+                if (decision == RedisGuardSupport.GuardDecision.DEGRADED) {
+                    log.warn("idempotent guard degraded to fail-close, method={}, key={}",
+                            method.getName(), idempotentSubmit.prefix() + key);
+                    return Result.fail(ResultCodeEnum.SERVICE_ERROR.getCode(), SYSTEM_BUSY_MESSAGE);
                 }
             }
         }

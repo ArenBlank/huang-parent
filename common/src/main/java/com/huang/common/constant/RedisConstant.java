@@ -65,6 +65,7 @@ public class RedisConstant {
     public static final String APP_BOOKING_CREATE_IDEMPOTENT_PREFIX = "app:idem:booking:create:";
     public static final String APP_PAY_CALLBACK_GUARD_PREFIX = "app:guard:pay:callback:";
     public static final String TASK_LOCK_PREFIX = "task:lock:";
+    public static final String TASK_SCHEDULE_LOCK_PREFIX = "task:schedule:lock:";
 
     public static String appNoticePublishedKey(Integer limit) {
         return APP_NOTICE_PUBLISHED_PREFIX + limit;
@@ -144,6 +145,10 @@ public class RedisConstant {
 
     public static String taskLockKey(String taskCode) {
         return TASK_LOCK_PREFIX + normalizeKeyPart(taskCode);
+    }
+
+    public static String taskScheduleLockKey(String taskCode) {
+        return TASK_SCHEDULE_LOCK_PREFIX + normalizeKeyPart(taskCode);
     }
 
     private static String normalizeKeyPart(String value) {

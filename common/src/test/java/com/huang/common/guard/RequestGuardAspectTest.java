@@ -65,14 +65,16 @@ class RequestGuardAspectTest {
         when(methodSignature.getMethod()).thenReturn(method);
         when(joinPoint.getArgs()).thenReturn(new Object[]{dto});
         when(joinPoint.proceed()).thenReturn(Result.ok("ok"));
-        when(redisGuardSupport.allowByFixedWindow("rate:12:33", 2, 30)).thenReturn(true);
-        when(redisGuardSupport.tryAcquireIdempotent("idem:12:33", 5)).thenReturn(true);
+        when(redisGuardSupport.fixedWindowDecision("rate:12:33", 2, 30))
+                .thenReturn(RedisGuardSupport.GuardDecision.ALLOW);
+        when(redisGuardSupport.idempotentDecision("idem:12:33", 5))
+                .thenReturn(RedisGuardSupport.GuardDecision.ALLOW);
 
         Object result = requestGuardAspect.applyGuards(joinPoint);
 
         assertThat(result).isInstanceOf(Result.class);
-        verify(redisGuardSupport).allowByFixedWindow("rate:12:33", 2, 30);
-        verify(redisGuardSupport).tryAcquireIdempotent("idem:12:33", 5);
+        verify(redisGuardSupport).fixedWindowDecision("rate:12:33", 2, 30);
+        verify(redisGuardSupport).idempotentDecision("idem:12:33", 5);
         verify(joinPoint).proceed();
     }
 
@@ -88,8 +90,54 @@ class RequestGuardAspectTest {
         Object result = requestGuardAspect.applyGuards(joinPoint);
 
         assertThat(result).isInstanceOf(Result.class);
-        verify(redisGuardSupport, never()).allowByFixedWindow(org.mockito.ArgumentMatchers.anyString(), org.mockito.ArgumentMatchers.anyInt(), org.mockito.ArgumentMatchers.anyLong());
+        verify(redisGuardSupport, never()).fixedWindowDecision(
+                org.mockito.ArgumentMatchers.anyString(),
+                org.mockito.ArgumentMatchers.anyInt(),
+                org.mockito.ArgumentMatchers.anyLong()
+        );
         verify(joinPoint).proceed();
+    }
+
+    @Test
+    void applyGuards_shouldAllowRateLimitWhenRedisDegraded() throws Throwable {
+        DemoDTO dto = new DemoDTO();
+        dto.setScheduleId(33L);
+        Method method = DemoController.class.getDeclaredMethod("createRateOnly", DemoDTO.class);
+
+        when(joinPoint.getSignature()).thenReturn(methodSignature);
+        when(methodSignature.getMethod()).thenReturn(method);
+        when(joinPoint.getArgs()).thenReturn(new Object[]{dto});
+        when(joinPoint.proceed()).thenReturn(Result.ok("ok"));
+        when(redisGuardSupport.fixedWindowDecision("rate:12:33", 2, 30))
+                .thenReturn(RedisGuardSupport.GuardDecision.DEGRADED);
+
+        Object result = requestGuardAspect.applyGuards(joinPoint);
+
+        assertThat(result).isInstanceOf(Result.class);
+        verify(joinPoint).proceed();
+    }
+
+    @Test
+    void applyGuards_shouldBlockIdempotentWhenRedisDegraded() throws Throwable {
+        DemoDTO dto = new DemoDTO();
+        dto.setScheduleId(33L);
+        Method method = DemoController.class.getDeclaredMethod("create", DemoDTO.class);
+
+        when(joinPoint.getSignature()).thenReturn(methodSignature);
+        when(methodSignature.getMethod()).thenReturn(method);
+        when(joinPoint.getArgs()).thenReturn(new Object[]{dto});
+        when(redisGuardSupport.fixedWindowDecision("rate:12:33", 2, 30))
+                .thenReturn(RedisGuardSupport.GuardDecision.ALLOW);
+        when(redisGuardSupport.idempotentDecision("idem:12:33", 5))
+                .thenReturn(RedisGuardSupport.GuardDecision.DEGRADED);
+
+        Object result = requestGuardAspect.applyGuards(joinPoint);
+
+        assertThat(result).isInstanceOf(Result.class);
+        Result<?> response = (Result<?>) result;
+        assertThat(response.getCode()).isEqualTo(203);
+        assertThat(response.getMessage()).isEqualTo("系统繁忙，请稍后重试");
+        verify(joinPoint, never()).proceed();
     }
 
     @SuppressWarnings("unused")
@@ -104,6 +152,11 @@ class RequestGuardAspectTest {
         @RateLimit(prefix = "rate:", key = "#missing.value", maxRequests = 1, windowSec = 10, message = "blocked", failOpen = true)
         public Result<String> failOpen(String body) {
             return Result.ok(body);
+        }
+
+        @RateLimit(prefix = "rate:", key = "#userId + ':' + #dto.scheduleId", maxRequests = 2, windowSec = 30, message = "blocked")
+        public Result<String> createRateOnly(DemoDTO dto) {
+            return Result.ok("ok");
         }
     }
 

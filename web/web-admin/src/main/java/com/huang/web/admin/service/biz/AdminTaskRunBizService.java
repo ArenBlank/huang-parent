@@ -119,7 +119,7 @@ public class AdminTaskRunBizService {
                                    String triggerMode,
                                    TaskRunner taskRunner) {
         String lockKey = RedisConstant.taskLockKey(taskCode);
-        String lockToken = redisGuardSupport.tryAcquireLock(lockKey, RedisConstant.TASK_LOCK_TTL_SEC);
+        String lockToken = redisGuardSupport.tryAcquireLock(lockKey, TaskRunConstant.lockTtlSec(taskCode));
         if (lockToken == null) {
             return recordSkip(taskCode, taskName, triggerMode, "task lock already held");
         }

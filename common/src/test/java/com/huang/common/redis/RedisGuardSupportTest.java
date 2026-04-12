@@ -62,6 +62,24 @@ class RedisGuardSupportTest {
     }
 
     @Test
+    void fixedWindowDecision_shouldReturnDegradedWhenRedisThrows() {
+        when(valueOperations.increment("limit:key")).thenThrow(new RuntimeException("redis down"));
+
+        RedisGuardSupport.GuardDecision decision = redisGuardSupport.fixedWindowDecision("limit:key", 2, 30);
+
+        assertThat(decision).isEqualTo(RedisGuardSupport.GuardDecision.DEGRADED);
+    }
+
+    @Test
+    void idempotentDecision_shouldReturnDegradedWhenRedisThrows() {
+        when(valueOperations.setIfAbsent(eq("idem:key"), eq("1"), any())).thenThrow(new RuntimeException("redis down"));
+
+        RedisGuardSupport.GuardDecision decision = redisGuardSupport.idempotentDecision("idem:key", 5);
+
+        assertThat(decision).isEqualTo(RedisGuardSupport.GuardDecision.DEGRADED);
+    }
+
+    @Test
     void tryAcquireLock_andRelease_shouldUseTokenValue() {
         when(valueOperations.setIfAbsent(eq("lock:key"), any(), any())).thenReturn(Boolean.TRUE);
         when(valueOperations.get("lock:key")).thenAnswer(invocation -> currentLockToken);

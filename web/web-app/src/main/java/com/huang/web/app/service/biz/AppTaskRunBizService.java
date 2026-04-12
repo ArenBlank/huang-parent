@@ -32,7 +32,7 @@ public class AppTaskRunBizService {
 
     public int executeTask(String taskCode, String taskName, String triggerMode, TaskRunner runner) {
         String lockKey = RedisConstant.taskLockKey(taskCode);
-        String lockToken = redisGuardSupport.tryAcquireLock(lockKey, RedisConstant.TASK_LOCK_TTL_SEC);
+        String lockToken = redisGuardSupport.tryAcquireLock(lockKey, TaskRunConstant.lockTtlSec(taskCode));
         if (lockToken == null) {
             recordSkip(taskCode, taskName, triggerMode, "task lock already held");
             return 0;

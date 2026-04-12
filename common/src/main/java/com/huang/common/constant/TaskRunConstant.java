@@ -18,4 +18,14 @@ public final class TaskRunConstant {
     public static final String STATUS_SUCCESS = "SUCCESS";
     public static final String STATUS_FAILED = "FAILED";
     public static final String STATUS_SKIPPED = "SKIPPED";
+
+    public static long lockTtlSec(String taskCode) {
+        if (TASK_PAYMENT_COMPENSATE.equalsIgnoreCase(taskCode)) {
+            return 300L;
+        }
+        if (TASK_BOOKING_TIMEOUT_CLOSE.equalsIgnoreCase(taskCode)) {
+            return 180L;
+        }
+        return 300L;
+    }
 }

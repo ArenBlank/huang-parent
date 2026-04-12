@@ -2,6 +2,7 @@ package com.huang.web.app.custom.schedule;
 
 import com.huang.web.app.service.biz.PaymentCompensationBizService;
 import com.huang.common.constant.TaskRunConstant;
+import com.huang.common.guard.DistributedTaskLock;
 import com.huang.web.app.service.biz.AppTaskRunBizService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -29,6 +30,7 @@ public class PaymentCompensationTask {
     }
 
     @Scheduled(fixedDelayString = "${payment.compensate.delay-ms:120000}")
+    @DistributedTaskLock(taskCode = TaskRunConstant.TASK_PAYMENT_COMPENSATE, ttlSec = 300)
     public void compensatePaidOrders() {
         int fixed = appTaskRunBizService.executeTask(
                 TaskRunConstant.TASK_PAYMENT_COMPENSATE,

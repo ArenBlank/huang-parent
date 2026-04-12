@@ -49,7 +49,10 @@ class AdminTaskRunBizServiceTest {
     @Test
     void trigger_shouldRecordSuccessWhenTaskRunsNormally() {
         AtomicReference<TaskRunLog> store = new AtomicReference<>();
-        when(redisGuardSupport.tryAcquireLock(RedisConstant.taskLockKey(TaskRunConstant.TASK_PAYMENT_COMPENSATE), RedisConstant.TASK_LOCK_TTL_SEC))
+        when(redisGuardSupport.tryAcquireLock(
+                RedisConstant.taskLockKey(TaskRunConstant.TASK_PAYMENT_COMPENSATE),
+                TaskRunConstant.lockTtlSec(TaskRunConstant.TASK_PAYMENT_COMPENSATE)
+        ))
                 .thenReturn("lock-token");
         when(adminPaymentCompensationBizService.repairPaidOrders(50)).thenReturn(3);
         when(taskRunLogMapper.insert(any(TaskRunLog.class))).thenAnswer(invocation -> {
@@ -77,7 +80,10 @@ class AdminTaskRunBizServiceTest {
 
     @Test
     void trigger_shouldRecordSkippedWhenTaskLockAlreadyHeld() {
-        when(redisGuardSupport.tryAcquireLock(RedisConstant.taskLockKey(TaskRunConstant.TASK_BOOKING_TIMEOUT_CLOSE), RedisConstant.TASK_LOCK_TTL_SEC))
+        when(redisGuardSupport.tryAcquireLock(
+                RedisConstant.taskLockKey(TaskRunConstant.TASK_BOOKING_TIMEOUT_CLOSE),
+                TaskRunConstant.lockTtlSec(TaskRunConstant.TASK_BOOKING_TIMEOUT_CLOSE)
+        ))
                 .thenReturn(null);
         when(taskRunLogMapper.insert(any(TaskRunLog.class))).thenAnswer(invocation -> {
             TaskRunLog log = invocation.getArgument(0);

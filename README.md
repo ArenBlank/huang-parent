@@ -27,7 +27,7 @@
 - 缓存与并发控制：`Redis`、`Caffeine`
 - 认证鉴权：`JWT`、`TokenVersion-enhanced stateless auth`
 - 对象存储：`MinIO`
-- 网关与部署：`Nginx upstream`、Docker Compose
+- 网关与部署：`Nginx upstream`、`Docker Compose`
 - 接口文档：`Knife4j / OpenAPI 3`
 - 自动化验证：`Postman/Newman`、`GitHub Actions`
 
@@ -132,12 +132,16 @@ flowchart LR
 
 - `Nginx upstream + dual-instance deployment`
 - `TokenVersion-enhanced stateless JWT authentication`
+- `Admin RBAC Redis auth cache + targeted eviction`
+- `App auth Redis L2 cache`
 - `three-layer concurrency control`
 - `fixed-window rate limiting`
 - `short-lived idempotency key`
+- `fail-open / fail-close graceful degradation`
 - `callback idempotency`
 - `Caffeine + Redis + Redis Pub/Sub`
 - `Cache-Aside + TTL jitter + null-object caching + hotspot rebuild protection`
+- `@DistributedTaskLock + dynamic task lock TTL`
 - `graceful degradation`
 - `runtime observability`
 - `end-to-end regression pipeline`
@@ -152,6 +156,8 @@ flowchart LR
 - 教练预约并发验证通过
 - 支付回调重复投递幂等验证通过
 - `Caffeine + Redis + Redis Pub/Sub` 近实时失效验证通过
+- App/Admin 鉴权缓存与失效验证通过
+- 双实例补偿任务互斥实机验收通过
 
 ## 快速开始
 
@@ -192,9 +198,11 @@ powershell -ExecutionPolicy Bypass -File tests/invoke-concurrent-requests.ps1
 - 双实例与 Redis 并发治理：[doc/单体双实例与Redis并发落地说明.md](./doc/单体双实例与Redis并发落地说明.md)
 - 简历项目亮点：[doc/简历项目亮点（真实增强版）.md](./doc/简历项目亮点（真实增强版）.md)
 - 并发方案对比：[doc/并发方案样板场景对比.md](./doc/并发方案样板场景对比.md)
+- 中间件与版本清单：[doc/中间件与版本清单.md](./doc/中间件与版本清单.md)
 - 部署与环境配置：[doc/部署与环境配置.md](./doc/部署与环境配置.md)
 - API 接口清单：[doc/API接口清单与示例.md](./doc/API接口清单与示例.md)
 - 权限模型说明：[doc/权限模型说明.md](./doc/权限模型说明.md)
+- 常见追问回答：[doc/常见追问回答清单.md](./doc/常见追问回答清单.md)
 - 开发参考文档：[doc/开发参考文档.md](./doc/开发参考文档.md)
 
 ## 仓库说明

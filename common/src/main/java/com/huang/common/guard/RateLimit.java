@@ -18,7 +18,7 @@ public @interface RateLimit {
 
     long windowSec();
 
-    String message() default "请求过于频繁，请稍后再试";
+    String message() default "\u8bf7\u6c42\u8fc7\u4e8e\u9891\u7e41\uff0c\u8bf7\u7a0d\u540e\u518d\u8bd5";
 
     boolean failOpen() default true;
 }
