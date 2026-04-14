@@ -1,9 +1,12 @@
 package com.huang.web.app.service.biz;
 
+import com.huang.common.constant.BizStatusConstant;
 import com.huang.common.redis.MultiLevelCacheSupport;
 import com.huang.model.entity.Course;
+import com.huang.model.entity.CourseEnrollment;
 import com.huang.model.entity.CourseSchedule;
 import com.huang.model.entity.OrderInfo;
+import com.huang.model.entity.PaymentRecord;
 import com.huang.web.app.dto.course.CourseEnrollDTO;
 import com.huang.web.app.mapper.CourseEnrollmentMapper;
 import com.huang.web.app.mapper.CourseMapper;
@@ -15,6 +18,7 @@ import com.huang.web.app.mapper.RefundRecordMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DuplicateKeyException;
@@ -23,7 +27,10 @@ import java.math.BigDecimal;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.doThrow;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -97,5 +104,95 @@ class CourseLearningBizServiceTest {
         assertThat(result).isNull();
         verify(orderInfoMapper).insert(any(OrderInfo.class));
         verify(paymentRecordMapper).insert(any());
+    }
+
+    @Test
+    void markPaySuccess_shouldGenerateCheckInCodeAndMoveAttendStatusToWaitClass() {
+        CourseEnrollment enrollment = new CourseEnrollment();
+        enrollment.setId(5L);
+        enrollment.setUserId(9L);
+        enrollment.setOrderId(44L);
+        enrollment.setStatus(BizStatusConstant.EnrollmentStatus.UNPAID);
+        enrollment.setAttendStatus(BizStatusConstant.AttendStatus.INVALID);
+
+        OrderInfo orderInfo = new OrderInfo();
+        orderInfo.setId(44L);
+        orderInfo.setPayStatus(BizStatusConstant.PayStatus.UNPAID);
+        orderInfo.setOrderStatus(BizStatusConstant.OrderStatus.UNPAID);
+
+        PaymentRecord paymentRecord = new PaymentRecord();
+        paymentRecord.setId(77L);
+        paymentRecord.setOrderId(44L);
+        paymentRecord.setPayNo("CPAY001");
+        paymentRecord.setPayStatus(BizStatusConstant.PayStatus.UNPAID);
+
+        when(courseEnrollmentMapper.selectById(5L)).thenReturn(enrollment, enrollment);
+        when(orderInfoMapper.selectById(44L)).thenReturn(orderInfo);
+        when(paymentRecordMapper.selectOne(any())).thenReturn(paymentRecord);
+
+        boolean ok = courseLearningBizService.markPaySuccess(5L, 9L);
+
+        assertThat(ok).isTrue();
+        verify(orderInfoMapper).updateById(orderInfo);
+        verify(paymentRecordMapper).updateById(paymentRecord);
+
+        ArgumentCaptor<CourseEnrollment> captor = ArgumentCaptor.forClass(CourseEnrollment.class);
+        verify(courseEnrollmentMapper, atLeast(2)).updateById(captor.capture());
+        assertThat(captor.getAllValues()).anyMatch(item ->
+                item.getId().equals(5L)
+                        && Integer.valueOf(BizStatusConstant.EnrollmentStatus.PAID).equals(item.getStatus()));
+        assertThat(captor.getAllValues()).anyMatch(item ->
+                item.getId().equals(5L)
+                        && Integer.valueOf(BizStatusConstant.AttendStatus.WAIT_CLASS).equals(item.getAttendStatus())
+                        && item.getCheckInCode() != null
+                        && item.getCheckInCode().length() == 6);
+    }
+
+    @Test
+    void refundPaid_shouldSetAttendStatusInvalid() {
+        CourseEnrollment enrollment = new CourseEnrollment();
+        enrollment.setId(8L);
+        enrollment.setUserId(11L);
+        enrollment.setOrderId(66L);
+        enrollment.setScheduleId(99L);
+
+        OrderInfo orderInfo = new OrderInfo();
+        orderInfo.setId(66L);
+        orderInfo.setPayStatus(BizStatusConstant.PayStatus.PAID);
+        orderInfo.setOrderStatus(BizStatusConstant.OrderStatus.PAID);
+        orderInfo.setTotalAmount(new BigDecimal("88.00"));
+
+        PaymentRecord paymentRecord = new PaymentRecord();
+        paymentRecord.setOrderId(66L);
+        paymentRecord.setPayStatus(BizStatusConstant.PayStatus.PAID);
+
+        when(courseEnrollmentMapper.selectById(8L)).thenReturn(enrollment);
+        when(orderInfoMapper.selectById(66L)).thenReturn(orderInfo);
+        when(paymentRecordMapper.selectOne(any())).thenReturn(paymentRecord);
+
+        boolean ok = courseLearningBizService.refundPaid(8L, 11L, "行程冲突");
+
+        assertThat(ok).isTrue();
+        verify(courseEnrollmentMapper).updateById(argThat(item ->
+                item.getId().equals(8L)
+                        && Integer.valueOf(BizStatusConstant.EnrollmentStatus.REFUNDED).equals(item.getStatus())
+                        && Integer.valueOf(BizStatusConstant.AttendStatus.INVALID).equals(item.getAttendStatus())));
+    }
+
+    @Test
+    void checkInByCode_shouldTreatAlreadyCheckedInAsIdempotentSuccess() {
+        CourseEnrollment enrollment = new CourseEnrollment();
+        enrollment.setId(18L);
+        enrollment.setUserId(7L);
+        enrollment.setStatus(BizStatusConstant.EnrollmentStatus.PAID);
+        enrollment.setAttendStatus(BizStatusConstant.AttendStatus.CHECKED_IN);
+        enrollment.setCheckInCode("ABC123");
+
+        when(courseEnrollmentMapper.selectOne(any())).thenReturn(enrollment);
+
+        boolean ok = courseLearningBizService.checkInByCode(7L, "abc123");
+
+        assertThat(ok).isTrue();
+        verify(courseEnrollmentMapper, never()).updateById(any());
     }
 }

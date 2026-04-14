@@ -30,9 +30,17 @@ public class CourseEnrollment extends BaseEntity {
     @TableField(value = "order_id")
     private Long orderId;
 
-    @Schema(description = "状态:0取消 1已报名")
+    @Schema(description = "交易状态 0取消 1未支付 2已支付 3已退款")
     @TableField(value = "status")
     private Integer status;
+
+    @Schema(description = "履约状态 0待上课 1已签到/已完成 2已缺席 3已失效/已取消")
+    @TableField(value = "attend_status")
+    private Integer attendStatus;
+
+    @Schema(description = "6位核销码")
+    @TableField(value = "check_in_code")
+    private String checkInCode;
 
     @Schema(description = "报名时间")
     @TableField(value = "enroll_time")

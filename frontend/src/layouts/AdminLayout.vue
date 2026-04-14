@@ -112,6 +112,7 @@ const navSections = [
     items: [
       { path: '/training-plans', label: '训练主线', code: 'PL' },
       { path: '/courses', label: '课程目录', code: 'CR' },
+      { path: '/check-in-center', label: '前台核销', code: 'CI' },
       { path: '/schedules', label: '排期课表', code: 'SC' },
       { path: '/videos', label: '视频实验室', code: 'VD' }
     ]
@@ -153,6 +154,10 @@ const pageMeta = {
     title: '训练主线编排室',
     description: '从课程宇宙的角度安排训练计划、动作节点和视频绑定。'
   },
+  '/check-in-center': {
+    title: '前台核销中心',
+    description: '给门店前台和课程助教使用的极简核销工作台，支持扫码枪与手动输入。'
+  },
   '/orders': {
     title: '订单成绩单',
     description: '把支付、退款和财务摘要拆成更好扫读的学习成绩卡。'
@@ -166,11 +171,13 @@ const pageMeta = {
 const heroActions = [
   { path: '/dashboard', label: '回到主舞台', code: 'HM' },
   { path: '/training-plans', label: '去训练主线', code: 'PL' },
+  { path: '/check-in-center', label: '去前台核销', code: 'CI' },
   { path: '/content', label: '去内容工坊', code: 'CT' }
 ]
 
 const radarCards = [
   { path: '/courses', title: '课程目录', headline: 'Catalog', note: '维护课程池', tone: 'peach' },
+  { path: '/check-in-center', title: '前台核销', headline: 'Check-In', note: '扫码枪快速核销', tone: 'mint' },
   { path: '/training-plans', title: '训练主线', headline: 'Progress', note: '编排计划节点', tone: 'mint' },
   { path: '/permission-center', title: '权限学院', headline: 'Voices', note: '查看修复闭环', tone: 'butter' },
   { path: '/orders', title: '订单成绩单', headline: 'Enroll', note: '追踪成交与退款', tone: 'lilac' }

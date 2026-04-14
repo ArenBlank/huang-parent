@@ -52,6 +52,7 @@ public class AdminTrainingPlanBizService {
     public List<Map<String, Object>> listPlans(Integer status) {
         List<TrainingPlan> plans = trainingPlanMapper.selectList(
                 Wrappers.<TrainingPlan>lambdaQuery()
+                        .isNull(TrainingPlan::getOwnerUserId)
                         .eq(status != null, TrainingPlan::getStatus, status)
                         .orderByDesc(TrainingPlan::getId)
         );
@@ -93,7 +94,7 @@ public class AdminTrainingPlanBizService {
 
     public Map<String, Object> getPlanDetail(Long planId) {
         TrainingPlan plan = trainingPlanMapper.selectById(planId);
-        if (plan == null) {
+        if (plan == null || plan.getOwnerUserId() != null) {
             return null;
         }
 
@@ -159,7 +160,7 @@ public class AdminTrainingPlanBizService {
     @Transactional(rollbackFor = Exception.class)
     public boolean updatePlan(Long id, TrainingPlanUpsertDTO dto) {
         TrainingPlan exists = trainingPlanMapper.selectById(id);
-        if (exists == null) {
+        if (exists == null || exists.getOwnerUserId() != null) {
             return false;
         }
         fillPlan(exists, dto);
@@ -174,7 +175,7 @@ public class AdminTrainingPlanBizService {
     @Transactional(rollbackFor = Exception.class)
     public boolean deletePlan(Long id) {
         TrainingPlan exists = trainingPlanMapper.selectById(id);
-        if (exists == null) {
+        if (exists == null || exists.getOwnerUserId() != null) {
             return false;
         }
         long subscribeCount = trainingPlanSubscribeMapper.selectCount(
@@ -205,7 +206,7 @@ public class AdminTrainingPlanBizService {
     @Transactional(rollbackFor = Exception.class)
     public Long createPlanItem(Long planId, TrainingPlanItemUpsertDTO dto) {
         TrainingPlan plan = trainingPlanMapper.selectById(planId);
-        if (plan == null) {
+        if (plan == null || plan.getOwnerUserId() != null) {
             return null;
         }
         validateVideo(dto.getVideoId());
@@ -224,6 +225,10 @@ public class AdminTrainingPlanBizService {
         if (exists == null) {
             return false;
         }
+        TrainingPlan plan = trainingPlanMapper.selectById(exists.getPlanId());
+        if (plan == null || plan.getOwnerUserId() != null) {
+            return false;
+        }
         validateVideo(dto.getVideoId());
         Long planId = exists.getPlanId();
         fillPlanItem(exists, dto);
@@ -239,6 +244,10 @@ public class AdminTrainingPlanBizService {
     public boolean deletePlanItem(Long itemId) {
         TrainingPlanItem exists = trainingPlanItemMapper.selectById(itemId);
         if (exists == null) {
+            return false;
+        }
+        TrainingPlan plan = trainingPlanMapper.selectById(exists.getPlanId());
+        if (plan == null || plan.getOwnerUserId() != null) {
             return false;
         }
         long recordCount = trainingRecordMapper.selectCount(
@@ -263,6 +272,7 @@ public class AdminTrainingPlanBizService {
         plan.setDurationWeeks(dto.getDurationWeeks());
         plan.setCoverUrl(dto.getCoverUrl());
         plan.setStatus(dto.getStatus());
+        plan.setOwnerUserId(null);
     }
 
     private void fillPlanItem(TrainingPlanItem item, TrainingPlanItemUpsertDTO dto) {

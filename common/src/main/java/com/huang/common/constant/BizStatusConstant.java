@@ -47,6 +47,16 @@ public final class BizStatusConstant {
         }
     }
 
+    public static final class AttendStatus {
+        public static final int WAIT_CLASS = 0;
+        public static final int CHECKED_IN = 1;
+        public static final int ABSENT = 2;
+        public static final int INVALID = 3;
+
+        private AttendStatus() {
+        }
+    }
+
     public static final class BizType {
         public static final String COACH_BOOKING = "coach_booking";
         public static final String COURSE_ENROLLMENT = "course_enrollment";
@@ -63,4 +73,3 @@ public final class BizStatusConstant {
         }
     }
 }
-

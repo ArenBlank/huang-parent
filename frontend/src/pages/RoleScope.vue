@@ -25,7 +25,11 @@
       <el-tab-pane label="单角色配置" name="single">
         <el-table :data="roles" style="width: 100%" v-loading="roleLoading">
           <el-table-column prop="id" label="角色ID" width="90" />
-          <el-table-column prop="roleName" label="角色名称" />
+          <el-table-column label="角色名称">
+            <template #default="scope">
+              {{ displayRoleName(scope.row) }}
+            </template>
+          </el-table-column>
           <el-table-column prop="roleCode" label="角色编码" width="160" />
           <el-table-column prop="status" label="状态" width="90">
             <template #default="scope">
@@ -50,7 +54,7 @@
                 <el-option
                   v-for="role in roles"
                   :key="role.id"
-                  :label="`${role.roleName} (${role.roleCode})`"
+                  :label="displayRoleLabel(role)"
                   :value="role.id"
                 />
               </el-select>
@@ -75,7 +79,7 @@
   <el-drawer v-model="drawerVisible" title="配置角色范围" size="32%">
     <div v-if="currentRole">
       <div class="role-meta">
-        <div>角色：{{ currentRole.roleName }} ({{ currentRole.roleCode }})</div>
+        <div>角色：{{ displayRoleLabel(currentRole) }}</div>
       </div>
       <el-form label-position="top">
         <el-form-item label="分类范围">
@@ -98,6 +102,7 @@
 import { computed, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { adminClient } from '../api/client'
+import { displayRoleLabel, displayRoleName } from '../utils/rbacDisplay'
 
 const activeTab = ref('single')
 const loading = ref(false)

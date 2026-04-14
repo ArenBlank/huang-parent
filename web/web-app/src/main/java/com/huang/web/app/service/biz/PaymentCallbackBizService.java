@@ -5,13 +5,11 @@ import com.huang.common.constant.BizStatusConstant;
 import com.huang.common.constant.RedisConstant;
 import com.huang.common.redis.RedisGuardSupport;
 import com.huang.model.entity.CoachBooking;
-import com.huang.model.entity.CourseEnrollment;
 import com.huang.model.entity.OrderInfo;
 import com.huang.model.entity.PaymentCallbackLog;
 import com.huang.model.entity.PaymentRecord;
 import com.huang.web.app.dto.pay.PayCallbackDTO;
 import com.huang.web.app.mapper.CoachBookingMapper;
-import com.huang.web.app.mapper.CourseEnrollmentMapper;
 import com.huang.web.app.mapper.OrderInfoMapper;
 import com.huang.web.app.mapper.PaymentCallbackLogMapper;
 import com.huang.web.app.mapper.PaymentRecordMapper;
@@ -33,25 +31,25 @@ public class PaymentCallbackBizService {
     private final PaymentRecordMapper paymentRecordMapper;
     private final OrderInfoMapper orderInfoMapper;
     private final CoachBookingMapper coachBookingMapper;
-    private final CourseEnrollmentMapper courseEnrollmentMapper;
     private final PaymentCallbackLogMapper paymentCallbackLogMapper;
     private final PaymentSignVerifier paymentSignVerifier;
     private final RedisGuardSupport redisGuardSupport;
+    private final CourseLearningBizService courseLearningBizService;
 
     public PaymentCallbackBizService(PaymentRecordMapper paymentRecordMapper,
                                      OrderInfoMapper orderInfoMapper,
                                      CoachBookingMapper coachBookingMapper,
-                                     CourseEnrollmentMapper courseEnrollmentMapper,
                                      PaymentCallbackLogMapper paymentCallbackLogMapper,
                                      PaymentSignVerifier paymentSignVerifier,
-                                     RedisGuardSupport redisGuardSupport) {
+                                     RedisGuardSupport redisGuardSupport,
+                                     CourseLearningBizService courseLearningBizService) {
         this.paymentRecordMapper = paymentRecordMapper;
         this.orderInfoMapper = orderInfoMapper;
         this.coachBookingMapper = coachBookingMapper;
-        this.courseEnrollmentMapper = courseEnrollmentMapper;
         this.paymentCallbackLogMapper = paymentCallbackLogMapper;
         this.paymentSignVerifier = paymentSignVerifier;
         this.redisGuardSupport = redisGuardSupport;
+        this.courseLearningBizService = courseLearningBizService;
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -189,11 +187,7 @@ public class PaymentCallbackBizService {
         String bizType = orderInfo.getBizType() == null ? "" : orderInfo.getBizType().toLowerCase(Locale.ROOT);
         if (BizStatusConstant.BizType.COURSE_ENROLLMENT.equals(bizType)
                 || BizStatusConstant.BizType.COURSE.equals(bizType)) {
-            CourseEnrollment enrollment = courseEnrollmentMapper.selectById(orderInfo.getBizId());
-            if (enrollment != null) {
-                enrollment.setStatus(BizStatusConstant.EnrollmentStatus.PAID);
-                courseEnrollmentMapper.updateById(enrollment);
-            }
+            courseLearningBizService.syncEnrollmentPaid(orderInfo.getBizId());
         }
     }
 

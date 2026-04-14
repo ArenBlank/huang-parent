@@ -14,7 +14,7 @@
       <StatCard label="必需" :value="matrix.required?.length || 0" />
       <StatCard label="配置" :value="matrix.config?.length || 0" />
       <StatCard label="数据库" :value="matrix.database?.length || 0" />
-      <StatCard label="缺失" :value="matrix.missing?.length || 0" :note="matrix.warning || ''" />
+      <StatCard label="缺失" :value="matrix.missing?.length || 0" :note="missingNote" />
     </div>
     <div class="action-row">
       <el-button size="small" @click="copyMissing" :disabled="!(matrix?.missing?.length)">复制缺失权限</el-button>
@@ -30,7 +30,7 @@
             <el-option
               v-for="role in roles"
               :key="role.id"
-              :label="`${role.roleName} (${role.roleCode})`"
+              :label="displayRoleLabel(role)"
               :value="role.id"
             />
           </el-select>
@@ -41,19 +41,19 @@
         </div>
       </div>
       <el-tag v-for="item in matrix?.missing || []" :key="item" type="danger" class="tag-item">
-        {{ item }}
+        {{ displayPermissionCodeLabel(item) }}
       </el-tag>
     </div>
       <div class="matrix-block">
         <h4>必需</h4>
         <el-tag v-for="item in matrix?.required || []" :key="item" class="tag-item">
-          {{ item }}
+          {{ displayPermissionCodeLabel(item) }}
         </el-tag>
       </div>
       <div class="matrix-block">
         <h4>已配置</h4>
         <el-tag v-for="item in matrix?.config || []" :key="item" type="success" class="tag-item">
-          {{ item }}
+          {{ displayPermissionCodeLabel(item) }}
         </el-tag>
       </div>
     </div>
@@ -61,10 +61,11 @@
 </template>
 
 <script setup>
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { adminClient } from '../api/client'
 import StatCard from '../components/StatCard.vue'
+import { displayPermissionCodeLabel, displayRoleLabel } from '../utils/rbacDisplay'
 
 const matrix = ref(null)
 const loading = ref(false)
@@ -73,6 +74,14 @@ const assigning = ref(false)
 const syncAssigning = ref(false)
 const roles = ref([])
 const targetRoleId = ref(null)
+
+const missingNote = computed(() => {
+  const count = matrix.value?.missing?.length || 0
+  if (!count) {
+    return '当前权限矩阵无缺失项'
+  }
+  return `当前矩阵仍缺少 ${count} 项权限`
+})
 
 const loadMatrix = async () => {
   try {

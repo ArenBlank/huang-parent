@@ -16,7 +16,7 @@
       <div class="stat-grid">
         <StatCard label="必需权限" :value="matrix?.required?.length || 0" note="系统声明需要的权限数量" />
         <StatCard label="已配置权限" :value="matrix?.config?.length || 0" note="已经接入矩阵的权限" />
-        <StatCard label="缺失权限" :value="matrix?.missing?.length || 0" :note="matrix?.warning || '点击查看详情'" @click="openMissing" />
+        <StatCard label="缺失权限" :value="matrix?.missing?.length || 0" :note="missingNote" @click="openMissing" />
         <StatCard label="覆盖率" :value="coverageRate" note="已配置 / 必需" />
       </div>
     </section>
@@ -43,7 +43,7 @@
                 <el-option
                   v-for="role in roles"
                   :key="role.id"
-                  :label="`${role.roleName} (${role.roleCode})`"
+                  :label="displayRoleLabel(role)"
                   :value="role.id"
                 />
               </el-select>
@@ -165,7 +165,7 @@
       </div>
       <div v-else class="missing-list">
         <el-tag v-for="perm in matrix.missing" :key="perm" type="danger">
-          {{ perm }}
+          {{ displayPermissionCodeLabel(perm) }}
         </el-tag>
       </div>
       <template #footer>
@@ -189,6 +189,7 @@ import { computed, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
 import { adminClient } from '../api/client'
+import { displayPermissionCodeLabel, displayRoleLabel } from '../utils/rbacDisplay'
 import StatCard from '../components/StatCard.vue'
 
 const router = useRouter()
@@ -220,6 +221,14 @@ const coverageRate = computed(() => {
   const configured = matrix.value?.config?.length || 0
   if (!required) return '0%'
   return `${Math.min(100, Math.round((configured / required) * 100))}%`
+})
+
+const missingNote = computed(() => {
+  const count = matrix.value?.missing?.length || 0
+  if (!count) {
+    return '当前权限矩阵无缺失项'
+  }
+  return `点击查看 ${count} 项缺失权限`
 })
 
 const go = (path) => {

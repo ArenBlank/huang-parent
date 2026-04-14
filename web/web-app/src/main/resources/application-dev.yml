@@ -19,3 +19,11 @@ minio:
   access-key: ${MINIO_ACCESS_KEY:root}
   secret-key: ${MINIO_SECRET_KEY:rootroot}
   bucket-name: ${MINIO_BUCKET:lease}
+
+langchain4j:
+  open-ai:
+    chat-model:
+      base-url: https://api.deepseek.com
+      api-key: sk-a8bf78df5b0e42c49b6d0920270c6ec6 # 填入你的真实密钥
+      model-name: deepseek-chat
+      timeout: 60s

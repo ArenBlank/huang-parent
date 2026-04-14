@@ -1,34 +1,51 @@
 package com.huang.web.admin.service.biz;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.huang.common.constant.BizStatusConstant;
 import com.huang.common.constant.RedisConstant;
+import com.huang.common.exception.HuangException;
 import com.huang.common.redis.MultiLevelCacheSupport;
+import com.huang.common.result.ResultCodeEnum;
+import com.huang.common.utils.CodeUtil;
 import com.huang.model.entity.Course;
+import com.huang.model.entity.CourseEnrollment;
 import com.huang.model.entity.CourseSchedule;
 import com.huang.web.admin.dto.course.CourseScheduleCreateDTO;
 import com.huang.web.admin.dto.course.CourseUpsertDTO;
+import com.huang.web.admin.mapper.CourseEnrollmentMapper;
 import com.huang.web.admin.mapper.CourseMapper;
 import com.huang.web.admin.mapper.CourseScheduleMapper;
 import com.huang.web.admin.service.core.AdminPermissionScopeService;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.util.List;
+import java.util.Locale;
+import java.util.Objects;
 
 @Service
 public class AdminCourseOpsBizService {
 
+    private static final int CHECK_IN_CODE_LENGTH = 6;
+    private static final int CHECK_IN_CODE_MAX_RETRY = 10;
+    private static final String CHECK_IN_CODE_GENERATE_FAILED_MESSAGE = "核销码生成失败，请稍后再试";
+
     private final CourseMapper courseMapper;
     private final CourseScheduleMapper courseScheduleMapper;
+    private final CourseEnrollmentMapper courseEnrollmentMapper;
     private final AdminPermissionScopeService adminPermissionScopeService;
     private final MultiLevelCacheSupport multiLevelCacheSupport;
 
     public AdminCourseOpsBizService(CourseMapper courseMapper,
                                     CourseScheduleMapper courseScheduleMapper,
+                                    CourseEnrollmentMapper courseEnrollmentMapper,
                                     AdminPermissionScopeService adminPermissionScopeService,
                                     MultiLevelCacheSupport multiLevelCacheSupport) {
         this.courseMapper = courseMapper;
         this.courseScheduleMapper = courseScheduleMapper;
+        this.courseEnrollmentMapper = courseEnrollmentMapper;
         this.adminPermissionScopeService = adminPermissionScopeService;
         this.multiLevelCacheSupport = multiLevelCacheSupport;
     }
@@ -133,6 +150,112 @@ public class AdminCourseOpsBizService {
             clearCourseListCaches();
         }
         return updated;
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public boolean checkInByCode(String rawCheckInCode) {
+        String checkInCode = normalizeCheckInCode(rawCheckInCode);
+        if (!StringUtils.hasText(checkInCode)) {
+            return false;
+        }
+        CourseEnrollment enrollment = courseEnrollmentMapper.selectOne(
+                new LambdaQueryWrapper<CourseEnrollment>()
+                        .eq(CourseEnrollment::getCheckInCode, checkInCode)
+                        .last("LIMIT 1")
+        );
+        if (enrollment == null) {
+            return false;
+        }
+        return performCheckIn(enrollment);
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public int fixHistoryCheckInCodes() {
+        List<CourseEnrollment> enrollments = courseEnrollmentMapper.selectList(
+                new LambdaQueryWrapper<CourseEnrollment>()
+                        .eq(CourseEnrollment::getStatus, BizStatusConstant.EnrollmentStatus.PAID)
+                        .isNull(CourseEnrollment::getCheckInCode)
+                        .orderByAsc(CourseEnrollment::getId)
+        );
+        if (enrollments == null || enrollments.isEmpty()) {
+            return 0;
+        }
+
+        int fixed = 0;
+        for (CourseEnrollment enrollment : enrollments) {
+            ensureCheckInReady(enrollment);
+            fixed++;
+        }
+        return fixed;
+    }
+
+    private boolean performCheckIn(CourseEnrollment enrollment) {
+        if (!Objects.equals(enrollment.getStatus(), BizStatusConstant.EnrollmentStatus.PAID)) {
+            return false;
+        }
+        if (Objects.equals(enrollment.getAttendStatus(), BizStatusConstant.AttendStatus.CHECKED_IN)) {
+            return true;
+        }
+        if (!Objects.equals(enrollment.getAttendStatus(), BizStatusConstant.AttendStatus.WAIT_CLASS)) {
+            return false;
+        }
+        CourseEnrollment patch = new CourseEnrollment();
+        patch.setId(enrollment.getId());
+        patch.setAttendStatus(BizStatusConstant.AttendStatus.CHECKED_IN);
+        return courseEnrollmentMapper.updateById(patch) > 0;
+    }
+
+    private void ensureCheckInReady(CourseEnrollment enrollment) {
+        if (enrollment == null || !Objects.equals(enrollment.getStatus(), BizStatusConstant.EnrollmentStatus.PAID)) {
+            return;
+        }
+
+        boolean shouldSetWaitClass = enrollment.getAttendStatus() == null
+                || Objects.equals(enrollment.getAttendStatus(), BizStatusConstant.AttendStatus.WAIT_CLASS);
+        if (Objects.equals(enrollment.getAttendStatus(), BizStatusConstant.AttendStatus.INVALID)) {
+            shouldSetWaitClass = true;
+        }
+        boolean missingCode = !StringUtils.hasText(enrollment.getCheckInCode());
+        if (!shouldSetWaitClass && !missingCode) {
+            return;
+        }
+
+        for (int attempt = 1; attempt <= CHECK_IN_CODE_MAX_RETRY; attempt++) {
+            String candidateCode = missingCode
+                    ? CodeUtil.getRandomAlphaNumericCode(CHECK_IN_CODE_LENGTH)
+                    : normalizeCheckInCode(enrollment.getCheckInCode());
+
+            CourseEnrollment patch = new CourseEnrollment();
+            patch.setId(enrollment.getId());
+            if (shouldSetWaitClass) {
+                patch.setAttendStatus(BizStatusConstant.AttendStatus.WAIT_CLASS);
+            }
+            if (missingCode) {
+                patch.setCheckInCode(candidateCode);
+            }
+
+            try {
+                courseEnrollmentMapper.updateById(patch);
+                if (shouldSetWaitClass) {
+                    enrollment.setAttendStatus(BizStatusConstant.AttendStatus.WAIT_CLASS);
+                }
+                if (missingCode) {
+                    enrollment.setCheckInCode(candidateCode);
+                }
+                return;
+            } catch (DataIntegrityViolationException ex) {
+                if (!missingCode || attempt == CHECK_IN_CODE_MAX_RETRY) {
+                    throw new HuangException(ResultCodeEnum.SERVICE_ERROR.getCode(), CHECK_IN_CODE_GENERATE_FAILED_MESSAGE);
+                }
+            }
+        }
+    }
+
+    private String normalizeCheckInCode(String rawCheckInCode) {
+        if (!StringUtils.hasText(rawCheckInCode)) {
+            return null;
+        }
+        return rawCheckInCode.trim().toUpperCase(Locale.ROOT);
     }
 
     private void fillCourse(Course course, CourseUpsertDTO dto) {

@@ -5,7 +5,10 @@ import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.huang.common.constant.BizStatusConstant;
 import com.huang.common.constant.RedisConstant;
+import com.huang.common.exception.HuangException;
 import com.huang.common.redis.MultiLevelCacheSupport;
+import com.huang.common.result.ResultCodeEnum;
+import com.huang.common.utils.CodeUtil;
 import com.huang.model.entity.Course;
 import com.huang.model.entity.CourseEnrollment;
 import com.huang.model.entity.CourseSchedule;
@@ -21,6 +24,7 @@ import com.huang.web.app.mapper.OrderInfoMapper;
 import com.huang.web.app.mapper.OrderItemMapper;
 import com.huang.web.app.mapper.PaymentRecordMapper;
 import com.huang.web.app.mapper.RefundRecordMapper;
+import com.huang.web.app.vo.course.CourseMyScheduleVO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -28,18 +32,28 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.interceptor.TransactionAspectSupport;
 import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class CourseLearningBizService {
 
     private static final Logger log = LoggerFactory.getLogger(CourseLearningBizService.class);
+    private static final int CHECK_IN_CODE_LENGTH = 6;
+    private static final int CHECK_IN_CODE_MAX_RETRY = 10;
+    private static final String CHECK_IN_CODE_GENERATE_FAILED_MESSAGE = "核销码生成失败，请稍后再试";
 
     private final CourseMapper courseMapper;
     private final CourseScheduleMapper courseScheduleMapper;
@@ -129,67 +143,68 @@ public class CourseLearningBizService {
                 return null;
             }
 
-        int updated = courseScheduleMapper.update(
-                null,
-                new LambdaUpdateWrapper<CourseSchedule>()
-                        .eq(CourseSchedule::getId, schedule.getId())
-                        .eq(CourseSchedule::getStatus, 1)
-                        .apply("booked_count < capacity")
-                        .setSql("booked_count = booked_count + 1")
-        );
+            int updated = courseScheduleMapper.update(
+                    null,
+                    new LambdaUpdateWrapper<CourseSchedule>()
+                            .eq(CourseSchedule::getId, schedule.getId())
+                            .eq(CourseSchedule::getStatus, 1)
+                            .apply("booked_count < capacity")
+                            .setSql("booked_count = booked_count + 1")
+            );
             if (updated == 0) {
                 reason = "schedule_full";
                 return null;
             }
 
-        OrderInfo orderInfo = new OrderInfo();
-        orderInfo.setOrderNo(genNo("CRS"));
-        orderInfo.setUserId(userId);
-        orderInfo.setTotalAmount(course.getPrice() == null ? BigDecimal.ZERO : course.getPrice());
-        orderInfo.setOrderStatus(BizStatusConstant.OrderStatus.UNPAID);
-        orderInfo.setPayStatus(BizStatusConstant.PayStatus.UNPAID);
-        orderInfo.setBizType(BizStatusConstant.BizType.COURSE_ENROLLMENT);
-        orderInfoMapper.insert(orderInfo);
+            OrderInfo orderInfo = new OrderInfo();
+            orderInfo.setOrderNo(genNo("CRS"));
+            orderInfo.setUserId(userId);
+            orderInfo.setTotalAmount(course.getPrice() == null ? BigDecimal.ZERO : course.getPrice());
+            orderInfo.setOrderStatus(BizStatusConstant.OrderStatus.UNPAID);
+            orderInfo.setPayStatus(BizStatusConstant.PayStatus.UNPAID);
+            orderInfo.setBizType(BizStatusConstant.BizType.COURSE_ENROLLMENT);
+            orderInfoMapper.insert(orderInfo);
 
-        OrderItem orderItem = new OrderItem();
-        orderItem.setOrderId(orderInfo.getId());
-        orderItem.setItemType("course");
-        orderItem.setItemId(course.getId());
-        orderItem.setItemName(course.getTitle());
-        orderItem.setPrice(orderInfo.getTotalAmount());
-        orderItem.setQuantity(1);
-        orderItem.setAmount(orderInfo.getTotalAmount());
-        orderItemMapper.insert(orderItem);
+            OrderItem orderItem = new OrderItem();
+            orderItem.setOrderId(orderInfo.getId());
+            orderItem.setItemType("course");
+            orderItem.setItemId(course.getId());
+            orderItem.setItemName(course.getTitle());
+            orderItem.setPrice(orderInfo.getTotalAmount());
+            orderItem.setQuantity(1);
+            orderItem.setAmount(orderInfo.getTotalAmount());
+            orderItemMapper.insert(orderItem);
 
-        PaymentRecord paymentRecord = new PaymentRecord();
-        paymentRecord.setOrderId(orderInfo.getId());
-        paymentRecord.setPayNo(genNo("CPAY"));
-        paymentRecord.setPayChannel("wechat");
-        paymentRecord.setPayAmount(orderInfo.getTotalAmount());
-        paymentRecord.setPayStatus(BizStatusConstant.PayStatus.UNPAID);
-        paymentRecordMapper.insert(paymentRecord);
+            PaymentRecord paymentRecord = new PaymentRecord();
+            paymentRecord.setOrderId(orderInfo.getId());
+            paymentRecord.setPayNo(genNo("CPAY"));
+            paymentRecord.setPayChannel("wechat");
+            paymentRecord.setPayAmount(orderInfo.getTotalAmount());
+            paymentRecord.setPayStatus(BizStatusConstant.PayStatus.UNPAID);
+            paymentRecordMapper.insert(paymentRecord);
 
-        CourseEnrollment enrollment = new CourseEnrollment();
-        enrollment.setUserId(userId);
-        enrollment.setCourseId(course.getId());
-        enrollment.setScheduleId(schedule.getId());
-        enrollment.setOrderId(orderInfo.getId());
-        enrollment.setStatus(BizStatusConstant.EnrollmentStatus.UNPAID);
-        enrollment.setEnrollTime(LocalDateTime.now());
-        courseEnrollmentMapper.insert(enrollment);
+            CourseEnrollment enrollment = new CourseEnrollment();
+            enrollment.setUserId(userId);
+            enrollment.setCourseId(course.getId());
+            enrollment.setScheduleId(schedule.getId());
+            enrollment.setOrderId(orderInfo.getId());
+            enrollment.setStatus(BizStatusConstant.EnrollmentStatus.UNPAID);
+            enrollment.setAttendStatus(BizStatusConstant.AttendStatus.INVALID);
+            enrollment.setEnrollTime(LocalDateTime.now());
+            courseEnrollmentMapper.insert(enrollment);
 
-        enrollmentId = enrollment.getId();
-        orderInfo.setBizId(enrollmentId);
-        orderInfoMapper.updateById(orderInfo);
+            enrollmentId = enrollment.getId();
+            orderInfo.setBizId(enrollmentId);
+            orderInfoMapper.updateById(orderInfo);
 
-        Map<String, Object> result = new HashMap<>();
-        result.put("enrollmentId", enrollmentId);
-        result.put("orderId", orderInfo.getId());
-        result.put("orderNo", orderInfo.getOrderNo());
-        result.put("payNo", paymentRecord.getPayNo());
-        result.put("amount", orderInfo.getTotalAmount());
-        success = true;
-        return result;
+            Map<String, Object> result = new HashMap<>();
+            result.put("enrollmentId", enrollmentId);
+            result.put("orderId", orderInfo.getId());
+            result.put("orderNo", orderInfo.getOrderNo());
+            result.put("payNo", paymentRecord.getPayNo());
+            result.put("amount", orderInfo.getTotalAmount());
+            success = true;
+            return result;
         } catch (DataIntegrityViolationException e) {
             markCurrentTransactionRollbackOnly();
             reason = "duplicate_enrollment_fallback";
@@ -216,7 +231,7 @@ public class CourseLearningBizService {
         boolean success = false;
         try {
             CourseEnrollment enrollment = courseEnrollmentMapper.selectById(enrollmentId);
-            if (enrollment == null || !enrollment.getUserId().equals(userId)) {
+            if (enrollment == null || !Objects.equals(enrollment.getUserId(), userId)) {
                 return false;
             }
             OrderInfo orderInfo = orderInfoMapper.selectById(enrollment.getOrderId());
@@ -235,8 +250,8 @@ public class CourseLearningBizService {
             String idempotencyKey = "COURSE_CALLBACK_" + paymentRecord.getPayNo();
             if (idempotencyKey.equals(paymentRecord.getCallbackIdempotencyKey())
                     || BizStatusConstant.PayStatus.PAID.equals(paymentRecord.getPayStatus())) {
-                success = true;
-                return true;
+                success = syncEnrollmentPaid(enrollment.getId());
+                return success;
             }
 
             orderInfo.setPayStatus(BizStatusConstant.PayStatus.PAID);
@@ -247,10 +262,8 @@ public class CourseLearningBizService {
             paymentRecord.setPayTime(LocalDateTime.now());
             paymentRecord.setCallbackIdempotencyKey(idempotencyKey);
             paymentRecordMapper.updateById(paymentRecord);
-            enrollment.setStatus(BizStatusConstant.EnrollmentStatus.PAID);
-            courseEnrollmentMapper.updateById(enrollment);
-            success = true;
-            return true;
+            success = syncEnrollmentPaid(enrollment.getId());
+            return success;
         } finally {
             long costMs = System.currentTimeMillis() - start;
             log.info("COURSE_PAY_SUCCESS userId={} enrollmentId={} success={} costMs={}",
@@ -258,10 +271,26 @@ public class CourseLearningBizService {
         }
     }
 
-@Transactional(rollbackFor = Exception.class)
+    public boolean syncEnrollmentPaid(Long enrollmentId) {
+        CourseEnrollment enrollment = courseEnrollmentMapper.selectById(enrollmentId);
+        if (enrollment == null) {
+            return false;
+        }
+        if (!Objects.equals(enrollment.getStatus(), BizStatusConstant.EnrollmentStatus.PAID)) {
+            CourseEnrollment patch = new CourseEnrollment();
+            patch.setId(enrollment.getId());
+            patch.setStatus(BizStatusConstant.EnrollmentStatus.PAID);
+            courseEnrollmentMapper.updateById(patch);
+            enrollment.setStatus(BizStatusConstant.EnrollmentStatus.PAID);
+        }
+        ensureCheckInReady(enrollment);
+        return true;
+    }
+
+    @Transactional(rollbackFor = Exception.class)
     public boolean cancelUnpaid(Long enrollmentId, Long userId) {
         CourseEnrollment enrollment = courseEnrollmentMapper.selectById(enrollmentId);
-        if (enrollment == null || !enrollment.getUserId().equals(userId)) {
+        if (enrollment == null || !Objects.equals(enrollment.getUserId(), userId)) {
             return false;
         }
 
@@ -270,6 +299,14 @@ public class CourseLearningBizService {
             return false;
         }
         if (BizStatusConstant.OrderStatus.CLOSED.equals(orderInfo.getOrderStatus())) {
+            if (!Objects.equals(enrollment.getStatus(), BizStatusConstant.EnrollmentStatus.CANCELED)
+                    || !Objects.equals(enrollment.getAttendStatus(), BizStatusConstant.AttendStatus.INVALID)) {
+                CourseEnrollment patch = new CourseEnrollment();
+                patch.setId(enrollment.getId());
+                patch.setStatus(BizStatusConstant.EnrollmentStatus.CANCELED);
+                patch.setAttendStatus(BizStatusConstant.AttendStatus.INVALID);
+                courseEnrollmentMapper.updateById(patch);
+            }
             return true;
         }
         if (!BizStatusConstant.PayStatus.UNPAID.equals(orderInfo.getPayStatus())) {
@@ -295,8 +332,11 @@ public class CourseLearningBizService {
                         .setSql("booked_count = booked_count - 1")
         );
 
-        enrollment.setStatus(BizStatusConstant.EnrollmentStatus.CANCELED);
-        courseEnrollmentMapper.updateById(enrollment);
+        CourseEnrollment patch = new CourseEnrollment();
+        patch.setId(enrollment.getId());
+        patch.setStatus(BizStatusConstant.EnrollmentStatus.CANCELED);
+        patch.setAttendStatus(BizStatusConstant.AttendStatus.INVALID);
+        courseEnrollmentMapper.updateById(patch);
         return true;
     }
 
@@ -309,7 +349,7 @@ public class CourseLearningBizService {
                 return false;
             }
             CourseEnrollment enrollment = courseEnrollmentMapper.selectById(enrollmentId);
-            if (enrollment == null || !enrollment.getUserId().equals(userId)) {
+            if (enrollment == null || !Objects.equals(enrollment.getUserId(), userId)) {
                 return false;
             }
             OrderInfo orderInfo = orderInfoMapper.selectById(enrollment.getOrderId());
@@ -317,6 +357,14 @@ public class CourseLearningBizService {
                 return false;
             }
             if (BizStatusConstant.OrderStatus.REFUNDED.equals(orderInfo.getOrderStatus())) {
+                if (!Objects.equals(enrollment.getStatus(), BizStatusConstant.EnrollmentStatus.REFUNDED)
+                        || !Objects.equals(enrollment.getAttendStatus(), BizStatusConstant.AttendStatus.INVALID)) {
+                    CourseEnrollment patch = new CourseEnrollment();
+                    patch.setId(enrollment.getId());
+                    patch.setStatus(BizStatusConstant.EnrollmentStatus.REFUNDED);
+                    patch.setAttendStatus(BizStatusConstant.AttendStatus.INVALID);
+                    courseEnrollmentMapper.updateById(patch);
+                }
                 return true;
             }
             if (!BizStatusConstant.PayStatus.PAID.equals(orderInfo.getPayStatus())) {
@@ -356,8 +404,11 @@ public class CourseLearningBizService {
             refundRecord.setReason(reason.trim());
             refundRecordMapper.insert(refundRecord);
 
-            enrollment.setStatus(BizStatusConstant.EnrollmentStatus.REFUNDED);
-            courseEnrollmentMapper.updateById(enrollment);
+            CourseEnrollment patch = new CourseEnrollment();
+            patch.setId(enrollment.getId());
+            patch.setStatus(BizStatusConstant.EnrollmentStatus.REFUNDED);
+            patch.setAttendStatus(BizStatusConstant.AttendStatus.INVALID);
+            courseEnrollmentMapper.updateById(patch);
             success = true;
             return true;
         } finally {
@@ -373,6 +424,158 @@ public class CourseLearningBizService {
                         .eq(CourseEnrollment::getUserId, userId)
                         .orderByDesc(CourseEnrollment::getId)
         );
+    }
+
+    public List<CourseMyScheduleVO> mySchedules(Long userId) {
+        List<CourseEnrollment> enrollments = courseEnrollmentMapper.selectList(
+                new LambdaQueryWrapper<CourseEnrollment>()
+                        .eq(CourseEnrollment::getUserId, userId)
+                        .eq(CourseEnrollment::getStatus, BizStatusConstant.EnrollmentStatus.PAID)
+                        .eq(CourseEnrollment::getAttendStatus, BizStatusConstant.AttendStatus.WAIT_CLASS)
+                        .orderByDesc(CourseEnrollment::getId)
+        );
+        if (enrollments == null || enrollments.isEmpty()) {
+            return List.of();
+        }
+
+        Set<Long> courseIds = enrollments.stream()
+                .map(CourseEnrollment::getCourseId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        Set<Long> scheduleIds = enrollments.stream()
+                .map(CourseEnrollment::getScheduleId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        Map<Long, Course> courseMap = courseIds.isEmpty()
+                ? Map.of()
+                : courseMapper.selectList(new LambdaQueryWrapper<Course>().in(Course::getId, courseIds))
+                .stream()
+                .collect(Collectors.toMap(Course::getId, item -> item));
+
+        Map<Long, CourseSchedule> scheduleMap = scheduleIds.isEmpty()
+                ? Map.of()
+                : courseScheduleMapper.selectList(new LambdaQueryWrapper<CourseSchedule>().in(CourseSchedule::getId, scheduleIds))
+                .stream()
+                .collect(Collectors.toMap(CourseSchedule::getId, item -> item));
+
+        List<CourseMyScheduleVO> schedules = new ArrayList<>();
+        for (CourseEnrollment enrollment : enrollments) {
+            Course course = courseMap.get(enrollment.getCourseId());
+            CourseSchedule schedule = scheduleMap.get(enrollment.getScheduleId());
+            if (course == null || schedule == null) {
+                continue;
+            }
+
+            CourseMyScheduleVO vo = new CourseMyScheduleVO();
+            vo.setEnrollmentId(enrollment.getId());
+            vo.setOrderId(enrollment.getOrderId());
+            vo.setCourseId(course.getId());
+            vo.setCourseTitle(course.getTitle());
+            vo.setCoverUrl(course.getCoverUrl());
+            vo.setScheduleId(schedule.getId());
+            vo.setCoachId(schedule.getCoachId());
+            vo.setStartTime(schedule.getStartTime());
+            vo.setEndTime(schedule.getEndTime());
+            vo.setPrice(course.getPrice());
+            vo.setCheckInCode(enrollment.getCheckInCode());
+            vo.setAttendStatus(enrollment.getAttendStatus());
+            schedules.add(vo);
+        }
+
+        schedules.sort(Comparator.comparing(
+                CourseMyScheduleVO::getStartTime,
+                Comparator.nullsLast(LocalDateTime::compareTo)
+        ));
+        return schedules;
+    }
+
+    @Transactional(rollbackFor = Exception.class)
+    public boolean checkInByCode(Long userId, String rawCheckInCode) {
+        String checkInCode = normalizeCheckInCode(rawCheckInCode);
+        if (!StringUtils.hasText(checkInCode)) {
+            return false;
+        }
+
+        CourseEnrollment enrollment = courseEnrollmentMapper.selectOne(
+                new LambdaQueryWrapper<CourseEnrollment>()
+                        .eq(CourseEnrollment::getCheckInCode, checkInCode)
+                        .last("LIMIT 1")
+        );
+        if (enrollment == null || !Objects.equals(enrollment.getUserId(), userId)) {
+            return false;
+        }
+        return performCheckIn(enrollment);
+    }
+
+    private boolean performCheckIn(CourseEnrollment enrollment) {
+        if (!Objects.equals(enrollment.getStatus(), BizStatusConstant.EnrollmentStatus.PAID)) {
+            return false;
+        }
+        if (Objects.equals(enrollment.getAttendStatus(), BizStatusConstant.AttendStatus.CHECKED_IN)) {
+            return true;
+        }
+        if (!Objects.equals(enrollment.getAttendStatus(), BizStatusConstant.AttendStatus.WAIT_CLASS)) {
+            return false;
+        }
+
+        CourseEnrollment patch = new CourseEnrollment();
+        patch.setId(enrollment.getId());
+        patch.setAttendStatus(BizStatusConstant.AttendStatus.CHECKED_IN);
+        return courseEnrollmentMapper.updateById(patch) > 0;
+    }
+
+    private void ensureCheckInReady(CourseEnrollment enrollment) {
+        if (enrollment == null || !Objects.equals(enrollment.getStatus(), BizStatusConstant.EnrollmentStatus.PAID)) {
+            return;
+        }
+
+        boolean shouldSetWaitClass = enrollment.getAttendStatus() == null
+                || Objects.equals(enrollment.getAttendStatus(), BizStatusConstant.AttendStatus.WAIT_CLASS);
+        if (Objects.equals(enrollment.getAttendStatus(), BizStatusConstant.AttendStatus.INVALID)) {
+            shouldSetWaitClass = true;
+        }
+        boolean missingCode = !StringUtils.hasText(enrollment.getCheckInCode());
+        if (!shouldSetWaitClass && !missingCode) {
+            return;
+        }
+
+        for (int attempt = 1; attempt <= CHECK_IN_CODE_MAX_RETRY; attempt++) {
+            String candidateCode = missingCode
+                    ? CodeUtil.getRandomAlphaNumericCode(CHECK_IN_CODE_LENGTH)
+                    : normalizeCheckInCode(enrollment.getCheckInCode());
+
+            CourseEnrollment patch = new CourseEnrollment();
+            patch.setId(enrollment.getId());
+            if (shouldSetWaitClass) {
+                patch.setAttendStatus(BizStatusConstant.AttendStatus.WAIT_CLASS);
+            }
+            if (missingCode) {
+                patch.setCheckInCode(candidateCode);
+            }
+
+            try {
+                courseEnrollmentMapper.updateById(patch);
+                if (shouldSetWaitClass) {
+                    enrollment.setAttendStatus(BizStatusConstant.AttendStatus.WAIT_CLASS);
+                }
+                if (missingCode) {
+                    enrollment.setCheckInCode(candidateCode);
+                }
+                return;
+            } catch (DataIntegrityViolationException ex) {
+                if (!missingCode || attempt == CHECK_IN_CODE_MAX_RETRY) {
+                    throw new HuangException(ResultCodeEnum.SERVICE_ERROR.getCode(), CHECK_IN_CODE_GENERATE_FAILED_MESSAGE);
+                }
+            }
+        }
+    }
+
+    private String normalizeCheckInCode(String rawCheckInCode) {
+        if (!StringUtils.hasText(rawCheckInCode)) {
+            return null;
+        }
+        return rawCheckInCode.trim().toUpperCase(Locale.ROOT);
     }
 
     private String genNo(String prefix) {

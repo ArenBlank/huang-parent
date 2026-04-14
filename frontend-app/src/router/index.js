@@ -10,10 +10,12 @@ import Training from '../pages/Training.vue'
 import Orders from '../pages/Orders.vue'
 import Profile from '../pages/Profile.vue'
 import CoachApply from '../pages/CoachApply.vue'
+import VideoPlayer from '../pages/VideoPlayer.vue'
 
 const routes = [
   { path: '/', redirect: '/home' },
   { path: '/login', component: Login },
+  { path: '/video-player', component: VideoPlayer, meta: { requiresAuth: true } },
   {
     path: '/',
     component: AppLayout,

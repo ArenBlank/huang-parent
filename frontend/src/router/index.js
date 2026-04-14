@@ -9,6 +9,7 @@ import Orders from '../pages/Orders.vue'
 import BookingOps from '../pages/BookingOps.vue'
 import Videos from '../pages/Videos.vue'
 import TrainingPlans from '../pages/TrainingPlans.vue'
+import CheckInCenter from '../pages/CheckInCenter.vue'
 import PermissionMatrix from '../pages/PermissionMatrix.vue'
 import ContentOps from '../pages/ContentOps.vue'
 import OperationLogs from '../pages/OperationLogs.vue'
@@ -28,6 +29,7 @@ const routes = [
     children: [
       { path: 'dashboard', component: Dashboard },
       { path: 'courses', component: Courses },
+      { path: 'check-in-center', component: CheckInCenter },
       { path: 'schedules', component: CourseSchedule },
       { path: 'orders', component: Orders },
       { path: 'booking-ops', component: BookingOps },

@@ -9,7 +9,6 @@ import com.huang.model.entity.PaymentCallbackLog;
 import com.huang.model.entity.PaymentRecord;
 import com.huang.web.app.dto.pay.PayCallbackDTO;
 import com.huang.web.app.mapper.CoachBookingMapper;
-import com.huang.web.app.mapper.CourseEnrollmentMapper;
 import com.huang.web.app.mapper.OrderInfoMapper;
 import com.huang.web.app.mapper.PaymentCallbackLogMapper;
 import com.huang.web.app.mapper.PaymentRecordMapper;
@@ -42,9 +41,6 @@ class PaymentCallbackBizServiceTest {
     private CoachBookingMapper coachBookingMapper;
 
     @Mock
-    private CourseEnrollmentMapper courseEnrollmentMapper;
-
-    @Mock
     private PaymentCallbackLogMapper paymentCallbackLogMapper;
 
     @Mock
@@ -52,6 +48,9 @@ class PaymentCallbackBizServiceTest {
 
     @Mock
     private RedisGuardSupport redisGuardSupport;
+
+    @Mock
+    private CourseLearningBizService courseLearningBizService;
 
     private PaymentCallbackBizService paymentCallbackBizService;
 
@@ -61,10 +60,10 @@ class PaymentCallbackBizServiceTest {
                 paymentRecordMapper,
                 orderInfoMapper,
                 coachBookingMapper,
-                courseEnrollmentMapper,
                 paymentCallbackLogMapper,
                 paymentSignVerifier,
-                redisGuardSupport
+                redisGuardSupport,
+                courseLearningBizService
         );
     }
 
@@ -105,13 +104,14 @@ class PaymentCallbackBizServiceTest {
                 RedisConstant.PAY_CALLBACK_GUARD_TTL_SEC
         )).thenReturn("lock-token");
         when(orderInfoMapper.selectById(10L)).thenReturn(orderInfo);
+        when(courseLearningBizService.syncEnrollmentPaid(88L)).thenReturn(true);
 
         String result = paymentCallbackBizService.handleCallback(dto, "{\"payNo\":\"PAY001\"}");
 
         assertThat(result).isEqualTo("success");
         verify(paymentRecordMapper).updateById(any(PaymentRecord.class));
         verify(orderInfoMapper).updateById(any(OrderInfo.class));
-        verify(courseEnrollmentMapper).selectById(88L);
+        verify(courseLearningBizService).syncEnrollmentPaid(88L);
         verify(paymentCallbackLogMapper).insert(any(PaymentCallbackLog.class));
         verify(redisGuardSupport).releaseLock(
                 RedisConstant.appPayCallbackPayNoGuardKey("PAY001"),

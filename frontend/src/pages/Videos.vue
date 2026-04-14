@@ -149,7 +149,7 @@
                     {{ row.status === 1 ? '停用素材' : '启用素材' }}
                   </el-button>
                   <el-button size="small" type="danger" plain @click="deleteVideo(row)">删除素材</el-button>
-                  <el-button size="small" type="primary" @click="prefillBind(row)">绑定计划</el-button>
+                  <el-button size="small" type="primary" @click="prefillBind(row)">绑定计划项</el-button>
                 </div>
               </template>
             </el-table-column>

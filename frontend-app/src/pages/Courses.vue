@@ -12,6 +12,7 @@
             <span class="badge-pill is-dark">课程 {{ courses.length }}</span>
             <span class="badge-pill is-dark">当前可报排期 {{ availableSchedules }}</span>
             <span class="badge-pill is-dark">我的报名 {{ enrollments.length }}</span>
+            <span class="badge-pill is-dark">待上课 {{ mySchedules.length }}</span>
           </div>
         </div>
         <div class="hero-actions">
@@ -271,34 +272,123 @@
       </div>
     </div>
 
-    <section class="card">
+    <section class="card itinerary-panel">
       <div class="toolbar">
         <div>
-          <h2 class="section-title">我的报名列表</h2>
-          <p class="section-sub">报名历史放在独立区域，工作台专注当前操作，历史记录单独查阅更清晰。</p>
+          <h2 class="section-title">待上课 / 我的行程</h2>
+          <p class="section-sub">支付完成后，这里会自动汇总你待上课的排期，并提供核销码出示入口。</p>
         </div>
-        <el-button type="primary" @click="loadEnrollments" :loading="enrollmentsLoading">刷新</el-button>
+        <div class="hero-actions">
+          <el-button plain @click="loadMySchedules" :loading="mySchedulesLoading">刷新行程</el-button>
+          <el-button type="primary" plain @click="loadEnrollments" :loading="enrollmentsLoading">刷新报名</el-button>
+        </div>
       </div>
 
-      <el-empty v-if="!enrollments.length && !enrollmentsLoading" description="暂无报名记录" />
-      <el-table v-else :data="enrollments" v-loading="enrollmentsLoading" style="width: 100%">
-        <el-table-column prop="id" label="报名ID" width="90" />
-        <el-table-column label="课程">
-          <template #default="{ row }">{{ courseMap[row.courseId] || row.courseId }}</template>
-        </el-table-column>
-        <el-table-column label="订单" width="120">
-          <template #default="{ row }">
-            <el-button size="small" text :disabled="!row.orderId" @click="goToOrder(row.orderId)">查看</el-button>
-          </template>
-        </el-table-column>
-        <el-table-column label="状态" width="120">
-          <template #default="{ row }">{{ formatEnrollmentStatus(row.status) }}</template>
-        </el-table-column>
-        <el-table-column label="创建时间" min-width="180">
-          <template #default="{ row }">{{ formatDateTime(row.createTime || row.enrollTime) }}</template>
-        </el-table-column>
-      </el-table>
+      <el-tabs v-model="itineraryTab" class="itinerary-tabs">
+        <el-tab-pane :label="`待上课 / 我的行程 ${mySchedules.length}`" name="upcoming">
+          <el-empty v-if="!mySchedules.length && !mySchedulesLoading" description="你还没有待上课行程">
+            <div class="empty-actions">
+              <el-button size="small" type="primary" @click="scrollToCatalog">去报名课程</el-button>
+              <el-button size="small" @click="loadMySchedules">刷新行程</el-button>
+            </div>
+          </el-empty>
+
+          <div v-else class="itinerary-grid" v-loading="mySchedulesLoading">
+            <article
+              v-for="schedule in mySchedules"
+              :key="schedule.enrollmentId"
+              class="itinerary-card"
+            >
+              <div class="itinerary-card__cover-wrap">
+                <el-image
+                  v-if="schedule.coverUrl"
+                  :src="schedule.coverUrl"
+                  fit="cover"
+                  class="itinerary-card__cover"
+                />
+                <div v-else class="itinerary-card__cover fallback">待上课</div>
+              </div>
+
+              <div class="itinerary-card__body">
+                <div class="itinerary-card__header">
+                  <div>
+                    <p class="section-eyebrow">待上课排期</p>
+                    <strong>{{ schedule.courseTitle || `课程 ${schedule.courseId}` }}</strong>
+                  </div>
+                  <span class="tag">核销码 {{ schedule.checkInCode || "------" }}</span>
+                </div>
+
+                <div class="itinerary-card__meta">
+                  <span>上课时间：{{ formatScheduleTime(schedule) }}</span>
+                  <span>教练：{{ schedule.coachId ? `#${schedule.coachId}` : "待分配" }}</span>
+                  <span>订单：{{ schedule.orderId || "-" }}</span>
+                  <span>价格：{{ schedule.price ?? "-" }}</span>
+                </div>
+
+                <div class="itinerary-card__actions">
+                  <el-button type="primary" @click="openCheckInDialog(schedule)">出示核销码 / 去打卡</el-button>
+                  <el-button plain @click="goToOrder(schedule.orderId)" :disabled="!schedule.orderId">查看订单</el-button>
+                </div>
+              </div>
+            </article>
+          </div>
+        </el-tab-pane>
+
+        <el-tab-pane :label="`报名历史 ${enrollments.length}`" name="history">
+          <el-empty v-if="!enrollments.length && !enrollmentsLoading" description="暂无报名记录" />
+          <el-table v-else :data="enrollments" v-loading="enrollmentsLoading" style="width: 100%">
+            <el-table-column prop="id" label="报名ID" width="90" />
+            <el-table-column label="课程">
+              <template #default="{ row }">{{ courseMap[row.courseId] || row.courseId }}</template>
+            </el-table-column>
+            <el-table-column label="订单" width="120">
+              <template #default="{ row }">
+                <el-button size="small" text :disabled="!row.orderId" @click="goToOrder(row.orderId)">查看</el-button>
+              </template>
+            </el-table-column>
+            <el-table-column label="状态" width="120">
+              <template #default="{ row }">{{ formatEnrollmentStatus(row.status) }}</template>
+            </el-table-column>
+            <el-table-column label="创建时间" min-width="180">
+              <template #default="{ row }">{{ formatDateTime(row.createTime || row.enrollTime) }}</template>
+            </el-table-column>
+          </el-table>
+        </el-tab-pane>
+      </el-tabs>
     </section>
+
+    <el-dialog
+      v-model="checkInDialogVisible"
+      width="520px"
+      title="出示核销码"
+      destroy-on-close
+      @closed="closeCheckInDialog"
+    >
+      <div v-if="activeCheckInSchedule" class="checkin-dialog">
+        <p class="checkin-dialog__tip">到店后向前台或教练出示下方 6 位核销码即可完成签到。</p>
+        <div class="checkin-dialog__code">{{ activeCheckInSchedule.checkInCode || "------" }}</div>
+
+        <div class="checkin-dialog__meta">
+          <div class="checkin-dialog__meta-item">
+            <span>课程名称</span>
+            <strong>{{ activeCheckInSchedule.courseTitle || `课程 ${activeCheckInSchedule.courseId}` }}</strong>
+          </div>
+          <div class="checkin-dialog__meta-item">
+            <span>上课时间</span>
+            <strong>{{ formatScheduleTime(activeCheckInSchedule) }}</strong>
+          </div>
+          <div class="checkin-dialog__meta-item">
+            <span>教练</span>
+            <strong>{{ activeCheckInSchedule.coachId ? `#${activeCheckInSchedule.coachId}` : "待分配" }}</strong>
+          </div>
+        </div>
+      </div>
+
+      <template #footer>
+        <el-button @click="closeCheckInDialog">我知道了</el-button>
+        <el-button type="primary" @click="copyCheckInCode">复制核销码</el-button>
+      </template>
+    </el-dialog>
   </div>
 </template>
 
@@ -307,6 +397,7 @@ import { computed, nextTick, ref, watch } from "vue"
 import { useRoute, useRouter } from "vue-router"
 import { ElMessage } from "element-plus"
 import { appClient } from "../api/client"
+import { fetchMyCourseSchedules } from "../api/course"
 
 const router = useRouter()
 const route = useRoute()
@@ -325,6 +416,11 @@ const scheduleListRef = ref(null)
 const enrollments = ref([])
 const enrollmentsLoading = ref(false)
 const enrolling = ref(false)
+const mySchedules = ref([])
+const mySchedulesLoading = ref(false)
+const itineraryTab = ref("upcoming")
+const checkInDialogVisible = ref(false)
+const activeCheckInSchedule = ref(null)
 
 const lastEnrollment = ref(null)
 const recentEnrollmentRef = ref(null)
@@ -464,7 +560,7 @@ const mockPay = async () => {
     })
     if (data.code !== 200) throw new Error(data.message || "模拟支付失败")
     ElMessage.success("支付状态已更新")
-    await loadEnrollments()
+    await Promise.all([loadEnrollments(), loadMySchedules()])
   } catch (err) {
     ElMessage.error(err.message || "模拟支付失败")
   } finally {
@@ -484,7 +580,7 @@ const cancelUnpaid = async () => {
     })
     if (data.code !== 200) throw new Error(data.message || "取消失败")
     ElMessage.success("已取消未支付报名")
-    await loadEnrollments()
+    await Promise.all([loadEnrollments(), loadMySchedules()])
   } catch (err) {
     ElMessage.error(err.message || "取消失败")
   } finally {
@@ -509,7 +605,7 @@ const refundPaid = async () => {
     })
     if (data.code !== 200) throw new Error(data.message || "退款失败")
     ElMessage.success("退款已提交")
-    await loadEnrollments()
+    await Promise.all([loadEnrollments(), loadMySchedules()])
   } catch (err) {
     ElMessage.error(err.message || "退款失败")
   } finally {
@@ -527,6 +623,42 @@ const loadEnrollments = async () => {
     ElMessage.error(err.message || "加载报名失败")
   } finally {
     enrollmentsLoading.value = false
+  }
+}
+
+const loadMySchedules = async () => {
+  try {
+    mySchedulesLoading.value = true
+    const { data } = await fetchMyCourseSchedules()
+    if (data.code !== 200) throw new Error(data.message || "加载我的行程失败")
+    mySchedules.value = data.data || []
+  } catch (err) {
+    ElMessage.error(err.message || "加载我的行程失败")
+  } finally {
+    mySchedulesLoading.value = false
+  }
+}
+
+const openCheckInDialog = (row) => {
+  activeCheckInSchedule.value = row
+  checkInDialogVisible.value = true
+}
+
+const closeCheckInDialog = () => {
+  checkInDialogVisible.value = false
+  activeCheckInSchedule.value = null
+}
+
+const copyCheckInCode = async () => {
+  if (!activeCheckInSchedule.value?.checkInCode) {
+    ElMessage.warning("当前没有可用核销码")
+    return
+  }
+  try {
+    await navigator.clipboard.writeText(activeCheckInSchedule.value.checkInCode)
+    ElMessage.success("核销码已复制")
+  } catch (err) {
+    ElMessage.error("复制失败，请手动记录核销码")
   }
 }
 
@@ -649,6 +781,7 @@ const formatScheduleTime = (row) => {
 
 loadCourses()
 loadEnrollments()
+loadMySchedules()
 loadLastEnrollment()
 </script>
 
@@ -1001,6 +1134,128 @@ loadLastEnrollment()
   width: 100%;
 }
 
+.itinerary-panel {
+  display: grid;
+  gap: 12px;
+}
+
+.itinerary-tabs :deep(.el-tabs__header) {
+  margin-bottom: 18px;
+}
+
+.itinerary-grid {
+  display: grid;
+  gap: 14px;
+}
+
+.itinerary-card {
+  display: grid;
+  grid-template-columns: 148px minmax(0, 1fr);
+  gap: 16px;
+  padding: 16px;
+  border-radius: 22px;
+  border: 2px solid rgba(52, 45, 105, 0.12);
+  background: linear-gradient(180deg, #ffffff 0%, #fffaf3 100%);
+}
+
+.itinerary-card__cover-wrap {
+  height: 132px;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 2px solid rgba(52, 45, 105, 0.12);
+  background: #ffffff;
+}
+
+.itinerary-card__cover {
+  width: 100%;
+  height: 100%;
+}
+
+.itinerary-card__body {
+  display: grid;
+  gap: 12px;
+  align-content: start;
+}
+
+.itinerary-card__header {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.itinerary-card__header strong {
+  display: block;
+  font-size: 20px;
+  line-height: 1.2;
+}
+
+.itinerary-card__meta {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 12px;
+  color: var(--eco-text-soft);
+  font-size: 13px;
+}
+
+.itinerary-card__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.checkin-dialog {
+  display: grid;
+  gap: 18px;
+}
+
+.checkin-dialog__tip {
+  margin: 0;
+  color: var(--eco-text-soft);
+  font-size: 14px;
+  line-height: 1.7;
+}
+
+.checkin-dialog__code {
+  display: grid;
+  place-items: center;
+  min-height: 132px;
+  padding: 18px;
+  border-radius: 22px;
+  border: 2px solid rgba(91, 83, 255, 0.18);
+  background: linear-gradient(135deg, rgba(109, 103, 255, 0.1), rgba(255, 208, 122, 0.14));
+  color: var(--eco-primary-strong);
+  font-size: clamp(40px, 8vw, 64px);
+  font-weight: 900;
+  letter-spacing: 0.18em;
+  text-indent: 0.18em;
+}
+
+.checkin-dialog__meta {
+  display: grid;
+  gap: 10px;
+}
+
+.checkin-dialog__meta-item {
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 2px solid rgba(52, 45, 105, 0.12);
+  background: #ffffff;
+}
+
+.checkin-dialog__meta-item span {
+  display: block;
+  margin-bottom: 8px;
+  color: var(--eco-text-soft);
+  font-size: 12px;
+}
+
+.checkin-dialog__meta-item strong {
+  display: block;
+  font-size: 16px;
+  line-height: 1.4;
+}
+
 @media (max-width: 1180px) {
   .workspace-shell {
     grid-template-columns: minmax(0, 1fr) 380px;
@@ -1029,6 +1284,14 @@ loadLastEnrollment()
   .selected-course-card {
     grid-template-columns: 1fr;
   }
+
+  .itinerary-card {
+    grid-template-columns: 1fr;
+  }
+
+  .itinerary-card__cover-wrap {
+    height: 180px;
+  }
 }
 
 @media (max-width: 640px) {
@@ -1048,8 +1311,13 @@ loadLastEnrollment()
     justify-content: flex-start;
   }
 
-  .schedule-item__meta {
+  .schedule-item__meta,
+  .itinerary-card__meta {
     grid-template-columns: 1fr;
+  }
+
+  .itinerary-card__header {
+    flex-direction: column;
   }
 }
 </style>

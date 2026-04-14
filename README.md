@@ -1,9 +1,9 @@
-# 运动健康管理平台后端工程
+# 运动健康管理平台工程
 
 ![CI](https://github.com/ArenBlank/huang-parent/actions/workflows/ci.yml/badge.svg?branch=V3)
 ![Integration](https://github.com/ArenBlank/huang-parent/actions/workflows/integration.yml/badge.svg?branch=V3)
 
-这是一个基于 `Spring Boot 3 + MySQL + Redis + Caffeine + Nginx + MinIO` 的运动健康管理平台后端工程，采用“`web-admin` 单实例 + `web-app` 可双实例”的工程型单体架构。项目围绕训练计划、课程报名、教练预约、支付回调、退款审计、RBAC 权限与运维回归展开，重点解决多实例部署下的缓存一致性、重复提交、回调幂等、限流与可观测性问题。
+这是一个以前后端联动为目标、以后端治理能力为核心的运动健康管理平台工程。后端基于 `Spring Boot 3 + MySQL + Redis + Caffeine + Nginx + MinIO`，采用“`web-admin` 单实例 + `web-app` 可双实例”的工程型单体架构；前端基于 `Vue 3 + Vite + Pinia + Vue Router + Axios + Element Plus`，提供管理端与用户端两套界面。项目围绕训练计划、课程报名、教练预约、支付回调、退款审计、RBAC 权限与运维回归展开，重点解决多实例部署下的缓存一致性、重复提交、回调幂等、限流与可观测性问题。
 
 ## 项目定位
 
@@ -26,6 +26,9 @@
 - 数据访问：`MyBatis-Plus`、`MySQL`
 - 缓存与并发控制：`Redis`、`Caffeine`
 - 认证鉴权：`JWT`、`TokenVersion-enhanced stateless auth`
+- 前端框架：`Vue 3`、`Vite`
+- 前端状态与路由：`Pinia`、`Vue Router`
+- 前端请求与组件：`Axios`、`Element Plus`
 - 对象存储：`MinIO`
 - 网关与部署：`Nginx upstream`、`Docker Compose`
 - 接口文档：`Knife4j / OpenAPI 3`
@@ -63,6 +66,8 @@ flowchart LR
 - `model`：实体模型与基础审计字段
 - `web/web-admin`：后台管理端接口、任务中心、权限与审计
 - `web/web-app`：用户端接口、训练/课程/预约/支付业务
+- `frontend`：管理端前端工程
+- `frontend-app`：用户端前端工程
 - `tests`：Postman 集合、并发脚本、双实例验证脚本
 - `deploy` / `docker`：Nginx、Compose、环境变量样例
 

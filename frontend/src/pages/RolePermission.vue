@@ -37,7 +37,7 @@
         <el-option
           v-for="role in roles"
           :key="role.id"
-          :label="`${role.roleName} (${role.roleCode})`"
+          :label="displayRoleLabel(role)"
           :value="role.id"
         />
       </el-select>
@@ -74,7 +74,7 @@
     <div v-else class="perm-grid">
       <div class="perm-group" v-for="group in groupedPerms" :key="group.module">
         <div class="group-title">
-          <span>{{ group.module || 'default' }}</span>
+          <span>{{ displayModuleName(group.module) }}</span>
           <el-button size="small" @click="toggleGroup(group, true)">全选</el-button>
           <el-button size="small" @click="toggleGroup(group, false)">清空</el-button>
         </div>
@@ -84,7 +84,7 @@
             :key="perm.permCode"
             :label="perm.permCode"
           >
-            {{ perm.permName }} ({{ perm.permCode }})
+            {{ displayPermissionLabel(perm) }}
           </el-checkbox>
         </el-checkbox-group>
       </div>
@@ -115,6 +115,7 @@
 import { computed, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { adminClient } from '../api/client'
+import { displayModuleName, displayPermissionLabel, displayRoleLabel } from '../utils/rbacDisplay'
 
 const loading = ref(false)
 const saving = ref(false)
@@ -209,7 +210,7 @@ const applyFilter = () => {
     return
   }
   filteredPermissions.value = permissions.value.filter((perm) => {
-    const name = (perm.permName || '').toLowerCase()
+    const name = displayPermissionLabel(perm).toLowerCase()
     const code = (perm.permCode || '').toLowerCase()
     return name.includes(key) || code.includes(key)
   })

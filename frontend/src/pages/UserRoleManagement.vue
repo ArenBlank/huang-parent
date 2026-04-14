@@ -73,7 +73,11 @@
 
     <el-table :data="roles" style="width: 100%" v-loading="roleLoading">
       <el-table-column prop="id" label="ID" width="70" />
-      <el-table-column prop="roleName" label="角色名称" />
+      <el-table-column label="角色名称">
+        <template #default="scope">
+          {{ displayRoleName(scope.row) }}
+        </template>
+      </el-table-column>
       <el-table-column prop="roleCode" label="角色编码" width="160" />
       <el-table-column prop="status" label="状态" width="90">
         <template #default="scope">
@@ -104,7 +108,7 @@
             <el-option
               v-for="role in availableRoles"
               :key="role.id"
-              :label="`${role.roleName} (${role.roleCode})`"
+              :label="displayRoleLabel(role)"
               :value="role.id"
             />
           </el-select>
@@ -122,6 +126,7 @@
 import { computed, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
 import { adminClient } from '../api/client'
+import { displayRoleLabel, displayRoleName } from '../utils/rbacDisplay'
 
 const users = ref([])
 const userLoading = ref(false)

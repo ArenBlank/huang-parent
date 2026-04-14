@@ -7,6 +7,7 @@ import lombok.Data;
 
 /**
  * 训练计划
+ *
  * @author system
  * @since 2026-02-25
  */
@@ -29,7 +30,7 @@ public class TrainingPlan extends BaseEntity {
     @TableField(value = "level")
     private String level;
 
-    @Schema(description = "周期(周)")
+    @Schema(description = "周期（周）")
     @TableField(value = "duration_weeks")
     private Integer durationWeeks;
 
@@ -40,4 +41,8 @@ public class TrainingPlan extends BaseEntity {
     @Schema(description = "状态")
     @TableField(value = "status")
     private Integer status;
+
+    @Schema(description = "归属用户ID，null 表示公共计划")
+    @TableField(value = "owner_user_id")
+    private Long ownerUserId;
 }

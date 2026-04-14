@@ -1,12 +1,18 @@
 package com.huang.web.app.service.biz;
 
 import com.huang.common.constant.RedisConstant;
+import com.huang.common.exception.HuangException;
+import com.huang.common.login.LoginUser;
+import com.huang.common.login.LoginUserHolder;
 import com.huang.common.redis.MultiLevelCacheSupport;
 import com.huang.common.redis.RedisCacheSupport;
 import com.huang.model.entity.TrainingPlan;
 import com.huang.model.entity.TrainingPlanItem;
 import com.huang.model.entity.TrainingPlanSubscribe;
 import com.huang.model.entity.VideoAsset;
+import com.huang.web.app.ai.AiGeneratedPlan;
+import com.huang.web.app.ai.AiGeneratedPlanItem;
+import com.huang.web.app.ai.PersonalTrainerAi;
 import com.huang.web.app.mapper.TrainingPlanItemMapper;
 import com.huang.web.app.mapper.TrainingPlanMapper;
 import com.huang.web.app.mapper.TrainingPlanSubscribeMapper;
@@ -23,14 +29,19 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import java.lang.reflect.Constructor;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicReference;
 
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -58,6 +69,9 @@ class PlanBizServiceTest {
     @Mock
     private MultiLevelCacheSupport multiLevelCacheSupport;
 
+    @Mock
+    private PersonalTrainerAi personalTrainerAi;
+
     private PlanBizService planBizService;
 
     @BeforeEach
@@ -69,10 +83,12 @@ class PlanBizServiceTest {
                 trainingPlanSubscribeMapper,
                 videoAssetMapper,
                 minioClientProvider,
-                multiLevelCacheSupport
+                multiLevelCacheSupport,
+                personalTrainerAi
         );
         ReflectionTestUtils.setField(planBizService, "minioPublicEndpoint", "http://files.localhost");
         ReflectionTestUtils.setField(planBizService, "minioBucketName", "fitness-platform");
+        LoginUserHolder.clear();
     }
 
     @Test
@@ -190,6 +206,66 @@ class PlanBizServiceTest {
         verify(trainingPlanMapper, never()).selectById(anyLong());
         verify(trainingPlanItemMapper, never()).selectList(any());
         verify(videoAssetMapper, never()).selectBatchIds(any());
+    }
+
+    @Test
+    void generateAndSavePlanByAi_shouldInsertPlanItemsAndEvictCaches() {
+        LoginUserHolder.setLoginUser(new LoginUser(88L, "root_member"));
+        AtomicReference<TrainingPlan> insertedPlanRef = new AtomicReference<>();
+        List<TrainingPlanItem> insertedItems = new ArrayList<>();
+
+        AiGeneratedPlan generatedPlan = new AiGeneratedPlan(
+                "AI 减脂计划",
+                "适合居家减脂训练",
+                "beginner",
+                null,
+                List.of(
+                        new AiGeneratedPlanItem(1, "深蹲", 4, 12, 15, 60),
+                        new AiGeneratedPlanItem(3, "卷腹", 3, 20, 10, 30)
+                )
+        );
+        when(personalTrainerAi.generatePlan("我是新手，想减脂")).thenReturn(generatedPlan);
+        doAnswer(invocation -> {
+            TrainingPlan plan = invocation.getArgument(0);
+            insertedPlanRef.set(plan);
+            plan.setId(900L);
+            return 1;
+        }).when(trainingPlanMapper).insert(any(TrainingPlan.class));
+        VideoAsset matchedVideo = new VideoAsset();
+        matchedVideo.setId(66L);
+        matchedVideo.setTitle("深蹲");
+        matchedVideo.setStatus(1);
+        when(videoAssetMapper.selectList(any())).thenReturn(List.of(matchedVideo));
+        doAnswer(invocation -> {
+            insertedItems.add(invocation.getArgument(0));
+            return 1;
+        }).when(trainingPlanItemMapper).insert(any(TrainingPlanItem.class));
+
+        Map<String, Object> result = planBizService.generateAndSavePlanByAi("我是新手，想减脂");
+
+        assertThat(result)
+                .containsEntry("planId", 900L)
+                .containsEntry("title", "AI 减脂计划")
+                .containsEntry("itemCount", 2);
+        assertThat(insertedPlanRef.get()).isNotNull();
+        assertThat(insertedPlanRef.get().getTitle()).hasSizeLessThanOrEqualTo(100);
+        assertThat(insertedPlanRef.get().getGoal()).hasSizeLessThanOrEqualTo(50);
+        assertThat(insertedItems).hasSize(2);
+        assertThat(insertedItems).allMatch(item -> item.getVideoId() != null && item.getVideoId().equals(66L));
+        verify(trainingPlanMapper).insert(any(TrainingPlan.class));
+        verify(trainingPlanItemMapper, times(2)).insert(any(TrainingPlanItem.class));
+        verify(multiLevelCacheSupport).sharedEvict(RedisConstant.APP_PLAN_LIST_ACTIVE_KEY);
+        verify(multiLevelCacheSupport).sharedEvict(RedisConstant.appPlanDetailStaticKey(900L));
+    }
+
+    @Test
+    void generateAndSavePlanByAi_shouldTranslateAiFailureToFriendlyBusinessException() {
+        LoginUserHolder.setLoginUser(new LoginUser(99L, "root_member"));
+        when(personalTrainerAi.generatePlan("给我来一份计划")).thenThrow(new RuntimeException("timeout"));
+
+        assertThatThrownBy(() -> planBizService.generateAndSavePlanByAi("给我来一份计划"))
+                .isInstanceOf(HuangException.class)
+                .hasMessage("AI 教练正在思考中，请稍后再试");
     }
 
     private TrainingPlan buildPlan(Long id, String title) {

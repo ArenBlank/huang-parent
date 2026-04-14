@@ -3,11 +3,9 @@ package com.huang.web.app.service.biz;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.huang.common.constant.BizStatusConstant;
 import com.huang.model.entity.CoachBooking;
-import com.huang.model.entity.CourseEnrollment;
 import com.huang.model.entity.OrderInfo;
 import com.huang.model.entity.PaymentRecord;
 import com.huang.web.app.mapper.CoachBookingMapper;
-import com.huang.web.app.mapper.CourseEnrollmentMapper;
 import com.huang.web.app.mapper.OrderInfoMapper;
 import com.huang.web.app.mapper.PaymentRecordMapper;
 import org.slf4j.Logger;
@@ -25,16 +23,16 @@ public class PaymentCompensationBizService {
     private final PaymentRecordMapper paymentRecordMapper;
     private final OrderInfoMapper orderInfoMapper;
     private final CoachBookingMapper coachBookingMapper;
-    private final CourseEnrollmentMapper courseEnrollmentMapper;
+    private final CourseLearningBizService courseLearningBizService;
 
     public PaymentCompensationBizService(PaymentRecordMapper paymentRecordMapper,
                                          OrderInfoMapper orderInfoMapper,
                                          CoachBookingMapper coachBookingMapper,
-                                         CourseEnrollmentMapper courseEnrollmentMapper) {
+                                         CourseLearningBizService courseLearningBizService) {
         this.paymentRecordMapper = paymentRecordMapper;
         this.orderInfoMapper = orderInfoMapper;
         this.coachBookingMapper = coachBookingMapper;
-        this.courseEnrollmentMapper = courseEnrollmentMapper;
+        this.courseLearningBizService = courseLearningBizService;
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -104,12 +102,7 @@ public class PaymentCompensationBizService {
         String bizType = orderInfo.getBizType() == null ? "" : orderInfo.getBizType();
         if (BizStatusConstant.BizType.COURSE_ENROLLMENT.equals(bizType)
                 || BizStatusConstant.BizType.COURSE.equals(bizType)) {
-            CourseEnrollment enrollment = courseEnrollmentMapper.selectById(orderInfo.getBizId());
-            if (enrollment != null && enrollment.getStatus() != BizStatusConstant.EnrollmentStatus.PAID) {
-                enrollment.setStatus(BizStatusConstant.EnrollmentStatus.PAID);
-                courseEnrollmentMapper.updateById(enrollment);
-                return true;
-            }
+            return courseLearningBizService.syncEnrollmentPaid(orderInfo.getBizId());
         }
         return false;
     }

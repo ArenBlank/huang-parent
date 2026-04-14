@@ -6,6 +6,7 @@ import com.huang.web.admin.constant.AdminRoleCode;
 import com.huang.web.admin.custom.annotation.RequireAdminPermission;
 import com.huang.web.admin.custom.annotation.RequireAdminRole;
 import com.huang.web.admin.custom.aop.OperationLog;
+import com.huang.web.admin.dto.course.CourseCheckInDTO;
 import com.huang.web.admin.dto.course.CourseScheduleCreateDTO;
 import com.huang.web.admin.dto.course.CourseUpsertDTO;
 import com.huang.web.admin.service.biz.AdminCourseOpsBizService;
@@ -21,7 +22,9 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-@Tag(name = "Admin课程运营", description = "课程与排期运营管理")
+import java.util.Map;
+
+@Tag(name = "Admin课程运营", description = "课程、排期与课程履约管理")
 @RestController
 @RequestMapping("/admin/course")
 @RequireAdminRole({AdminRoleCode.ADMIN, AdminRoleCode.OPS_ADMIN})
@@ -96,5 +99,23 @@ public class CourseManageController {
         }
         boolean ok = adminCourseOpsBizService.updateScheduleStatus(id, status);
         return ok ? Result.ok("状态更新成功") : Result.fail(AdminErrorCode.COURSE_SCHEDULE_NOT_FOUND, "排期不存在");
+    }
+
+    @Operation(summary = "课程签到核销")
+    @PostMapping("/check-in")
+    @RequireAdminPermission({"course:checkin"})
+    @OperationLog(module = "course_enrollment", action = "check_in", detail = "admin course enrollment check in")
+    public Result<?> checkIn(@Valid @RequestBody CourseCheckInDTO dto) {
+        boolean ok = adminCourseOpsBizService.checkInByCode(dto.getCheckInCode());
+        return ok ? Result.ok("核销成功") : Result.fail("核销失败，核销码无效或报名状态不可核销");
+    }
+
+    @Operation(summary = "补齐历史课程核销码")
+    @PostMapping("/fix-history-checkin-codes")
+    @RequireAdminPermission({"course:checkin"})
+    @OperationLog(module = "course_enrollment", action = "fix_checkin_codes", detail = "admin fix history check in codes")
+    public Result<?> fixHistoryCheckInCodes() {
+        int fixedCount = adminCourseOpsBizService.fixHistoryCheckInCodes();
+        return Result.ok(Map.of("fixedCount", fixedCount));
     }
 }

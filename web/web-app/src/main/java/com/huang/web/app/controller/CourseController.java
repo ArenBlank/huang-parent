@@ -2,10 +2,11 @@ package com.huang.web.app.controller;
 
 import com.huang.common.constant.RedisConstant;
 import com.huang.common.guard.IdempotentSubmit;
+import com.huang.common.guard.RateLimit;
 import com.huang.common.login.LoginUser;
 import com.huang.common.login.LoginUserHolder;
-import com.huang.common.guard.RateLimit;
 import com.huang.common.result.Result;
+import com.huang.web.app.dto.course.CourseCheckInDTO;
 import com.huang.web.app.dto.course.CourseEnrollDTO;
 import com.huang.web.app.dto.course.CourseRefundDTO;
 import com.huang.web.app.service.biz.CourseLearningBizService;
@@ -20,7 +21,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
-@Tag(name = "App课程学习", description = "课程浏览、报名下单、支付回调、报名记录")
+@Tag(name = "App课程学习", description = "课程浏览、报名下单、支付回调、报名记录与待上课行程")
 @RestController
 @RequestMapping("/app/course")
 public class CourseController {
@@ -109,5 +110,26 @@ public class CourseController {
             return Result.fail("未登录");
         }
         return Result.ok(courseLearningBizService.myEnrollments(loginUser.getUserId()));
+    }
+
+    @Operation(summary = "我的待上课行程")
+    @GetMapping("/my/schedules")
+    public Result<?> mySchedules() {
+        LoginUser loginUser = LoginUserHolder.getLoginUser();
+        if (loginUser == null) {
+            return Result.fail("未登录");
+        }
+        return Result.ok(courseLearningBizService.mySchedules(loginUser.getUserId()));
+    }
+
+    @Operation(summary = "课程签到核销")
+    @PostMapping("/check-in")
+    public Result<?> checkIn(@Valid @RequestBody CourseCheckInDTO dto) {
+        LoginUser loginUser = LoginUserHolder.getLoginUser();
+        if (loginUser == null) {
+            return Result.fail("未登录");
+        }
+        boolean ok = courseLearningBizService.checkInByCode(loginUser.getUserId(), dto.getCheckInCode());
+        return ok ? Result.ok("核销成功") : Result.fail("核销失败，核销码无效或报名状态不可核销");
     }
 }

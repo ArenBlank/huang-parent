@@ -107,7 +107,7 @@
             <span class="tag">休息 {{ selectedItem.restSec || 0 }} 秒</span>
           </div>
           <div class="action-row">
-            <el-button type="primary" :disabled="!selectedItem?.video?.playUrl" @click="openVideo(selectedItem?.video?.playUrl)">
+            <el-button type="primary" :disabled="!selectedItem?.video?.playUrl" @click="openVideo(selectedItem)">
               {{ selectedItem?.video?.playUrl ? "查看教学视频" : "暂无视频" }}
             </el-button>
             <span class="muted">{{ selectedItem?.video?.title || "当前节点未绑定视频资源" }}</span>
@@ -151,6 +151,7 @@ import { computed, reactive, ref } from "vue"
 import { useRouter } from "vue-router"
 import { ElMessage } from "element-plus"
 import { appClient } from "../api/client"
+import { createVideoPlaylist, saveVideoPlaylist } from "../utils/videoPlaylist"
 
 const router = useRouter()
 const stats = ref(null)
@@ -263,9 +264,31 @@ const submit = async () => {
   }
 }
 
-const openVideo = (url) => {
-  if (!url) return
-  window.open(url, "_blank")
+const openVideo = (item) => {
+  const playUrl = item?.video?.playUrl
+  if (!playUrl) return
+
+  const playlist = createVideoPlaylist({
+    items: planItems.value,
+    source: currentPlanTitle.value || "训练计划",
+    cover: "",
+    fallbackTitle: "训练教学视频"
+  })
+  const playlistIndex = playlist.findIndex((entry) => entry.id === item?.id)
+  const playlistKey = saveVideoPlaylist(playlist, `training-${form.planId || "checkin"}`)
+
+  router.push({
+    path: "/video-player",
+    query: {
+      playlistKey,
+      index: String(playlistIndex >= 0 ? playlistIndex : 0),
+      url: playUrl,
+      title: item?.video?.title || item?.actionName || "训练教学视频",
+      source: currentPlanTitle.value || "训练计划",
+      action: item?.actionName || "",
+      cover: ""
+    }
+  })
 }
 
 const goPlans = () => {

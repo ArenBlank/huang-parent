@@ -165,14 +165,65 @@ CREATE TABLE IF NOT EXISTS course_enrollment (
   schedule_id BIGINT DEFAULT NULL,
   order_id BIGINT DEFAULT NULL,
   status TINYINT NOT NULL DEFAULT 1,
+  attend_status TINYINT NOT NULL DEFAULT 0 COMMENT '0待上课 1已签到/已完成 2已缺席 3已失效/已取消',
+  check_in_code VARCHAR(6) DEFAULT NULL COMMENT '6位核销码',
   enroll_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   is_deleted TINYINT NOT NULL DEFAULT 0,
   UNIQUE KEY uk_course_enrollment (user_id, course_id, schedule_id),
+  UNIQUE KEY uk_course_enrollment_check_in_code (check_in_code),
   KEY idx_course_enrollment_user (user_id),
   KEY idx_course_enrollment_course (course_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+SET @course_enrollment_has_attend_status := (
+  SELECT COUNT(*)
+  FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'course_enrollment'
+    AND COLUMN_NAME = 'attend_status'
+);
+SET @course_enrollment_attend_status_sql := IF(
+  @course_enrollment_has_attend_status = 0,
+  'ALTER TABLE course_enrollment ADD COLUMN attend_status TINYINT NOT NULL DEFAULT 0 COMMENT ''0待上课 1已签到/已完成 2已缺席 3已失效/已取消'' AFTER status',
+  'SELECT 1'
+);
+PREPARE course_enrollment_attend_status_stmt FROM @course_enrollment_attend_status_sql;
+EXECUTE course_enrollment_attend_status_stmt;
+DEALLOCATE PREPARE course_enrollment_attend_status_stmt;
+
+SET @course_enrollment_has_check_in_code := (
+  SELECT COUNT(*)
+  FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'course_enrollment'
+    AND COLUMN_NAME = 'check_in_code'
+);
+SET @course_enrollment_check_in_code_sql := IF(
+  @course_enrollment_has_check_in_code = 0,
+  'ALTER TABLE course_enrollment ADD COLUMN check_in_code VARCHAR(6) DEFAULT NULL COMMENT ''6位核销码'' AFTER attend_status',
+  'SELECT 1'
+);
+PREPARE course_enrollment_check_in_code_stmt FROM @course_enrollment_check_in_code_sql;
+EXECUTE course_enrollment_check_in_code_stmt;
+DEALLOCATE PREPARE course_enrollment_check_in_code_stmt;
+
+SET @course_enrollment_has_check_in_idx := (
+  SELECT COUNT(*)
+  FROM information_schema.STATISTICS
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'course_enrollment'
+    AND INDEX_NAME = 'uk_course_enrollment_check_in_code'
+);
+SET @course_enrollment_check_in_idx_sql := IF(
+  @course_enrollment_has_check_in_idx = 0,
+  'ALTER TABLE course_enrollment ADD UNIQUE KEY uk_course_enrollment_check_in_code (check_in_code)',
+  'SELECT 1'
+);
+PREPARE course_enrollment_check_in_idx_stmt FROM @course_enrollment_check_in_idx_sql;
+EXECUTE course_enrollment_check_in_idx_stmt;
+DEALLOCATE PREPARE course_enrollment_check_in_idx_stmt;
 
 CREATE TABLE IF NOT EXISTS training_plan (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
@@ -182,10 +233,27 @@ CREATE TABLE IF NOT EXISTS training_plan (
   duration_weeks INT DEFAULT 4,
   cover_url VARCHAR(255) DEFAULT NULL,
   status TINYINT NOT NULL DEFAULT 1,
+  owner_user_id BIGINT DEFAULT NULL,
   create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   is_deleted TINYINT NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+SET @training_plan_has_owner_user_id := (
+  SELECT COUNT(*)
+  FROM information_schema.COLUMNS
+  WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'training_plan'
+    AND COLUMN_NAME = 'owner_user_id'
+);
+SET @training_plan_owner_user_id_sql := IF(
+  @training_plan_has_owner_user_id = 0,
+  'ALTER TABLE training_plan ADD COLUMN owner_user_id BIGINT DEFAULT NULL AFTER status',
+  'SELECT 1'
+);
+PREPARE training_plan_owner_user_id_stmt FROM @training_plan_owner_user_id_sql;
+EXECUTE training_plan_owner_user_id_stmt;
+DEALLOCATE PREPARE training_plan_owner_user_id_stmt;
 
 CREATE TABLE IF NOT EXISTS video_asset (
   id BIGINT PRIMARY KEY AUTO_INCREMENT,
@@ -471,6 +539,7 @@ INSERT INTO permission (permission_name, permission_code, module, status) VALUES
 ('Course Update', 'course:update', 'course', 1),
 ('Course Publish', 'course:publish', 'course', 1),
 ('Course Schedule', 'course:schedule', 'course', 1),
+('Course Check-In', 'course:checkin', 'course', 1),
 ('Coach Apply Audit', 'coach:apply:audit', 'coach', 1),
 ('User Status', 'user:status', 'user', 1),
 ('User Role', 'user:role', 'user', 1),
@@ -488,7 +557,7 @@ SELECT r.id, p.id FROM role r
 JOIN permission p ON p.permission_code IN (
   'banner:manage', 'notice:manage', 'system:config',
   'video:asset', 'video:upload', 'video:status', 'video:bind',
-  'course:create', 'course:update', 'course:publish', 'course:schedule',
+  'course:create', 'course:update', 'course:publish', 'course:schedule', 'course:checkin',
   'operation:log:read', 'task:run:read', 'task:run:trigger'
 ) WHERE r.role_code = 'OPS_ADMIN';
 
