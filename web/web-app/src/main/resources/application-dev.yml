@@ -23,7 +23,7 @@ minio:
 langchain4j:
   open-ai:
     chat-model:
-      base-url: https://api.deepseek.com
-      api-key: sk-a8bf78df5b0e42c49b6d0920270c6ec6 # 填入你的真实密钥
-      model-name: deepseek-chat
-      timeout: 60s
+      base-url: ${LLM_BASE_URL:https://api.deepseek.com}
+      api-key: ${LLM_API_KEY:${DEEPSEEK_API_KEY:PLEASE_SET_YOUR_LLM_API_KEY}}
+      model-name: ${LLM_MODEL_NAME:deepseek-chat}
+      timeout: ${LLM_TIMEOUT:60s}

@@ -24,3 +24,11 @@ payment:
   sign:
     mode: ${PAY_SIGN_MODE:hmac}
     secret: ${PAY_SIGN_SECRET:change-me}
+
+langchain4j:
+  open-ai:
+    chat-model:
+      base-url: ${LLM_BASE_URL:https://api.deepseek.com}
+      api-key: ${LLM_API_KEY}
+      model-name: ${LLM_MODEL_NAME:deepseek-chat}
+      timeout: ${LLM_TIMEOUT:60s}
