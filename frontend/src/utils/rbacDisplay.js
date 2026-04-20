@@ -28,10 +28,12 @@ const PERMISSION_NAME_MAP = {
   'video:status': '视频状态管理',
   'video:bind': '视频绑定计划项',
   'course:create': '课程创建',
+  'course:delete': '课程删除',
   'course:update': '课程编辑',
   'course:publish': '课程发布',
   'course:schedule': '课程排期管理',
   'course:checkin': '课程核销',
+  'booking:schedule': '教练档期管理',
   'coach:apply:audit': '教练申请审核',
   'refund:audit': '退款审核',
   'pay:callback:audit': '支付回调审计',
@@ -43,7 +45,7 @@ function isBrokenLabel(value) {
   if (!value) {
     return true
   }
-  return /[?�]/.test(value)
+  return /[?锟]/.test(value)
 }
 
 export function displayRoleName(role) {

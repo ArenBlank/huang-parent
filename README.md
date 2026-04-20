@@ -34,24 +34,54 @@
 - 接口文档：`Knife4j / OpenAPI 3`
 - 自动化验证：`Postman/Newman`、`GitHub Actions`
 
+## 当前技术亮点
+
+- `Nginx upstream + dual-instance deployment`：Nginx upstream 负载均衡 + App 双实例部署
+- `TokenVersion-enhanced stateless JWT authentication`：基于 TokenVersion 的无状态 JWT 鉴权增强方案
+- `Admin RBAC Redis auth cache + targeted eviction`：管理端 RBAC 权限缓存 + 定向失效
+- `App auth Redis L2 cache`：用户端登录鉴权 Redis 二级缓存
+- `three-layer concurrency control`：三层并发控制
+- `fixed-window rate limiting`：固定窗口限流
+- `short-lived idempotency key`：短生命周期幂等键
+- `fail-open / fail-close graceful degradation`：Fail-Open / Fail-Close 双策略优雅降级
+- `callback idempotency`：支付回调幂等控制
+- `Caffeine + Redis + Redis Pub/Sub`：Caffeine + Redis + Redis 发布订阅多级缓存
+- `Cache-Aside + TTL jitter + null-object caching + hotspot rebuild protection`：旁路缓存 + TTL 抖动 + 空对象缓存 + 热点重建保护
+- `@DistributedTaskLock + dynamic task lock TTL`：分布式任务锁 + 动态锁过期时间
+- `graceful degradation`：优雅降级
+- `runtime observability`：运行期可观测性
+- `end-to-end regression pipeline`：端到端回归验证流水线
+
 ## 系统架构
 
 ```mermaid
-flowchart LR
-    U["App / Admin Client"] --> N["Nginx"]
-    N --> A1["web-app:8081"]
-    N --> A2["web-app:8082"]
-    U --> AD["web-admin:8080"]
-    A1 --> R["Redis"]
-    A2 --> R
-    AD --> R
-    A1 --> DB["MySQL"]
-    A2 --> DB
-    AD --> DB
-    A1 --> M["MinIO"]
-    A2 --> M
-    AD --> M
+graph LR
+    Client[App Client / Admin Client] --> Nginx[Nginx]
+    Client --> Admin[web-admin 8080]
+    Nginx --> App1[web-app 8081]
+    Nginx --> App2[web-app 8082]
+    App1 --> Redis[Redis]
+    App2 --> Redis
+    Admin --> Redis
+    App1 --> MySQL[MySQL]
+    App2 --> MySQL
+    Admin --> MySQL
+    App1 --> MinIO[MinIO]
+    App2 --> MinIO
+    Admin --> MinIO
 ```
+
+如果当前 Markdown 渲染器不支持 Mermaid，可参考下面的文字版拓扑：
+
+- App / Admin Client
+  - App 请求先进入 `Nginx`
+  - `Nginx` 轮询转发到 `web-app:8081`
+  - `Nginx` 轮询转发到 `web-app:8082`
+- Admin 请求直接进入 `web-admin:8080`
+- `web-app:8081`、`web-app:8082`、`web-admin:8080` 共同访问：
+  - `Redis`
+  - `MySQL`
+  - `MinIO`
 
 ### 部署形态
 
@@ -132,24 +162,6 @@ flowchart LR
 - 关键写操作记录 `operation_log`
 - 支付回调、退款、任务补偿都有独立审计记录
 - App/Admin 的接口文档统一接入 Knife4j，支持 Bearer 鉴权调试
-
-## 当前技术亮点
-
-- `Nginx upstream + dual-instance deployment`
-- `TokenVersion-enhanced stateless JWT authentication`
-- `Admin RBAC Redis auth cache + targeted eviction`
-- `App auth Redis L2 cache`
-- `three-layer concurrency control`
-- `fixed-window rate limiting`
-- `short-lived idempotency key`
-- `fail-open / fail-close graceful degradation`
-- `callback idempotency`
-- `Caffeine + Redis + Redis Pub/Sub`
-- `Cache-Aside + TTL jitter + null-object caching + hotspot rebuild protection`
-- `@DistributedTaskLock + dynamic task lock TTL`
-- `graceful degradation`
-- `runtime observability`
-- `end-to-end regression pipeline`
 
 ## 已完成验证
 

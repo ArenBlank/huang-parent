@@ -1,41 +1,106 @@
-﻿<template>
+<template>
   <div class="card">
     <div class="toolbar">
       <div>
         <h2>课程</h2>
-        <p>管理课程内容与上下架状态</p>
+        <p>管理课程内容、上下架状态，并按课程生命周期快速整理视图。</p>
       </div>
-      <el-button type="primary" @click="drawerVisible = true">新建课程</el-button>
-    </div>
-    <div class="summary-grid">
-      <div class="summary-card">
-        <div class="summary-label">课程总数</div>
-        <div class="summary-value">{{ courses.length }}</div>
-        <div class="summary-sub">上架 {{ publishedCount }}</div>
-      </div>
-      <div class="summary-card">
-        <div class="summary-label">最新课程</div>
-        <div class="summary-value">{{ latestCourse?.title || '-' }}</div>
-        <div class="summary-sub">ID {{ latestCourse?.id || '-' }}</div>
+      <div class="toolbar-actions">
+        <el-button @click="loadCourses" :loading="loading">刷新</el-button>
+        <el-button type="primary" @click="openDrawer()">新建课程</el-button>
       </div>
     </div>
 
-    <el-table :data="courses" style="width: 100%" v-loading="loading">
+    <div class="summary-grid">
+      <div class="summary-card">
+        <div class="summary-label">课程总数</div>
+        <div class="summary-value">{{ allCourses.length }}</div>
+        <div class="summary-sub">当前上架 {{ publishedCount }}</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-label">未结束课程</div>
+        <div class="summary-value">{{ unfinishedCount }}</div>
+        <div class="summary-sub">默认只看这部分，减少运营干扰</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-label">已结束课程</div>
+        <div class="summary-value">{{ endedCount }}</div>
+        <div class="summary-sub">有报名会自动下架，无报名会自动清理</div>
+      </div>
+      <div class="summary-card">
+        <div class="summary-label">无排期课程</div>
+        <div class="summary-value">{{ noScheduleCount }}</div>
+        <div class="summary-sub">适合继续补排期或直接清理草稿</div>
+      </div>
+    </div>
+
+    <el-tabs v-model="activeTab" class="lifecycle-tabs">
+      <el-tab-pane :label="`未结束 (${unfinishedCount})`" name="unfinished" />
+      <el-tab-pane :label="`已结束 (${endedCount})`" name="ended" />
+      <el-tab-pane :label="`无排期 (${noScheduleCount})`" name="no-schedule" />
+      <el-tab-pane :label="`全部 (${allCourses.length})`" name="all" />
+    </el-tabs>
+
+    <el-table :data="visibleCourses" style="width: 100%" v-loading="loading">
       <el-table-column prop="id" label="ID" width="70" />
-      <el-table-column prop="title" label="标题" />
+      <el-table-column prop="title" label="标题" min-width="240" />
       <el-table-column prop="categoryId" label="分类" width="110" />
+      <el-table-column label="阶段" width="120">
+        <template #default="scope">
+          <el-tag :type="lifecycleTagType(scope.row.lifecycleStatus)">
+            {{ scope.row.lifecycleLabel || '-' }}
+          </el-tag>
+        </template>
+      </el-table-column>
+      <el-table-column label="排期" width="120">
+        <template #default="scope">
+          {{ scope.row.activeSchedules || 0 }} / {{ scope.row.totalSchedules || 0 }}
+        </template>
+      </el-table-column>
+      <el-table-column label="报名" width="120">
+        <template #default="scope">
+          <el-tag :type="scope.row.hasEnrollment ? 'warning' : 'info'">
+            {{ scope.row.hasEnrollment ? '已有报名' : '暂无报名' }}
+          </el-tag>
+        </template>
+      </el-table-column>
       <el-table-column prop="price" label="价格" width="120" />
       <el-table-column label="状态" width="120">
         <template #default="scope">
           <el-tag :type="scope.row.status === 1 ? 'success' : 'info'">
-            {{ scope.row.status === 1 ? '已上架' : '草稿' }}
+            {{ scope.row.status === 1 ? '已上架' : '已下架' }}
           </el-tag>
         </template>
       </el-table-column>
-      <el-table-column label="操作" width="220">
+      <el-table-column label="操作" width="360">
         <template #default="scope">
           <el-button size="small" @click="openDrawer(scope.row)">编辑</el-button>
-          <el-button size="small" type="warning" @click="publish(scope.row)" :disabled="scope.row.status === 1">上架</el-button>
+          <el-button
+            size="small"
+            :type="scope.row.status === 1 ? 'warning' : 'success'"
+            @click="togglePublish(scope.row)"
+            :disabled="scope.row.status !== 1 && scope.row.lifecycleStatus === 'ENDED'"
+          >
+            {{ scope.row.status === 1 ? '下架' : '上架' }}
+          </el-button>
+          <el-tooltip
+            v-if="scope.row.hasEnrollment"
+            content="已有报名记录的课程会保留用于追溯，结束后会自动下架并归类到已结束列表。"
+            placement="top"
+          >
+            <span class="inline-block">
+              <el-button size="small" type="danger" plain disabled>删除</el-button>
+            </span>
+          </el-tooltip>
+          <el-button
+            v-else
+            size="small"
+            type="danger"
+            plain
+            @click="removeCourse(scope.row)"
+          >
+            删除
+          </el-button>
         </template>
       </el-table-column>
     </el-table>
@@ -66,7 +131,7 @@
       </el-form-item>
       <el-form-item label="状态">
         <el-select v-model.number="form.status">
-          <el-option label="草稿" :value="0" />
+          <el-option label="已下架" :value="0" />
           <el-option label="已上架" :value="1" />
         </el-select>
       </el-form-item>
@@ -80,18 +145,36 @@
 
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
-import { ElMessage } from 'element-plus'
+import { ElMessage, ElMessageBox } from 'element-plus'
 import { adminClient } from '../api/client'
 
-const courses = ref([])
+const allCourses = ref([])
 const loading = ref(false)
 const creating = ref(false)
 const drawerVisible = ref(false)
 const editingId = ref(null)
+const activeTab = ref('unfinished')
 const drawerTitle = computed(() => (editingId.value ? '编辑课程' : '新建课程'))
 
-const publishedCount = computed(() => courses.value.filter((item) => item.status === 1).length)
-const latestCourse = computed(() => (courses.value.length ? courses.value[0] : null))
+const publishedCount = computed(() => allCourses.value.filter((item) => item.status === 1).length)
+const unfinishedCount = computed(
+  () => allCourses.value.filter((item) => item.lifecycleStatus === 'UPCOMING' || item.lifecycleStatus === 'ONGOING').length
+)
+const endedCount = computed(() => allCourses.value.filter((item) => item.lifecycleStatus === 'ENDED').length)
+const noScheduleCount = computed(() => allCourses.value.filter((item) => item.lifecycleStatus === 'NO_SCHEDULE').length)
+
+const visibleCourses = computed(() => {
+  if (activeTab.value === 'ended') {
+    return allCourses.value.filter((item) => item.lifecycleStatus === 'ENDED')
+  }
+  if (activeTab.value === 'no-schedule') {
+    return allCourses.value.filter((item) => item.lifecycleStatus === 'NO_SCHEDULE')
+  }
+  if (activeTab.value === 'all') {
+    return allCourses.value
+  }
+  return allCourses.value.filter((item) => item.lifecycleStatus === 'UPCOMING' || item.lifecycleStatus === 'ONGOING')
+})
 
 const form = reactive({
   categoryId: 1,
@@ -104,12 +187,19 @@ const form = reactive({
   status: 0
 })
 
+const lifecycleTagType = (status) => {
+  if (status === 'ONGOING') return 'success'
+  if (status === 'UPCOMING') return 'warning'
+  if (status === 'ENDED') return 'info'
+  return ''
+}
+
 const loadCourses = async () => {
   try {
     loading.value = true
     const { data } = await adminClient.get('/admin/course/list')
     if (data.code !== 200) throw new Error(data.message || '加载失败')
-    courses.value = data.data || []
+    allCourses.value = data.data || []
   } catch (err) {
     ElMessage.error(err.message || '加载失败')
   } finally {
@@ -151,12 +241,12 @@ const createCourse = async () => {
     } else {
       ;({ data } = await adminClient.post('/admin/course', form))
     }
-    if (data.code !== 200) throw new Error(data.message || '创建失败')
+    if (data.code !== 200) throw new Error(data.message || '提交失败')
     ElMessage.success(editingId.value ? '课程已更新' : '课程已创建')
     drawerVisible.value = false
     await loadCourses()
   } catch (err) {
-    ElMessage.error(err.message || '创建失败')
+    ElMessage.error(err.message || '提交失败')
   } finally {
     creating.value = false
   }
@@ -173,16 +263,44 @@ const fillSample = () => {
   form.status = 0
 }
 
-const publish = async (row) => {
+const togglePublish = async (row) => {
+  const nextStatus = row.status === 1 ? 0 : 1
+  if (nextStatus === 1 && row.lifecycleStatus === 'ENDED') {
+    ElMessage.warning('已结束课程不能重新上架，请先补新的未来排期')
+    return
+  }
   try {
     const { data } = await adminClient.put(`/admin/course/${row.id}/status`, null, {
-      params: { status: 1 }
+      params: { status: nextStatus }
     })
-    if (data.code !== 200) throw new Error(data.message || '上架失败')
-    ElMessage.success('已上架')
+    if (data.code !== 200) throw new Error(data.message || '状态更新失败')
+    ElMessage.success(nextStatus === 1 ? '已上架' : '已下架')
     await loadCourses()
   } catch (err) {
-    ElMessage.error(err.message || '上架失败')
+    ElMessage.error(err.message || '状态更新失败')
+  }
+}
+
+const removeCourse = async (row) => {
+  try {
+    await ElMessageBox.confirm(
+      `确认删除课程《${row.title}》吗？没有任何报名记录的课程会被逻辑删除，并同步清理关联排期。`,
+      '删除课程',
+      {
+        type: 'warning',
+        confirmButtonText: '确认删除',
+        cancelButtonText: '取消'
+      }
+    )
+    const { data } = await adminClient.delete(`/admin/course/${row.id}`)
+    if (data.code !== 200) throw new Error(data.message || '删除失败')
+    ElMessage.success('课程已删除')
+    await loadCourses()
+  } catch (err) {
+    if (err === 'cancel' || err === 'close') {
+      return
+    }
+    ElMessage.error(err.message || '删除失败')
   }
 }
 
@@ -195,6 +313,12 @@ onMounted(loadCourses)
   justify-content: space-between;
   align-items: center;
   margin-bottom: 16px;
+  gap: 12px;
+}
+
+.toolbar-actions {
+  display: flex;
+  gap: 8px;
 }
 
 .toolbar h2 {
@@ -237,8 +361,16 @@ onMounted(loadCourses)
   color: #6b7280;
 }
 
+.lifecycle-tabs {
+  margin-bottom: 16px;
+}
+
 .form-actions {
   display: flex;
   gap: 8px;
+}
+
+.inline-block {
+  display: inline-block;
 }
 </style>

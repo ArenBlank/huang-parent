@@ -4,9 +4,15 @@
       <div class="course-hero">
         <div>
           <p class="quest-kicker">Course Catalog</p>
-          <h1 class="hero-title">选课留在左侧，排期与报名固定在右侧</h1>
+          <h1 class="hero-title">
+            {{ courseView === "mine" ? "我的课程与报名历史并排展示" : "选课留在左侧，排期与报名固定在右侧" }}
+          </h1>
           <p class="hero-subtitle">
-            课程列表不再把用户带离操作链。现在可以一边浏览课程，一边在旁边完成排期选择、报名提交和最近报名处理。
+            {{
+              courseView === "mine"
+                ? "左侧只看待上课课程，右侧同步保留完整报名历史。用户回来看自己的课，不需要再往页面底部长距离滚动。"
+                : "课程列表保持在主视野里，右侧工作台即时同步排期、报名和最近报名处理，找课与操作不再互相打断。"
+            }}
           </p>
           <div class="hero-badges">
             <span class="badge-pill is-dark">课程 {{ courses.length }}</span>
@@ -16,95 +22,233 @@
           </div>
         </div>
         <div class="hero-actions">
-          <el-button type="primary" @click="loadCourses" :loading="loading">刷新课程</el-button>
-          <el-button plain @click="scrollToCatalog">回到选课区</el-button>
+          <el-button
+            type="primary"
+            @click="courseView === 'mine' ? refreshMyWorkspace() : loadCourses()"
+            :loading="courseView === 'mine' ? mySchedulesLoading || enrollmentsLoading : loading"
+          >
+            {{ courseView === "mine" ? "刷新我的课程" : "刷新课程" }}
+          </el-button>
+          <el-button plain @click="switchCourseView(courseView === 'mine' ? 'discover' : 'mine')">
+            {{ courseView === "mine" ? "寻找课程" : "我的课程" }}
+          </el-button>
         </div>
       </div>
     </section>
 
-    <div class="workspace-shell">
+    <div :class="['workspace-shell', `workspace-shell--${courseView}`]">
       <section ref="catalogRef" class="card catalog-panel">
-        <div class="toolbar catalog-toolbar">
+        <div class="toolbar catalog-toolbar catalog-toolbar--stack">
           <div>
-            <h2 class="section-title">选课区</h2>
-            <p class="section-sub">课程列表保持在当前视野里，切换课程时不需要把整页重新滚回顶部。</p>
+            <h2 class="section-title">课程列表</h2>
+            <p class="section-sub">
+              左边专注切换视角，右边承接对应操作。我的课程聚焦待上课与历史记录，寻找课程则保留找课与报名工作台。
+            </p>
+          </div>
+          <div class="course-mode-switch" role="tablist" aria-label="课程视图切换">
+            <button
+              type="button"
+              class="course-mode-tab"
+              :class="{ 'course-mode-tab--active': courseView === 'mine' }"
+              @click="switchCourseView('mine')"
+            >
+              我的课程 {{ mySchedules.length }}
+            </button>
+            <button
+              type="button"
+              class="course-mode-tab"
+              :class="{ 'course-mode-tab--active': courseView === 'discover' }"
+              @click="switchCourseView('discover')"
+            >
+              寻找课程 {{ courses.length }}
+            </button>
           </div>
         </div>
 
-        <el-empty v-if="!courses.length" :description="loading ? '正在加载课程...' : '暂无课程'">
-          <div class="empty-actions">
-            <el-button size="small" @click="loadCourses">重试</el-button>
-            <el-button size="small" @click="goTo('/booking')">去教练预约</el-button>
-          </div>
-        </el-empty>
-
-        <template v-else>
-          <div class="catalog-controls">
-            <el-input
-              v-model="courseKeyword"
-              class="course-search"
-              clearable
-              placeholder="搜索课程名、简介或难度"
-            />
-            <div class="catalog-stats">
-              <span class="badge-pill is-dark">显示 {{ filteredCourses.length }}</span>
-              <span class="badge-pill">总计 {{ courses.length }}</span>
-            </div>
-          </div>
-
-          <div v-if="selectedCourse" class="catalog-selected-banner">
+        <template v-if="courseView === 'mine'">
+          <div class="catalog-selected-banner catalog-selected-banner--mine">
             <div>
-              <p class="selected-caption">当前选中课程</p>
-              <strong>{{ selectedCourse.title }}</strong>
-              <p>{{ selectedCourse.summary || "右侧工作台已经同步当前课程的排期与报名操作。" }}</p>
+              <p class="selected-caption">待上课课程</p>
+              <strong>我的课程</strong>
+              <p>已支付并待上课的课程固定显示在这里，用户可以直接出示核销码、查看订单，不会再被找课流打断。</p>
             </div>
             <div class="selected-banner__chips">
-              <span class="tag">排期 {{ schedules.length }}</span>
-              <span class="tag">可报 {{ availableSchedules }}</span>
-              <span class="tag">状态 {{ formatCourseStatus(selectedCourse.status) }}</span>
+              <span class="tag">待上课 {{ mySchedules.length }}</span>
+              <span class="tag">报名历史 {{ enrollments.length }}</span>
             </div>
           </div>
 
-          <el-empty v-if="!filteredCourses.length" description="没有匹配课程">
+          <el-empty v-if="!mySchedules.length && !mySchedulesLoading" description="你还没有待上课课程">
             <div class="empty-actions">
-              <el-button size="small" @click="courseKeyword = ''">清空搜索</el-button>
+              <el-button type="primary" size="small" @click="switchCourseView('discover')">去寻找课程</el-button>
+              <el-button size="small" @click="refreshMyWorkspace">刷新我的课程</el-button>
             </div>
           </el-empty>
 
-          <div v-else class="catalog-scroller">
-            <div class="course-grid">
-              <button
-                v-for="course in filteredCourses"
-                :key="course.id"
-                type="button"
-                class="course-card eco-clickable"
-                :class="{ 'course-card--active': selectedCourse?.id === course.id }"
-                @click="selectCourse(course)"
+          <div v-else class="catalog-scroller catalog-scroller--mine" v-loading="mySchedulesLoading">
+            <div class="itinerary-grid">
+              <article
+                v-for="schedule in mySchedules"
+                :key="schedule.enrollmentId"
+                class="itinerary-card"
               >
-                <span v-if="selectedCourse?.id === course.id" class="course-card__flag">已选中</span>
-                <div class="course-cover-wrap">
-                  <el-image v-if="course.coverUrl" :src="course.coverUrl" fit="cover" class="course-cover" />
-                  <div v-else class="course-cover fallback">暂无封面</div>
+                <div class="itinerary-card__cover-wrap">
+                  <el-image
+                    v-if="schedule.coverUrl"
+                    :src="schedule.coverUrl"
+                    fit="cover"
+                    class="itinerary-card__cover"
+                  />
+                  <div v-else class="itinerary-card__cover fallback">待上课</div>
                 </div>
-                <div class="course-body">
-                  <strong>{{ course.title }}</strong>
-                  <p>{{ course.summary || "暂无课程简介" }}</p>
-                  <div class="badge-row">
-                    <span class="tag">价格 {{ course.price }}</span>
-                    <span class="tag">状态 {{ formatCourseStatus(course.status) }}</span>
-                    <span class="tag" v-if="course.level">难度 {{ course.level }}</span>
+
+                <div class="itinerary-card__body">
+                  <div class="itinerary-card__header">
+                    <div>
+                      <p class="section-eyebrow">待上课排期</p>
+                      <strong>{{ schedule.courseTitle || `课程 ${schedule.courseId}` }}</strong>
+                    </div>
                   </div>
-                  <span class="course-card__hint">选中后右侧立即更新排期与报名操作</span>
+
+                  <div class="itinerary-card__meta">
+                    <span>报名ID：{{ schedule.enrollmentId || "-" }}</span>
+                    <span>订单ID：{{ schedule.orderId || "-" }}</span>
+                    <span>上课时间：{{ formatScheduleTime(schedule) }}</span>
+                    <span>教练：{{ schedule.coachId ? `#${schedule.coachId}` : "待分配" }}</span>
+                    <span>价格：{{ schedule.price ?? "-" }}</span>
+                  </div>
+
+                  <p class="itinerary-card__hint">核销码会在“出示核销码 / 去打卡”弹窗里展示，页面只保留最关键的上课信息。</p>
+
+                  <div class="itinerary-card__actions">
+                    <el-button type="primary" @click="openCheckInDialog(schedule)">出示核销码 / 去打卡</el-button>
+                    <el-button plain @click="goToOrder(schedule.orderId)" :disabled="!schedule.orderId">查看订单</el-button>
+                  </div>
                 </div>
-              </button>
+              </article>
             </div>
           </div>
+        </template>
+
+        <template v-else>
+          <el-empty v-if="!courses.length" :description="loading ? '正在加载课程...' : '暂无课程'">
+            <div class="empty-actions">
+              <el-button size="small" @click="loadCourses">重试</el-button>
+              <el-button size="small" @click="goTo('/booking')">去教练预约</el-button>
+            </div>
+          </el-empty>
+
+          <template v-else>
+            <div class="catalog-controls">
+              <el-input
+                v-model="courseKeyword"
+                class="course-search"
+                clearable
+                placeholder="搜索课程名、简介或难度"
+              />
+              <div class="catalog-stats">
+                <span class="badge-pill is-dark">显示 {{ filteredCourses.length }}</span>
+                <span class="badge-pill">总计 {{ courses.length }}</span>
+              </div>
+            </div>
+
+            <div v-if="selectedCourse" class="catalog-selected-banner">
+              <div>
+                <p class="selected-caption">当前选中课程</p>
+                <strong>{{ selectedCourse.title }}</strong>
+                <p>{{ selectedCourse.summary || "右侧工作台已经同步当前课程的排期与报名操作。" }}</p>
+              </div>
+              <div class="selected-banner__chips">
+                <span class="tag">排期 {{ schedules.length }}</span>
+                <span class="tag">可报 {{ availableSchedules }}</span>
+                <span class="tag">状态 {{ formatCourseStatus(selectedCourse.status) }}</span>
+              </div>
+            </div>
+
+            <el-empty v-if="!filteredCourses.length" description="没有匹配课程">
+              <div class="empty-actions">
+                <el-button size="small" @click="courseKeyword = ''">清空搜索</el-button>
+              </div>
+            </el-empty>
+
+            <div v-else class="catalog-scroller">
+              <div class="course-grid">
+                <button
+                  v-for="course in filteredCourses"
+                  :key="course.id"
+                  type="button"
+                  class="course-card eco-clickable"
+                  :class="{ 'course-card--active': selectedCourse?.id === course.id }"
+                  @click="selectCourse(course)"
+                >
+                  <span v-if="selectedCourse?.id === course.id" class="course-card__flag">已选中</span>
+                  <div class="course-cover-wrap">
+                    <el-image v-if="course.coverUrl" :src="course.coverUrl" fit="cover" class="course-cover" />
+                    <div v-else class="course-cover fallback">暂无封面</div>
+                  </div>
+                  <div class="course-body">
+                    <strong>{{ course.title }}</strong>
+                    <p>{{ course.summary || "暂无课程简介" }}</p>
+                    <div class="badge-row">
+                      <span class="tag">价格 {{ course.price }}</span>
+                      <span class="tag">状态 {{ formatCourseStatus(course.status) }}</span>
+                      <span class="tag" v-if="course.level">难度 {{ course.level }}</span>
+                    </div>
+                    <span class="course-card__hint">选中后右侧立即更新排期与报名操作</span>
+                  </div>
+                </button>
+              </div>
+            </div>
+          </template>
         </template>
       </section>
 
       <div class="workflow-column">
-        <section class="card workflow-panel">
-          <div class="workflow-stack">
+        <section class="card workflow-panel" :class="{ 'workflow-panel--history': courseView === 'mine' }">
+          <template v-if="courseView === 'mine'">
+            <section class="workflow-block workflow-block--history">
+              <div class="workflow-heading">
+                <div>
+                  <p class="section-eyebrow">报名历史 {{ enrollments.length }}</p>
+                  <h2 class="section-title-sm">报名历史</h2>
+                  <p class="section-sub">这里保留全部报名记录。待上课、已支付、已退款和已取消都能快速追踪到订单详情。</p>
+                </div>
+                <el-button plain size="small" @click="loadEnrollments" :loading="enrollmentsLoading">刷新报名</el-button>
+              </div>
+
+              <el-empty v-if="!enrollments.length && !enrollmentsLoading" description="暂无报名记录" />
+              <el-table v-else :data="enrollments" v-loading="enrollmentsLoading" class="history-table" style="width: 100%">
+                <el-table-column prop="id" label="报名ID" width="90" />
+                <el-table-column label="课程" min-width="220">
+                  <template #default="{ row }">
+                    <span class="history-table__course" :title="row.courseTitle || courseMap[row.courseId] || `课程 ${row.courseId}`">
+                      {{ row.courseTitle || courseMap[row.courseId] || `课程 ${row.courseId}` }}
+                    </span>
+                  </template>
+                </el-table-column>
+                <el-table-column label="订单" width="120">
+                  <template #default="{ row }">
+                    <div class="history-order-cell">
+                      <span class="history-order-cell__id">ID {{ row.orderId || "-" }}</span>
+                      <el-button size="small" text :disabled="!row.orderId" @click="goToOrder(row)">查看</el-button>
+                    </div>
+                  </template>
+                </el-table-column>
+                <el-table-column label="状态" width="118">
+                  <template #default="{ row }">
+                    <span class="history-status-pill" :class="`history-status-pill--${enrollmentStatusTone(row.status)}`">
+                      {{ formatEnrollmentStatus(row.status) }}
+                    </span>
+                  </template>
+                </el-table-column>
+                <el-table-column label="创建时间" width="156">
+                  <template #default="{ row }">{{ formatDateTime(row.createTime || row.enrollTime) }}</template>
+                </el-table-column>
+              </el-table>
+            </section>
+          </template>
+
+          <div v-else class="workflow-stack">
             <div class="workflow-block workflow-block--highlight">
               <div class="workflow-heading">
                 <div>
@@ -195,7 +339,7 @@
               </div>
             </div>
 
-            <div class="workflow-block">
+            <div class="workflow-block workflow-block--action-stack">
               <div class="workflow-action-head">
                 <div>
                   <p class="section-eyebrow">报名操作</p>
@@ -226,136 +370,88 @@
                   <span class="tag">状态 {{ scheduleStatus(selectedSchedule).text }}</span>
                 </div>
               </div>
-            </div>
+              <div class="workflow-divider"></div>
 
-            <section id="recent-enrollment" ref="recentEnrollmentRef" class="workflow-block">
-              <div class="workflow-action-head">
-                <div>
-                  <p class="section-eyebrow">最近报名</p>
-                  <h2 class="section-title-sm">后续处理</h2>
-                  <p class="section-sub">支付模拟、取消未支付、退款和查看订单都固定在工作台里，报名后不用再找卡片。</p>
-                </div>
-                <el-button type="primary" plain size="small" @click="loadEnrollments" :loading="enrollmentsLoading">
-                  刷新报名
-                </el-button>
-              </div>
-
-              <el-empty v-if="!lastEnrollment" description="暂无最近报名记录">
-                <div class="empty-actions">
-                  <el-button size="small" @click="loadEnrollments">刷新报名</el-button>
-                </div>
-              </el-empty>
-
-              <div v-else class="detail-card detail-card--stack">
-                <div class="detail-card__main">
-                  <strong>报名 {{ lastEnrollment.enrollmentId }}</strong>
-                  <p class="muted">订单 {{ lastEnrollment.orderId || "-" }}</p>
-                </div>
-                <div class="detail-list">
-                  <div>订单号：{{ lastEnrollment.orderNo || "-" }}</div>
-                  <div>支付号：{{ lastEnrollment.payNo || "-" }}</div>
-                  <div>金额：{{ lastEnrollment.amount || "-" }}</div>
-                </div>
-                <el-input v-model="refundReason" size="small" class="input-inline" placeholder="请输入退款原因" />
-                <div class="action-row">
-                  <el-button type="primary" size="small" :loading="paying" @click="mockPay">模拟支付</el-button>
-                  <el-button type="warning" size="small" :loading="canceling" @click="cancelUnpaid">取消未支付</el-button>
-                  <el-button type="danger" size="small" :loading="refunding" @click="refundPaid">发起退款</el-button>
-                  <el-button size="small" :disabled="!lastEnrollment?.orderId" @click="goToOrder(lastEnrollment?.orderId)">
-                    查看订单
+              <section id="recent-enrollment" ref="recentEnrollmentRef" class="workflow-subsection">
+                <div class="workflow-action-head">
+                  <div>
+                    <p class="section-eyebrow">最近报名</p>
+                    <h2 class="section-title-sm">后续处理</h2>
+                    <p class="section-sub">支付状态、退款入口和订单跳转都收在这里，第一次使用也能一眼看清自己当前进行到哪一步。</p>
+                  </div>
+                  <el-button type="primary" plain size="small" @click="loadEnrollments" :loading="enrollmentsLoading">
+                    刷新报名
                   </el-button>
                 </div>
-              </div>
-            </section>
+
+                <el-empty v-if="!lastEnrollment" description="暂无最近报名记录">
+                  <div class="empty-actions">
+                    <el-button size="small" @click="loadEnrollments">刷新报名</el-button>
+                  </div>
+                </el-empty>
+
+                <div v-else class="detail-card detail-card--stack">
+                  <div class="detail-card__main">
+                    <strong>报名 {{ lastEnrollment.enrollmentId }}</strong>
+                    <p class="muted">{{ lastEnrollment.courseTitle || "最近一次课程报名" }}</p>
+                  </div>
+
+                  <div class="status-overview">
+                    <span class="status-chip" :class="`status-chip--${enrollmentStatusTone(lastEnrollment.status)}`">
+                      报名状态 {{ formatEnrollmentStatus(lastEnrollment.status) }}
+                    </span>
+                    <span class="status-chip" :class="`status-chip--${paymentStatusTone(lastEnrollment.status)}`">
+                      支付状态 {{ formatPaymentStatus(lastEnrollment.status) }}
+                    </span>
+                    <span class="status-chip status-chip--plain">
+                      创建于 {{ formatDateTime(lastEnrollment.createTime || lastEnrollment.enrollTime) }}
+                    </span>
+                  </div>
+
+                  <div class="detail-list detail-list--grid">
+                    <div>报名ID：{{ lastEnrollment.enrollmentId || "-" }}</div>
+                    <div>订单ID：{{ lastEnrollment.orderId || "-" }}</div>
+                    <div>金额：{{ lastEnrollment.amount ?? "-" }}</div>
+                    <div>订单号：{{ lastEnrollment.orderNo || "-" }}</div>
+                    <div>支付号：{{ lastEnrollment.payNo || "-" }}</div>
+                  </div>
+
+                  <div v-if="refundComposerVisible && canRefundEnrollment" class="refund-composer">
+                    <el-input
+                      v-model="refundReason"
+                      size="small"
+                      class="input-inline"
+                      placeholder="例如：临时有事，需要改期或退款"
+                    />
+                    <div class="action-row action-row--compact">
+                      <el-button type="danger" size="small" :loading="refunding" @click="refundPaid">确认退款</el-button>
+                      <el-button size="small" @click="closeRefundComposer">先不退了</el-button>
+                    </div>
+                  </div>
+
+                  <div class="action-row">
+                    <el-button v-if="canMockPayEnrollment" type="primary" size="small" :loading="paying" @click="mockPay">模拟支付</el-button>
+                    <el-button v-if="canCancelEnrollment" type="warning" size="small" :loading="canceling" @click="cancelUnpaid">取消未支付</el-button>
+                    <el-button
+                      v-if="canRefundEnrollment && !refundComposerVisible"
+                      type="danger"
+                      plain
+                      size="small"
+                      @click="openRefundComposer"
+                    >
+                      申请退款
+                    </el-button>
+                    <el-button size="small" :disabled="!lastEnrollment?.orderId" @click="goToOrder(lastEnrollment)">
+                      查看订单
+                    </el-button>
+                  </div>
+                </div>
+              </section>
+            </div>
           </div>
         </section>
       </div>
     </div>
-
-    <section class="card itinerary-panel">
-      <div class="toolbar">
-        <div>
-          <h2 class="section-title">待上课 / 我的行程</h2>
-          <p class="section-sub">支付完成后，这里会自动汇总你待上课的排期，并提供核销码出示入口。</p>
-        </div>
-        <div class="hero-actions">
-          <el-button plain @click="loadMySchedules" :loading="mySchedulesLoading">刷新行程</el-button>
-          <el-button type="primary" plain @click="loadEnrollments" :loading="enrollmentsLoading">刷新报名</el-button>
-        </div>
-      </div>
-
-      <el-tabs v-model="itineraryTab" class="itinerary-tabs">
-        <el-tab-pane :label="`待上课 / 我的行程 ${mySchedules.length}`" name="upcoming">
-          <el-empty v-if="!mySchedules.length && !mySchedulesLoading" description="你还没有待上课行程">
-            <div class="empty-actions">
-              <el-button size="small" type="primary" @click="scrollToCatalog">去报名课程</el-button>
-              <el-button size="small" @click="loadMySchedules">刷新行程</el-button>
-            </div>
-          </el-empty>
-
-          <div v-else class="itinerary-grid" v-loading="mySchedulesLoading">
-            <article
-              v-for="schedule in mySchedules"
-              :key="schedule.enrollmentId"
-              class="itinerary-card"
-            >
-              <div class="itinerary-card__cover-wrap">
-                <el-image
-                  v-if="schedule.coverUrl"
-                  :src="schedule.coverUrl"
-                  fit="cover"
-                  class="itinerary-card__cover"
-                />
-                <div v-else class="itinerary-card__cover fallback">待上课</div>
-              </div>
-
-              <div class="itinerary-card__body">
-                <div class="itinerary-card__header">
-                  <div>
-                    <p class="section-eyebrow">待上课排期</p>
-                    <strong>{{ schedule.courseTitle || `课程 ${schedule.courseId}` }}</strong>
-                  </div>
-                  <span class="tag">核销码 {{ schedule.checkInCode || "------" }}</span>
-                </div>
-
-                <div class="itinerary-card__meta">
-                  <span>上课时间：{{ formatScheduleTime(schedule) }}</span>
-                  <span>教练：{{ schedule.coachId ? `#${schedule.coachId}` : "待分配" }}</span>
-                  <span>订单：{{ schedule.orderId || "-" }}</span>
-                  <span>价格：{{ schedule.price ?? "-" }}</span>
-                </div>
-
-                <div class="itinerary-card__actions">
-                  <el-button type="primary" @click="openCheckInDialog(schedule)">出示核销码 / 去打卡</el-button>
-                  <el-button plain @click="goToOrder(schedule.orderId)" :disabled="!schedule.orderId">查看订单</el-button>
-                </div>
-              </div>
-            </article>
-          </div>
-        </el-tab-pane>
-
-        <el-tab-pane :label="`报名历史 ${enrollments.length}`" name="history">
-          <el-empty v-if="!enrollments.length && !enrollmentsLoading" description="暂无报名记录" />
-          <el-table v-else :data="enrollments" v-loading="enrollmentsLoading" style="width: 100%">
-            <el-table-column prop="id" label="报名ID" width="90" />
-            <el-table-column label="课程">
-              <template #default="{ row }">{{ courseMap[row.courseId] || row.courseId }}</template>
-            </el-table-column>
-            <el-table-column label="订单" width="120">
-              <template #default="{ row }">
-                <el-button size="small" text :disabled="!row.orderId" @click="goToOrder(row.orderId)">查看</el-button>
-              </template>
-            </el-table-column>
-            <el-table-column label="状态" width="120">
-              <template #default="{ row }">{{ formatEnrollmentStatus(row.status) }}</template>
-            </el-table-column>
-            <el-table-column label="创建时间" min-width="180">
-              <template #default="{ row }">{{ formatDateTime(row.createTime || row.enrollTime) }}</template>
-            </el-table-column>
-          </el-table>
-        </el-tab-pane>
-      </el-tabs>
-    </section>
 
     <el-dialog
       v-model="checkInDialogVisible"
@@ -402,6 +498,10 @@ import { fetchMyCourseSchedules } from "../api/course"
 const router = useRouter()
 const route = useRoute()
 
+const STORAGE_ENROLLMENT = "fp_last_enrollment"
+const STORAGE_COURSE_ID = "fp_last_course_id"
+const STORAGE_COURSE_VIEW = "fp_course_workspace_view"
+
 const courses = ref([])
 const loading = ref(false)
 const courseKeyword = ref("")
@@ -418,7 +518,7 @@ const enrollmentsLoading = ref(false)
 const enrolling = ref(false)
 const mySchedules = ref([])
 const mySchedulesLoading = ref(false)
-const itineraryTab = ref("upcoming")
+const courseView = ref(localStorage.getItem(STORAGE_COURSE_VIEW) || "mine")
 const checkInDialogVisible = ref(false)
 const activeCheckInSchedule = ref(null)
 
@@ -427,10 +527,8 @@ const recentEnrollmentRef = ref(null)
 const paying = ref(false)
 const canceling = ref(false)
 const refunding = ref(false)
-const refundReason = ref("临时有事，申请退款")
-
-const STORAGE_ENROLLMENT = "fp_last_enrollment"
-const STORAGE_COURSE_ID = "fp_last_course_id"
+const refundReason = ref("")
+const refundComposerVisible = ref(false)
 
 const filteredCourses = computed(() => {
   const keyword = courseKeyword.value.trim().toLowerCase()
@@ -446,6 +544,9 @@ const courseMap = computed(() => {
   courses.value.forEach((course) => {
     map[course.id] = course.title
   })
+  mySchedules.value.forEach((schedule) => {
+    if (schedule.courseId && schedule.courseTitle) map[schedule.courseId] = schedule.courseTitle
+  })
   return map
 })
 
@@ -455,11 +556,68 @@ const selectedUnavailable = computed(() => {
 })
 
 const availableSchedules = computed(() => schedules.value.filter((row) => isScheduleAvailable(row)).length)
+const currentEnrollmentStatus = computed(() => Number(lastEnrollment.value?.status ?? -1))
+const canMockPayEnrollment = computed(() => currentEnrollmentStatus.value === 1)
+const canCancelEnrollment = computed(() => currentEnrollmentStatus.value === 1)
+const canRefundEnrollment = computed(() => currentEnrollmentStatus.value === 2)
+
+const toRecentEnrollment = (item) => {
+  if (!item) return null
+  return {
+    ...item,
+    enrollmentId: item.enrollmentId ?? item.id,
+    createTime: item.createTime || item.enrollTime || "",
+    courseTitle: item.courseTitle || courseMap.value[item.courseId] || ""
+  }
+}
+
+const syncLastEnrollment = (rows) => {
+  const normalizedRows = (rows || []).map((item) => toRecentEnrollment(item))
+  const currentId = Number(lastEnrollment.value?.enrollmentId ?? lastEnrollment.value?.id ?? 0)
+  const matched = currentId ? normalizedRows.find((item) => Number(item.enrollmentId) === currentId) : null
+  if (matched) {
+    lastEnrollment.value = {
+      ...lastEnrollment.value,
+      ...matched
+    }
+  } else if (normalizedRows.length) {
+    lastEnrollment.value = {
+      ...normalizedRows[0],
+      orderNo: lastEnrollment.value?.orderId === normalizedRows[0].orderId ? lastEnrollment.value?.orderNo : normalizedRows[0].orderNo,
+      payNo: lastEnrollment.value?.orderId === normalizedRows[0].orderId ? lastEnrollment.value?.payNo : normalizedRows[0].payNo,
+      amount: lastEnrollment.value?.orderId === normalizedRows[0].orderId ? lastEnrollment.value?.amount : normalizedRows[0].amount
+    }
+  } else {
+    lastEnrollment.value = null
+  }
+
+  if (lastEnrollment.value) {
+    localStorage.setItem(STORAGE_ENROLLMENT, JSON.stringify(lastEnrollment.value))
+  } else {
+    localStorage.removeItem(STORAGE_ENROLLMENT)
+  }
+
+  if (currentEnrollmentStatus.value !== 2) {
+    refundComposerVisible.value = false
+    refundReason.value = ""
+  }
+}
 
 const parseCourseId = (value) => {
   if (value === null || value === undefined || value === "") return null
   const parsed = Number(value)
   return Number.isFinite(parsed) ? parsed : null
+}
+
+const switchCourseView = async (view) => {
+  courseView.value = view
+  localStorage.setItem(STORAGE_COURSE_VIEW, view)
+  await nextTick()
+  catalogRef.value?.scrollIntoView?.({ behavior: "smooth", block: "start" })
+}
+
+const refreshMyWorkspace = async () => {
+  await Promise.all([loadMySchedules(), loadEnrollments()])
 }
 
 const loadCourses = async () => {
@@ -526,11 +684,13 @@ const enroll = async () => {
     const { data } = await appClient.post("/app/course/enroll", { scheduleId: selectedSchedule.value.id })
     if (data.code !== 200) throw new Error(data.message || "报名失败")
     ElMessage.success("报名成功")
-    lastEnrollment.value = data.data
+    lastEnrollment.value = toRecentEnrollment(data.data)
     if (data.data?.enrollmentId) {
-      localStorage.setItem(STORAGE_ENROLLMENT, JSON.stringify(data.data))
+      localStorage.setItem(STORAGE_ENROLLMENT, JSON.stringify(lastEnrollment.value))
       if (data.data.orderId) localStorage.setItem("fp_last_order_id", String(data.data.orderId))
     }
+    refundComposerVisible.value = false
+    refundReason.value = ""
     await loadEnrollments()
   } catch (err) {
     ElMessage.error(err.message || "报名失败")
@@ -542,10 +702,21 @@ const enroll = async () => {
 const loadLastEnrollment = () => {
   try {
     const cached = localStorage.getItem(STORAGE_ENROLLMENT)
-    if (cached) lastEnrollment.value = JSON.parse(cached)
-  } catch (err) {
+    if (cached) lastEnrollment.value = toRecentEnrollment(JSON.parse(cached))
+  } catch {
     lastEnrollment.value = null
   }
+}
+
+const openRefundComposer = () => {
+  if (!canRefundEnrollment.value) return
+  refundComposerVisible.value = true
+  if (!refundReason.value.trim()) refundReason.value = ""
+}
+
+const closeRefundComposer = () => {
+  refundComposerVisible.value = false
+  refundReason.value = ""
 }
 
 const mockPay = async () => {
@@ -560,7 +731,12 @@ const mockPay = async () => {
     })
     if (data.code !== 200) throw new Error(data.message || "模拟支付失败")
     ElMessage.success("支付状态已更新")
-    await Promise.all([loadEnrollments(), loadMySchedules()])
+    closeRefundComposer()
+    await refreshMyWorkspace()
+    if (mySchedules.value.length) {
+      courseView.value = "mine"
+      localStorage.setItem(STORAGE_COURSE_VIEW, "mine")
+    }
   } catch (err) {
     ElMessage.error(err.message || "模拟支付失败")
   } finally {
@@ -580,7 +756,8 @@ const cancelUnpaid = async () => {
     })
     if (data.code !== 200) throw new Error(data.message || "取消失败")
     ElMessage.success("已取消未支付报名")
-    await Promise.all([loadEnrollments(), loadMySchedules()])
+    closeRefundComposer()
+    await refreshMyWorkspace()
   } catch (err) {
     ElMessage.error(err.message || "取消失败")
   } finally {
@@ -605,7 +782,8 @@ const refundPaid = async () => {
     })
     if (data.code !== 200) throw new Error(data.message || "退款失败")
     ElMessage.success("退款已提交")
-    await Promise.all([loadEnrollments(), loadMySchedules()])
+    closeRefundComposer()
+    await refreshMyWorkspace()
   } catch (err) {
     ElMessage.error(err.message || "退款失败")
   } finally {
@@ -618,7 +796,11 @@ const loadEnrollments = async () => {
     enrollmentsLoading.value = true
     const { data } = await appClient.get("/app/course/my/enrollments")
     if (data.code !== 200) throw new Error(data.message || "加载报名失败")
-    enrollments.value = (data.data || []).map((item) => ({ ...item, createTime: item.createTime || item.enrollTime || "" }))
+    enrollments.value = (data.data || []).map((item) => ({
+      ...item,
+      createTime: item.createTime || item.enrollTime || ""
+    }))
+    syncLastEnrollment(enrollments.value)
   } catch (err) {
     ElMessage.error(err.message || "加载报名失败")
   } finally {
@@ -630,10 +812,10 @@ const loadMySchedules = async () => {
   try {
     mySchedulesLoading.value = true
     const { data } = await fetchMyCourseSchedules()
-    if (data.code !== 200) throw new Error(data.message || "加载我的行程失败")
+    if (data.code !== 200) throw new Error(data.message || "加载我的课程失败")
     mySchedules.value = data.data || []
   } catch (err) {
-    ElMessage.error(err.message || "加载我的行程失败")
+    ElMessage.error(err.message || "加载我的课程失败")
   } finally {
     mySchedulesLoading.value = false
   }
@@ -657,14 +839,25 @@ const copyCheckInCode = async () => {
   try {
     await navigator.clipboard.writeText(activeCheckInSchedule.value.checkInCode)
     ElMessage.success("核销码已复制")
-  } catch (err) {
+  } catch {
     ElMessage.error("复制失败，请手动记录核销码")
   }
 }
 
-const goToOrder = (orderId) => {
+const goToOrder = (payload) => {
+  const orderId = typeof payload === "object" && payload !== null ? payload.orderId : payload
   if (!orderId) return
-  router.push({ path: "/orders", query: { orderId, from: "courses", returnTo: "recent-enrollment" } })
+  const query = {
+    orderId: String(orderId),
+    from: "courses",
+    returnTo: "recent-enrollment"
+  }
+  if (payload && typeof payload === "object") {
+    if (payload.enrollmentId) query.enrollmentId = String(payload.enrollmentId)
+    if (payload.courseId) query.courseId = String(payload.courseId)
+    if (payload.courseTitle) query.courseTitle = payload.courseTitle
+  }
+  router.push({ path: "/orders", query })
 }
 
 const goTo = (path) => {
@@ -745,6 +938,21 @@ const formatEnrollmentStatus = (status) => {
   return map[status] || status || "-"
 }
 
+const enrollmentStatusTone = (status) => {
+  const map = { 0: "muted", 1: "warning", 2: "success", 3: "danger" }
+  return map[status] || "plain"
+}
+
+const formatPaymentStatus = (status) => {
+  const map = { 0: "已关闭", 1: "待支付", 2: "支付成功", 3: "已退款" }
+  return map[status] || "待确认"
+}
+
+const paymentStatusTone = (status) => {
+  const map = { 0: "muted", 1: "warning", 2: "success", 3: "danger" }
+  return map[status] || "plain"
+}
+
 const formatDate = (value) => {
   if (!value) return "-"
   const raw = String(value)
@@ -765,7 +973,7 @@ const formatDateTime = (value) => {
   const raw = String(value)
   if (raw.includes("T")) {
     const [date, time] = raw.split("T")
-    return `${date} ${time.slice(0, 8)}`
+    return `${date} ${time.slice(0, 5)}`
   }
   if (raw.length >= 16 && raw.includes("-")) return raw.slice(0, 16)
   return raw
@@ -806,14 +1014,51 @@ loadLastEnrollment()
 
 .workspace-shell {
   display: grid;
-  grid-template-columns: minmax(0, 1.18fr) minmax(360px, 0.82fr);
   gap: 16px;
   align-items: start;
+}
+
+.workspace-shell--discover {
+  grid-template-columns: minmax(0, 1.18fr) minmax(360px, 0.82fr);
+}
+
+.workspace-shell--mine {
+  grid-template-columns: minmax(0, 0.76fr) minmax(760px, 1.24fr);
 }
 
 .catalog-panel,
 .workflow-panel {
   min-height: 0;
+}
+
+.catalog-toolbar--stack {
+  display: grid;
+  gap: 16px;
+}
+
+.course-mode-switch {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px;
+  border-bottom: 2px solid rgba(52, 45, 105, 0.12);
+}
+
+.course-mode-tab {
+  border: none;
+  background: transparent;
+  padding: 10px 4px 12px;
+  color: var(--eco-text-soft);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: color 0.2s ease, border-color 0.2s ease;
+  border-bottom: 3px solid transparent;
+}
+
+.course-mode-tab--active {
+  color: var(--eco-primary);
+  border-bottom-color: var(--eco-primary);
 }
 
 .catalog-controls {
@@ -844,6 +1089,10 @@ loadLastEnrollment()
   border: 2px solid rgba(91, 83, 255, 0.18);
   background: linear-gradient(135deg, rgba(109, 103, 255, 0.09), rgba(255, 208, 122, 0.12));
   margin-bottom: 16px;
+}
+
+.catalog-selected-banner--mine {
+  background: linear-gradient(135deg, rgba(109, 103, 255, 0.12), rgba(255, 208, 122, 0.16));
 }
 
 .selected-caption,
@@ -881,6 +1130,10 @@ loadLastEnrollment()
   max-height: min(74vh, 960px);
   overflow: auto;
   padding-right: 6px;
+}
+
+.catalog-scroller--mine {
+  max-height: min(76vh, 980px);
 }
 
 .course-grid {
@@ -988,6 +1241,10 @@ loadLastEnrollment()
   overflow: auto;
 }
 
+.workflow-panel--history {
+  overflow-x: auto;
+}
+
 .workflow-stack {
   display: flex;
   flex-direction: column;
@@ -1005,6 +1262,27 @@ loadLastEnrollment()
   background: linear-gradient(180deg, #f3efff 0%, #fff9ee 100%);
 }
 
+.workflow-block--history {
+  min-height: 100%;
+}
+
+.workflow-block--action-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.workflow-subsection {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.workflow-divider {
+  height: 1px;
+  background: rgba(52, 45, 105, 0.12);
+}
+
 .workflow-heading,
 .workflow-action-head {
   display: flex;
@@ -1012,6 +1290,82 @@ loadLastEnrollment()
   align-items: flex-start;
   gap: 12px;
   margin-bottom: 12px;
+}
+
+.history-table {
+  margin-top: 8px;
+}
+
+.history-table :deep(.el-table__inner-wrapper) {
+  min-width: 700px;
+}
+
+.history-table :deep(.el-table__header-wrapper),
+.history-table :deep(.el-table__body-wrapper) {
+  min-width: 700px;
+}
+
+.history-table__course {
+  display: inline-block;
+  width: 100%;
+  line-height: 1.55;
+  white-space: normal;
+  word-break: break-word;
+}
+
+.history-order-cell {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+}
+
+.history-order-cell__id {
+  color: var(--eco-text-soft);
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+.history-status-pill,
+.status-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 0 12px;
+  border-radius: 999px;
+  border: 2px solid rgba(52, 45, 105, 0.12);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.history-status-pill--success,
+.status-chip--success {
+  color: #1f7a3f;
+  background: rgba(112, 214, 136, 0.16);
+}
+
+.history-status-pill--warning,
+.status-chip--warning {
+  color: #8a5800;
+  background: rgba(255, 193, 90, 0.18);
+}
+
+.history-status-pill--danger,
+.status-chip--danger {
+  color: #b7395d;
+  background: rgba(255, 128, 154, 0.16);
+}
+
+.history-status-pill--muted,
+.status-chip--muted {
+  color: var(--eco-text-soft);
+  background: rgba(52, 45, 105, 0.08);
+}
+
+.history-status-pill--plain,
+.status-chip--plain {
+  color: var(--eco-primary-strong);
+  background: rgba(109, 103, 255, 0.09);
 }
 
 .selected-course-card {
@@ -1124,23 +1478,29 @@ loadLastEnrollment()
   font-size: 13px;
 }
 
-.full {
-  color: #ca5744;
-  font-weight: 700;
+.detail-list--grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 14px;
 }
 
 .input-inline {
-  margin-top: 6px;
   width: 100%;
 }
 
-.itinerary-panel {
-  display: grid;
-  gap: 12px;
+.status-overview {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
-.itinerary-tabs :deep(.el-tabs__header) {
-  margin-bottom: 18px;
+.refund-composer {
+  display: grid;
+  gap: 10px;
+  padding-top: 4px;
+}
+
+.action-row--compact {
+  justify-content: flex-start;
 }
 
 .itinerary-grid {
@@ -1196,6 +1556,13 @@ loadLastEnrollment()
   gap: 8px 12px;
   color: var(--eco-text-soft);
   font-size: 13px;
+}
+
+.itinerary-card__hint {
+  margin: -2px 0 0;
+  color: var(--eco-text-soft);
+  font-size: 12px;
+  line-height: 1.6;
 }
 
 .itinerary-card__actions {
@@ -1257,13 +1624,18 @@ loadLastEnrollment()
 }
 
 @media (max-width: 1180px) {
-  .workspace-shell {
+  .workspace-shell--discover {
     grid-template-columns: minmax(0, 1fr) 380px;
+  }
+
+  .workspace-shell--mine {
+    grid-template-columns: minmax(0, 0.8fr) minmax(560px, 1.2fr);
   }
 }
 
 @media (max-width: 960px) {
-  .workspace-shell {
+  .workspace-shell--discover,
+  .workspace-shell--mine {
     grid-template-columns: 1fr;
   }
 
@@ -1281,10 +1653,11 @@ loadLastEnrollment()
     padding-right: 0;
   }
 
-  .selected-course-card {
+  .detail-list--grid {
     grid-template-columns: 1fr;
   }
 
+  .selected-course-card,
   .itinerary-card {
     grid-template-columns: 1fr;
   }
@@ -1316,8 +1689,14 @@ loadLastEnrollment()
     grid-template-columns: 1fr;
   }
 
-  .itinerary-card__header {
+  .itinerary-card__header,
+  .course-mode-switch {
     flex-direction: column;
+    align-items: stretch;
+  }
+
+  .course-mode-tab {
+    text-align: left;
   }
 }
 </style>

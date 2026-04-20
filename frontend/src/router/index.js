@@ -7,6 +7,7 @@ import Courses from '../pages/Courses.vue'
 import CourseSchedule from '../pages/CourseSchedule.vue'
 import Orders from '../pages/Orders.vue'
 import BookingOps from '../pages/BookingOps.vue'
+import CoachSchedules from '../pages/CoachSchedules.vue'
 import Videos from '../pages/Videos.vue'
 import TrainingPlans from '../pages/TrainingPlans.vue'
 import CheckInCenter from '../pages/CheckInCenter.vue'
@@ -33,6 +34,7 @@ const routes = [
       { path: 'schedules', component: CourseSchedule },
       { path: 'orders', component: Orders },
       { path: 'booking-ops', component: BookingOps },
+      { path: 'coach-schedules', component: CoachSchedules },
       { path: 'videos', component: Videos },
       { path: 'training-plans', component: TrainingPlans },
       { path: 'permission-matrix', component: PermissionMatrix },

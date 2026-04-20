@@ -68,15 +68,130 @@ function Ensure-MinioBucket {
     }
 }
 
+function Invoke-DockerCompose {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string[]]$Arguments
+    )
+
+    Push-Location (Join-Path $root "docker")
+    try {
+        & docker compose @Arguments
+        if ($LASTEXITCODE -ne 0) {
+            throw "docker compose $($Arguments -join ' ') failed with exit code $LASTEXITCODE"
+        }
+    } finally {
+        Pop-Location
+    }
+}
+
+function Get-ContainerRunningState {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$ContainerName
+    )
+
+    $state = docker inspect --format "{{.State.Running}}" $ContainerName 2>$null
+    if ($LASTEXITCODE -ne 0) {
+        return $null
+    }
+    return ($state | Out-String).Trim()
+}
+
+function Wait-ContainerRunning {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$ContainerName,
+        [int]$TimeoutSeconds = 40
+    )
+
+    $deadline = (Get-Date).AddSeconds($TimeoutSeconds)
+    do {
+        if ((Get-ContainerRunningState -ContainerName $ContainerName) -eq "true") {
+            Write-Host "$ContainerName is running" -ForegroundColor Green
+            return
+        }
+        Start-Sleep -Seconds 1
+    } while ((Get-Date) -lt $deadline)
+
+    throw "$ContainerName did not reach running state within $TimeoutSeconds seconds"
+}
+
+function Ensure-CoreContainersRunning {
+    $containerNames = @(
+        "mysql-container-huang",
+        "redis-container-huang",
+        "minio-container-huang",
+        "rabbitmq-container-huang",
+        "nginx-container-huang"
+    )
+
+    foreach ($containerName in $containerNames) {
+        if ((Get-ContainerRunningState -ContainerName $containerName) -ne "true") {
+            Write-Host "[1.2/4] $containerName was not running after compose up, retrying targeted start..." -ForegroundColor Yellow
+            switch ($containerName) {
+                "mysql-container-huang" { Invoke-DockerCompose -Arguments @("up", "-d", "mysql") }
+                "redis-container-huang" { Invoke-DockerCompose -Arguments @("up", "-d", "redis") }
+                "minio-container-huang" { Invoke-DockerCompose -Arguments @("up", "-d", "minio") }
+                "rabbitmq-container-huang" { Invoke-DockerCompose -Arguments @("up", "-d", "rabbitmq") }
+                "nginx-container-huang" { Invoke-DockerCompose -Arguments @("up", "-d", "nginx") }
+            }
+        }
+        Wait-ContainerRunning -ContainerName $containerName
+    }
+}
+
+function Resolve-EnvValue {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Name,
+        [string]$DefaultValue = ""
+    )
+
+    $current = [Environment]::GetEnvironmentVariable($Name, "Process")
+    if ($current) {
+        return $current
+    }
+
+    $userValue = [Environment]::GetEnvironmentVariable($Name, "User")
+    if ($userValue) {
+        [Environment]::SetEnvironmentVariable($Name, $userValue, "Process")
+        return $userValue
+    }
+
+    $machineValue = [Environment]::GetEnvironmentVariable($Name, "Machine")
+    if ($machineValue) {
+        [Environment]::SetEnvironmentVariable($Name, $machineValue, "Process")
+        return $machineValue
+    }
+
+    if ($DefaultValue) {
+        [Environment]::SetEnvironmentVariable($Name, $DefaultValue, "Process")
+        return $DefaultValue
+    }
+
+    return ""
+}
+
 Write-Host "[0/4] Cleaning stale local listeners..." -ForegroundColor Cyan
 Stop-ListeningProcess -Port 8080
 Stop-ListeningProcess -Port 8081
 Stop-ListeningProcess -Port 8082
 
+$llmApiKey = Resolve-EnvValue -Name "LLM_API_KEY"
+$llmBaseUrl = Resolve-EnvValue -Name "LLM_BASE_URL" -DefaultValue "https://api.deepseek.com"
+$llmModelName = Resolve-EnvValue -Name "LLM_MODEL_NAME" -DefaultValue "deepseek-chat"
+$llmTimeout = Resolve-EnvValue -Name "LLM_TIMEOUT" -DefaultValue "60s"
+
+if (-not $llmApiKey) {
+    Write-Host "[WARN] LLM_API_KEY is empty. AI plan generation will use placeholder and fail authentication." -ForegroundColor Yellow
+} else {
+    Write-Host "[0/4] Loaded LLM env: base=$llmBaseUrl model=$llmModelName timeout=$llmTimeout keyLen=$($llmApiKey.Length)" -ForegroundColor Green
+}
+
 Write-Host "[1/4] Starting external containers..." -ForegroundColor Cyan
-Push-Location (Join-Path $root "docker")
-docker compose up -d | Out-Null
-Pop-Location
+Invoke-DockerCompose -Arguments @("up", "-d")
+Ensure-CoreContainersRunning
 Ensure-MinioBucket -MinioRootUser $env:MINIO_ROOT_USER -MinioRootPassword $env:MINIO_ROOT_PASSWORD -BucketName $env:MINIO_BUCKET
 
 Write-Host "[2/4] Building shared modules..." -ForegroundColor Cyan

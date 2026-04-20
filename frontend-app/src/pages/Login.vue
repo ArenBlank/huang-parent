@@ -45,8 +45,8 @@
         </el-form>
 
         <div class="login-actions">
-          <el-button @click="fillAccount('root', 'root')">填充测试账号</el-button>
-          <p class="muted">常用测试账号：`root / root`。如果失败请确认 app 后端已启动。</p>
+          <el-button @click="fillAccount('root_member', 'root')">填充测试账号</el-button>
+          <p class="muted">常用测试账号：`root_member / root`。如果失败请确认 app 后端已启动。</p>
         </div>
       </div>
     </section>

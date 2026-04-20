@@ -13,6 +13,7 @@ import com.huang.web.admin.service.biz.AdminCourseOpsBizService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -24,7 +25,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.Map;
 
-@Tag(name = "Admin课程运营", description = "课程、排期与课程履约管理")
+@Tag(name = "Admin 课程运营", description = "课程、排期与课程履约管理")
 @RestController
 @RequestMapping("/admin/course")
 @RequireAdminRole({AdminRoleCode.ADMIN, AdminRoleCode.OPS_ADMIN})
@@ -59,6 +60,15 @@ public class CourseManageController {
     public Result<?> update(@PathVariable Long id, @Valid @RequestBody CourseUpsertDTO dto) {
         boolean ok = adminCourseOpsBizService.updateCourse(id, dto);
         return ok ? Result.ok("更新成功") : Result.fail(AdminErrorCode.COURSE_NOT_FOUND, "课程不存在");
+    }
+
+    @Operation(summary = "删除课程")
+    @DeleteMapping("/{id}")
+    @RequireAdminPermission({"course:delete"})
+    @OperationLog(module = "course", action = "delete", detail = "admin delete course")
+    public Result<?> delete(@PathVariable Long id) {
+        boolean ok = adminCourseOpsBizService.deleteCourse(id);
+        return ok ? Result.ok("删除成功") : Result.fail(AdminErrorCode.COURSE_NOT_FOUND, "课程不存在");
     }
 
     @Operation(summary = "更新课程状态")

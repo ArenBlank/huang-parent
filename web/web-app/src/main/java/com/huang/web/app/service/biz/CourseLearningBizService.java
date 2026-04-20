@@ -24,6 +24,7 @@ import com.huang.web.app.mapper.OrderInfoMapper;
 import com.huang.web.app.mapper.OrderItemMapper;
 import com.huang.web.app.mapper.PaymentRecordMapper;
 import com.huang.web.app.mapper.RefundRecordMapper;
+import com.huang.web.app.vo.course.CourseEnrollmentHistoryVO;
 import com.huang.web.app.vo.course.CourseMyScheduleVO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,6 +37,7 @@ import org.springframework.util.StringUtils;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -51,6 +53,7 @@ import java.util.stream.Collectors;
 public class CourseLearningBizService {
 
     private static final Logger log = LoggerFactory.getLogger(CourseLearningBizService.class);
+    private static final DateTimeFormatter SQL_DATE_TIME_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     private static final int CHECK_IN_CODE_LENGTH = 6;
     private static final int CHECK_IN_CODE_MAX_RETRY = 10;
     private static final String CHECK_IN_CODE_GENERATE_FAILED_MESSAGE = "核销码生成失败，请稍后再试";
@@ -89,8 +92,14 @@ public class CourseLearningBizService {
             return cached.nullValue() ? List.of() : cached.value();
         }
 
+        String nowText = LocalDateTime.now().format(SQL_DATE_TIME_FORMATTER);
         LambdaQueryWrapper<Course> wrapper = new LambdaQueryWrapper<Course>()
                 .eq(Course::getStatus, 1)
+                .inSql(
+                        Course::getId,
+                        "SELECT DISTINCT course_id FROM course_schedule " +
+                                "WHERE status = 1 AND is_deleted = 0 AND end_time >= '" + nowText + "'"
+                )
                 .orderByDesc(Course::getId);
         if (categoryId != null) {
             wrapper.eq(Course::getCategoryId, categoryId);
@@ -105,10 +114,12 @@ public class CourseLearningBizService {
     }
 
     public List<CourseSchedule> listSchedules(Long courseId) {
+        LocalDateTime now = LocalDateTime.now();
         return courseScheduleMapper.selectList(
                 new LambdaQueryWrapper<CourseSchedule>()
                         .eq(CourseSchedule::getCourseId, courseId)
                         .eq(CourseSchedule::getStatus, 1)
+                        .ge(CourseSchedule::getEndTime, now)
                         .orderByAsc(CourseSchedule::getStartTime)
         );
     }
@@ -418,12 +429,52 @@ public class CourseLearningBizService {
         }
     }
 
-    public List<CourseEnrollment> myEnrollments(Long userId) {
-        return courseEnrollmentMapper.selectList(
+    public List<CourseEnrollmentHistoryVO> myEnrollments(Long userId) {
+        List<CourseEnrollment> enrollments = courseEnrollmentMapper.selectList(
                 new LambdaQueryWrapper<CourseEnrollment>()
                         .eq(CourseEnrollment::getUserId, userId)
                         .orderByDesc(CourseEnrollment::getId)
         );
+        if (enrollments == null || enrollments.isEmpty()) {
+            return List.of();
+        }
+
+        Set<Long> courseIds = enrollments.stream()
+                .map(CourseEnrollment::getCourseId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        if (courseIds.isEmpty()) {
+            return enrollments.stream()
+                    .map(this::toEnrollmentHistoryVO)
+                    .toList();
+        }
+
+        Map<Long, String> courseTitleMap = courseMapper.selectList(
+                        new LambdaQueryWrapper<Course>()
+                                .in(Course::getId, courseIds))
+                .stream()
+                .collect(Collectors.toMap(Course::getId, Course::getTitle));
+        return enrollments.stream()
+                .map(item -> toEnrollmentHistoryVO(item, courseTitleMap.get(item.getCourseId())))
+                .toList();
+    }
+
+    private CourseEnrollmentHistoryVO toEnrollmentHistoryVO(CourseEnrollment enrollment) {
+        return toEnrollmentHistoryVO(enrollment, null);
+    }
+
+    private CourseEnrollmentHistoryVO toEnrollmentHistoryVO(CourseEnrollment enrollment, String courseTitle) {
+        CourseEnrollmentHistoryVO vo = new CourseEnrollmentHistoryVO();
+        vo.setId(enrollment.getId());
+        vo.setCourseId(enrollment.getCourseId());
+        vo.setCourseTitle(courseTitle);
+        vo.setScheduleId(enrollment.getScheduleId());
+        vo.setOrderId(enrollment.getOrderId());
+        vo.setStatus(enrollment.getStatus());
+        vo.setAttendStatus(enrollment.getAttendStatus());
+        vo.setEnrollTime(enrollment.getEnrollTime());
+        vo.setCreateTime(enrollment.getCreateTime());
+        return vo;
     }
 
     public List<CourseMyScheduleVO> mySchedules(Long userId) {

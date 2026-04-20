@@ -18,6 +18,8 @@ import com.huang.web.app.mapper.CoachScheduleMapper;
 import com.huang.web.app.mapper.OrderInfoMapper;
 import com.huang.web.app.mapper.OrderItemMapper;
 import com.huang.web.app.mapper.PaymentRecordMapper;
+import com.huang.web.app.vo.booking.BookingHistoryVO;
+import com.huang.web.app.vo.booking.BookingScheduleSummaryVO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
@@ -29,10 +31,14 @@ import org.springframework.transaction.support.TransactionSynchronizationManager
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.LocalTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
+import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 @Service
 public class BookingBizService {
@@ -81,6 +87,53 @@ public class BookingBizService {
             );
         }
         return coachScheduleMapper.selectList(wrapper);
+    }
+
+    public BookingScheduleSummaryVO scheduleSummary(Long userId, Long coachId) {
+        LocalDate today = LocalDate.now();
+        LocalTime now = LocalTime.now();
+
+        LambdaQueryWrapper<CoachSchedule> baseWrapper = new LambdaQueryWrapper<CoachSchedule>()
+                .eq(CoachSchedule::getStatus, 1);
+        if (coachId != null) {
+            baseWrapper.eq(CoachSchedule::getCoachId, coachId);
+        }
+
+        List<CoachSchedule> schedules = coachScheduleMapper.selectList(
+                baseWrapper.orderByAsc(CoachSchedule::getScheduleDate, CoachSchedule::getStartTime)
+        );
+
+        long futureSchedules = schedules.stream()
+                .filter(item -> isFutureSchedule(item, today, now))
+                .count();
+
+        long availableSchedules = schedules.stream()
+                .filter(item -> isFutureSchedule(item, today, now))
+                .filter(item -> hasCapacity(item))
+                .filter(item -> !hasBooked(userId, item.getId()))
+                .count();
+
+        BookingScheduleSummaryVO vo = new BookingScheduleSummaryVO();
+        vo.setCoachId(coachId);
+        vo.setTotalSchedules((long) schedules.size());
+        vo.setFutureSchedules(futureSchedules);
+        vo.setAvailableSchedules(availableSchedules);
+        vo.setLastScheduleDate(
+                schedules.stream()
+                        .map(CoachSchedule::getScheduleDate)
+                        .filter(Objects::nonNull)
+                        .max(LocalDate::compareTo)
+                        .orElse(null)
+        );
+        vo.setNextScheduleDate(
+                schedules.stream()
+                        .filter(item -> isFutureSchedule(item, today, now))
+                        .map(CoachSchedule::getScheduleDate)
+                        .filter(Objects::nonNull)
+                        .min(LocalDate::compareTo)
+                        .orElse(null)
+        );
+        return vo;
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -275,17 +328,93 @@ public class BookingBizService {
         return coachReviewMapper.insert(review) > 0;
     }
 
-    public List<CoachBooking> myBookings(Long userId) {
-        return coachBookingMapper.selectList(
+    public List<BookingHistoryVO> myBookings(Long userId) {
+        List<CoachBooking> bookings = coachBookingMapper.selectList(
                 new LambdaQueryWrapper<CoachBooking>()
                         .eq(CoachBooking::getUserId, userId)
                         .orderByDesc(CoachBooking::getId)
         );
+        if (bookings == null || bookings.isEmpty()) {
+            return List.of();
+        }
+
+        Set<Long> scheduleIds = bookings.stream()
+                .map(CoachBooking::getScheduleId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        Set<Long> orderIds = bookings.stream()
+                .map(CoachBooking::getOrderId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        Map<Long, CoachSchedule> scheduleMap = scheduleIds.isEmpty()
+                ? Map.of()
+                : coachScheduleMapper.selectList(new LambdaQueryWrapper<CoachSchedule>().in(CoachSchedule::getId, scheduleIds))
+                .stream()
+                .collect(Collectors.toMap(CoachSchedule::getId, item -> item));
+
+        Map<Long, OrderInfo> orderMap = orderIds.isEmpty()
+                ? Map.of()
+                : orderInfoMapper.selectList(new LambdaQueryWrapper<OrderInfo>().in(OrderInfo::getId, orderIds))
+                .stream()
+                .collect(Collectors.toMap(OrderInfo::getId, item -> item));
+
+        return bookings.stream()
+                .map(item -> toBookingHistoryVO(item, scheduleMap.get(item.getScheduleId()), orderMap.get(item.getOrderId())))
+                .toList();
+    }
+
+    private BookingHistoryVO toBookingHistoryVO(CoachBooking booking, CoachSchedule schedule, OrderInfo orderInfo) {
+        BookingHistoryVO vo = new BookingHistoryVO();
+        vo.setId(booking.getId());
+        vo.setOrderId(booking.getOrderId());
+        vo.setOrderNo(orderInfo == null ? null : orderInfo.getOrderNo());
+        vo.setAmount(orderInfo == null ? null : orderInfo.getTotalAmount());
+        vo.setCoachId(booking.getCoachId());
+        vo.setScheduleId(booking.getScheduleId());
+        if (schedule != null) {
+            vo.setScheduleDate(schedule.getScheduleDate());
+            vo.setStartTime(schedule.getStartTime());
+            vo.setEndTime(schedule.getEndTime());
+        }
+        vo.setBookingStatus(booking.getBookingStatus());
+        vo.setPayStatus(booking.getPayStatus());
+        vo.setCreateTime(booking.getCreateTime());
+        vo.setFinishTime(booking.getFinishTime());
+        return vo;
     }
 
     private String genNo(String prefix) {
         return prefix + LocalDateTime.now().toString().replace("-", "").replace(":", "").replace("T", "").replace(".", "")
                 + UUID.randomUUID().toString().replace("-", "").substring(0, 6);
+    }
+
+    private boolean isFutureSchedule(CoachSchedule schedule, LocalDate today, LocalTime now) {
+        if (schedule == null || schedule.getScheduleDate() == null) {
+            return false;
+        }
+        if (schedule.getScheduleDate().isAfter(today)) {
+            return true;
+        }
+        if (!schedule.getScheduleDate().isEqual(today)) {
+            return false;
+        }
+        LocalTime endTime = schedule.getEndTime() == null ? LocalTime.MIN : schedule.getEndTime();
+        return endTime.isAfter(now.minusMinutes(1));
+    }
+
+    private boolean hasCapacity(CoachSchedule schedule) {
+        int capacity = schedule.getCapacity() == null ? 0 : schedule.getCapacity();
+        int bookedCount = schedule.getBookedCount() == null ? 0 : schedule.getBookedCount();
+        return bookedCount < capacity;
+    }
+
+    private boolean hasBooked(Long userId, Long scheduleId) {
+        if (userId == null || scheduleId == null) {
+            return false;
+        }
+        Long count = coachBookingMapper.countAnyByUserAndSchedule(userId, scheduleId);
+        return count != null && count > 0;
     }
 
     private void markCurrentTransactionRollbackOnly() {

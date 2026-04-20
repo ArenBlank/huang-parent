@@ -7,9 +7,11 @@ public final class TaskRunConstant {
 
     public static final String TASK_PAYMENT_COMPENSATE = "PAYMENT_COMPENSATE";
     public static final String TASK_BOOKING_TIMEOUT_CLOSE = "BOOKING_TIMEOUT_CLOSE";
+    public static final String TASK_COURSE_LIFECYCLE_GOVERN = "COURSE_LIFECYCLE_GOVERN";
 
     public static final String TASK_PAYMENT_COMPENSATE_NAME = "Payment compensation";
     public static final String TASK_BOOKING_TIMEOUT_CLOSE_NAME = "Booking timeout close";
+    public static final String TASK_COURSE_LIFECYCLE_GOVERN_NAME = "Course lifecycle governance";
 
     public static final String TRIGGER_SCHEDULED = "SCHEDULED";
     public static final String TRIGGER_MANUAL = "MANUAL";
@@ -24,6 +26,9 @@ public final class TaskRunConstant {
             return 300L;
         }
         if (TASK_BOOKING_TIMEOUT_CLOSE.equalsIgnoreCase(taskCode)) {
+            return 180L;
+        }
+        if (TASK_COURSE_LIFECYCLE_GOVERN.equalsIgnoreCase(taskCode)) {
             return 180L;
         }
         return 300L;

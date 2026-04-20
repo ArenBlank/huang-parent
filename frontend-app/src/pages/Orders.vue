@@ -13,7 +13,7 @@
           </div>
         </div>
         <div class="toolbar-actions">
-          <el-button v-if="showBackToCourses" @click="backToCourses">返回最近报名</el-button>
+          <el-button v-if="showBackToSource" @click="backToSource">{{ backToSourceLabel }}</el-button>
           <el-button plain @click="scrollToOrders">回到订单列表</el-button>
           <el-button type="primary" @click="loadOrders" :loading="ordersLoading">刷新订单</el-button>
         </div>
@@ -54,9 +54,15 @@
             <div>
               <p class="selected-caption">当前选中订单</p>
               <strong>{{ selectedOrder.orderNo }}</strong>
-              <p>{{ formatBizType(selectedOrder.bizType) }}，{{ formatOrderStatus(selectedOrder.orderStatus) }}，右侧详情已同步。</p>
+              <p>
+                订单ID {{ selectedOrder.id }}，
+                {{ formatBizType(selectedOrder.bizType) }}，
+                {{ formatOrderStatus(selectedOrder.orderStatus) }}，
+                右侧详情已同步。
+              </p>
             </div>
             <div class="orders-selected-chips">
+              <span class="tag">订单ID {{ selectedOrder.id }}</span>
               <span class="tag">金额 {{ formatAmount(selectedOrder.totalAmount) }}</span>
               <span class="tag">支付 {{ formatPayStatus(selectedOrder.payStatus) }}</span>
               <span class="tag">时间 {{ formatDateTime(selectedOrder.createTime) }}</span>
@@ -81,7 +87,7 @@
               >
                 <div class="order-card__top">
                   <div>
-                    <p class="order-card__eyebrow">{{ formatBizType(row.bizType) }}</p>
+                    <p class="order-card__eyebrow">{{ formatBizType(row.bizType) }} · 订单ID {{ row.id }}</p>
                     <strong>{{ row.orderNo }}</strong>
                   </div>
                   <span class="order-card__amount">{{ formatAmount(row.totalAmount) }}</span>
@@ -115,8 +121,27 @@
             <el-empty v-if="orders.length && !detail && !loading" description="请选择一条订单查看详情" />
 
             <div v-else-if="detail" class="detail-stack" v-loading="loading">
+              <article v-if="sourceContext" class="source-card">
+                <div class="source-card__head">
+                  <div>
+                    <p class="section-eyebrow">来源定位</p>
+                    <h3 class="section-title-sm">这就是你刚才点开的那一单</h3>
+                  </div>
+                </div>
+                <div class="source-card__chips">
+                  <span class="tag">来源 {{ sourceContext.sourceLabel }}</span>
+                  <span class="tag">{{ sourceEntityLabel }} {{ sourceContext.enrollmentId || "-" }}</span>
+                  <span class="tag">订单ID {{ sourceContext.orderId || "-" }}</span>
+                </div>
+                <p class="source-card__summary">
+                  {{ sourceContext.courseTitle ? `${sourceSummaryLabel}：${sourceContext.courseTitle}` : "来源信息已同步到当前订单工作台。" }}
+                </p>
+              </article>
+
               <article class="order-no-card">
                 <div>
+                  <p class="metric-label">订单ID</p>
+                  <p class="order-id">{{ normalized.orderId || "-" }}</p>
                   <p class="metric-label">订单号</p>
                   <p class="order-no">{{ normalized.orderNo }}</p>
                 </div>
@@ -126,6 +151,14 @@
               </article>
 
               <div class="summary-grid">
+                <article class="summary-item">
+                  <p class="metric-label">订单ID</p>
+                  <p class="summary-value">{{ normalized.orderId || "-" }}</p>
+                </article>
+                <article class="summary-item">
+                  <p class="metric-label">{{ sourceEntityLabel }}</p>
+                  <p class="summary-value">{{ sourceContext?.enrollmentId || normalized.bizId || "-" }}</p>
+                </article>
                 <article class="summary-item">
                   <p class="metric-label">支付状态</p>
                   <p class="summary-value">{{ formatPayStatus(normalized.payStatus) }}</p>
@@ -234,7 +267,11 @@ const detail = ref(null)
 const loading = ref(false)
 const ordersRef = ref(null)
 
-const showBackToCourses = computed(() => route.query.from === "courses")
+const sourceFrom = computed(() => String(route.query.from || ""))
+const showBackToSource = computed(() => sourceFrom.value === "courses" || sourceFrom.value === "booking")
+const backToSourceLabel = computed(() => (sourceFrom.value === "booking" ? "返回我的预约" : "返回最近报名"))
+const sourceEntityLabel = computed(() => (sourceFrom.value === "booking" ? "预约ID" : "报名ID"))
+const sourceSummaryLabel = computed(() => (sourceFrom.value === "booking" ? "档期" : "课程"))
 
 const filteredOrders = computed(() => {
   const keyword = orderKeyword.value.trim().toLowerCase()
@@ -264,6 +301,7 @@ const normalized = computed(() => {
   const order = d.order || {}
   const base = Object.keys(order).length ? order : d
   return {
+    orderId: base.id || d.id || orderId.value,
     orderNo: base.orderNo || "-",
     orderStatus: base.orderStatus ?? d.orderStatus,
     payStatus: base.payStatus ?? d.payStatus,
@@ -273,11 +311,39 @@ const normalized = computed(() => {
     refundTime: base.refundTime ?? d.refundTime,
     refundReason: base.refundReason ?? d.refundReason,
     totalAmount: base.totalAmount ?? d.totalAmount,
+    bizType: base.bizType ?? d.bizType,
+    bizId: base.bizId ?? d.bizId,
     paidAmount: d.paidAmount ?? base.paidAmount ?? base.totalAmount ?? d.totalAmount,
     refundAmount: d.refundAmount ?? base.refundAmount,
     netPaid: d.netPaid ?? base.netPaid,
     items: d.items || base.items || [],
     financeSummary: d.financeSummary || base.financeSummary || {}
+  }
+})
+
+const sourceContext = computed(() => {
+  if (!showBackToSource.value) return null
+  if (sourceFrom.value === "booking") {
+    const bookingId = route.query.bookingId ? Number(route.query.bookingId) : normalized.value.bizId
+    const scheduleDate = route.query.scheduleDate ? String(route.query.scheduleDate) : ""
+    const startTime = route.query.startTime ? String(route.query.startTime).slice(0, 5) : ""
+    const endTime = route.query.endTime ? String(route.query.endTime).slice(0, 5) : ""
+    const timeText = scheduleDate ? `${scheduleDate} ${startTime || "--:--"}-${endTime || "--:--"}` : ""
+    return {
+      sourceLabel: "教练预约",
+      courseTitle: timeText,
+      enrollmentId: Number.isFinite(Number(bookingId)) && Number(bookingId) > 0 ? Number(bookingId) : null,
+      orderId: normalized.value.orderId || (route.query.orderId ? Number(route.query.orderId) : null)
+    }
+  }
+
+  const courseTitle = route.query.courseTitle ? String(route.query.courseTitle) : ""
+  const enrollmentId = route.query.enrollmentId ? Number(route.query.enrollmentId) : normalized.value.bizId
+  return {
+    sourceLabel: "课程报名",
+    courseTitle,
+    enrollmentId: Number.isFinite(Number(enrollmentId)) && Number(enrollmentId) > 0 ? Number(enrollmentId) : null,
+    orderId: normalized.value.orderId || (route.query.orderId ? Number(route.query.orderId) : null)
   }
 })
 
@@ -410,7 +476,15 @@ const openOrder = async (id) => {
   if (!id) return
   orderId.value = Number(id)
   localStorage.setItem("fp_last_order_id", String(id))
-  router.replace({ query: { ...route.query, orderId: String(id) } })
+  const nextQuery = { ...route.query, orderId: String(id) }
+  if (Number(route.query.orderId) !== Number(id)) {
+    delete nextQuery.enrollmentId
+    delete nextQuery.courseId
+    delete nextQuery.courseTitle
+    delete nextQuery.from
+    delete nextQuery.returnTo
+  }
+  router.replace({ query: nextQuery })
   await loadDetail()
 }
 
@@ -472,7 +546,11 @@ const go = (path) => {
   router.push(path)
 }
 
-const backToCourses = () => {
+const backToSource = () => {
+  if (sourceFrom.value === "booking") {
+    router.push({ path: "/booking" })
+    return
+  }
   router.push({ path: "/courses", hash: "#recent-enrollment" })
 }
 
@@ -670,11 +748,29 @@ loadFromRoute()
 .detail-block,
 .finance-card,
 .reason-card,
-.order-no-card {
+.order-no-card,
+.source-card {
   border: 2px solid rgba(52, 45, 105, 0.12);
   border-radius: 20px;
   background: #ffffff;
   padding: 16px;
+}
+
+.source-card {
+  background: linear-gradient(180deg, #f8f3ff 0%, #fffaf3 100%);
+}
+
+.source-card__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.source-card__summary {
+  margin: 12px 0 0;
+  color: var(--eco-text-soft);
+  line-height: 1.6;
 }
 
 .order-no-card {
@@ -682,6 +778,14 @@ loadFromRoute()
   justify-content: space-between;
   gap: 12px;
   align-items: center;
+}
+
+.order-id {
+  margin: 6px 0 12px;
+  color: var(--eco-primary-strong);
+  font-size: 26px;
+  line-height: 1.1;
+  font-weight: 800;
 }
 
 .order-no {

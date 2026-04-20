@@ -122,6 +122,7 @@ const navSections = [
     items: [
       { path: '/orders', label: '订单成绩单', code: 'OD' },
       { path: '/booking-ops', label: '预约大厅', code: 'BK' },
+      { path: '/coach-schedules', label: '教练档期', code: 'CS' },
       { path: '/coach-apply', label: '教练招募', code: 'CP' },
       { path: '/operation-logs', label: '操作足迹', code: 'LG' }
     ]
@@ -161,6 +162,10 @@ const pageMeta = {
   '/orders': {
     title: '订单成绩单',
     description: '把支付、退款和财务摘要拆成更好扫读的学习成绩卡。'
+  },
+  '/coach-schedules': {
+    title: '教练档期管理台',
+    description: '在这里编排教练可预约时间段；具体预约单的处理仍然放在预约大厅。'
   },
   '/videos': {
     title: '视频实验室',

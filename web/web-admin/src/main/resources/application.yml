@@ -55,11 +55,13 @@ admin:
         - dashboard:read
         - booking:read
         - booking:manage
+        - booking:schedule
         - order:read
         - banner:manage
         - notice:manage
         - course:read
         - course:create
+        - course:delete
         - course:publish
         - course:schedule
         - course:update

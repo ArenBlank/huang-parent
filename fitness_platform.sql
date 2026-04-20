@@ -536,6 +536,7 @@ INSERT INTO permission (permission_name, permission_code, module, status) VALUES
 ('Video Status', 'video:status', 'video', 1),
 ('Video Bind', 'video:bind', 'video', 1),
 ('Course Create', 'course:create', 'course', 1),
+('Course Delete', 'course:delete', 'course', 1),
 ('Course Update', 'course:update', 'course', 1),
 ('Course Publish', 'course:publish', 'course', 1),
 ('Course Schedule', 'course:schedule', 'course', 1),
@@ -557,7 +558,7 @@ SELECT r.id, p.id FROM role r
 JOIN permission p ON p.permission_code IN (
   'banner:manage', 'notice:manage', 'system:config',
   'video:asset', 'video:upload', 'video:status', 'video:bind',
-  'course:create', 'course:update', 'course:publish', 'course:schedule', 'course:checkin',
+  'course:create', 'course:delete', 'course:update', 'course:publish', 'course:schedule', 'course:checkin',
   'operation:log:read', 'task:run:read', 'task:run:trigger'
 ) WHERE r.role_code = 'OPS_ADMIN';
 
@@ -579,20 +580,20 @@ INSERT INTO system_config (config_key, config_value, remark) VALUES
 ('site_name', '运动健康管理平台', '站点名称'),
 ('default_avatar', '/static/avatar/default.png', '默认头像');
 
--- Extended seed data for full business flow demo
+-- Extended base seed data for local development and regression
 
 INSERT IGNORE INTO user (id, username, password, nickname, email, phone, gender, birth_date, status, user_type) VALUES
 (1, 'admin', '$2a$10$demoAdminPasswordHash', '平台管理员', 'admin@fitness.local', '13800000001', 1, '1995-01-01', 1, 'admin'),
 (2, 'coach_lee', '$2a$10$demoCoachPasswordHash', '李教练', 'coach.lee@fitness.local', '13800000002', 1, '1992-05-12', 1, 'coach'),
 (3, 'member_chen', '$2a$10$demoMemberPasswordHash', '陈同学', 'member.chen@fitness.local', '13800000003', 2, '2002-09-09', 1, 'member'),
-(4, 'user123', '$2a$10$demoMemberPasswordHash', '回归测试用户', 'user123@fitness.local', '13800000004', 1, '2001-03-15', 1, 'member'),
+(4, 'user123', '$2a$10$demoMemberPasswordHash', '体验学员', 'user123@fitness.local', '13800000004', 1, '2001-03-15', 1, 'member'),
 (11, 'ops_admin', 'ops_admin_123', '运营管理员', 'ops.admin@fitness.local', '13800000011', 1, '1994-06-01', 1, 'admin'),
 (12, 'audit_admin', 'audit_admin_123', '审核管理员', 'audit.admin@fitness.local', '13800000012', 2, '1993-08-18', 1, 'admin');
 
 INSERT IGNORE INTO user (id, username, password, nickname, email, phone, gender, birth_date, status, user_type) VALUES
-(21, 'root', 'root', 'Test Member', 'root@fitness.local', '13800000101', 1, '2000-01-01', 1, 'member'),
-(22, 'root_admin', 'root', 'Test Admin', 'root.admin@fitness.local', '13800000102', 1, '1990-01-01', 1, 'admin'),
-(101, 'root_member', 'root', 'Regression Member', 'root.member@fitness.local', '13800000103', 1, '2000-06-01', 1, 'member');
+(21, 'root', 'root', '默认学员', 'root@fitness.local', '13800000101', 1, '2000-01-01', 1, 'member'),
+(22, 'root_admin', 'root', '默认管理员', 'root.admin@fitness.local', '13800000102', 1, '1990-01-01', 1, 'admin'),
+(101, 'root_member', 'root', '平台学员A', 'root.member@fitness.local', '13800000103', 1, '2000-06-01', 1, 'member');
 
 INSERT IGNORE INTO user_role (id, user_id, role_id) VALUES
 (1, 1, 1),
@@ -618,14 +619,6 @@ SELECT 101, id FROM role WHERE role_code = 'MEMBER';
 INSERT IGNORE INTO coach_profile (id, user_id, bio, expertise, years, price, rating, cert_status, status) VALUES
 (1, 2, '国家职业健身教练，擅长减脂增肌与动作矫正', '减脂,增肌,力量训练', 5, 199.00, 4.80, 1, 1);
 
-INSERT IGNORE INTO course (id, category_id, title, summary, cover_url, level, duration_min, price, status) VALUES
-(1, 1, '新手燃脂循环课', '45分钟中低强度燃脂课程，适合入门', '/minio/course/cover/fatburn-1.jpg', 'beginner', 45, 39.90, 1),
-(2, 2, '基础力量训练课', '核心力量与全身复合动作训练', '/minio/course/cover/strength-1.jpg', 'beginner', 60, 59.90, 1);
-
-INSERT IGNORE INTO course_schedule (id, course_id, coach_id, start_time, end_time, capacity, booked_count, status) VALUES
-(1, 1, 2, '2026-03-01 19:00:00', '2026-03-01 19:45:00', 20, 1, 1),
-(2, 2, 2, '2026-03-02 20:00:00', '2026-03-02 21:00:00', 15, 0, 1);
-
 INSERT IGNORE INTO training_plan (id, title, goal, level, duration_weeks, cover_url, status) VALUES
 (1, '4周减脂入门计划', 'fat_loss', 'beginner', 4, '/minio/plan/cover/plan-fatloss-1.jpg', 1);
 
@@ -649,28 +642,19 @@ INSERT IGNORE INTO coach_schedule (id, coach_id, schedule_date, start_time, end_
 (2, 2, '2026-03-04', '18:00:00', '19:00:00', 199.00, 1, 0, 1);
 
 INSERT IGNORE INTO order_info (id, order_no, user_id, total_amount, order_status, pay_status, biz_type, biz_id) VALUES
-(1, 'ORD202602250001', 3, 199.00, 'PAID', 'PAID', 'coach_booking', 1),
-(2, 'ORD202602250002', 3, 39.90, 'PAID', 'PAID', 'course', 1);
+(1, 'ORD202602250001', 3, 199.00, 'PAID', 'PAID', 'coach_booking', 1);
 
 INSERT IGNORE INTO order_item (id, order_id, item_type, item_id, item_name, price, quantity, amount) VALUES
-(1, 1, 'coach_booking', 1, '李教练线下私教课', 199.00, 1, 199.00),
-(2, 2, 'course', 1, '新手燃脂循环课', 39.90, 1, 39.90);
+(1, 1, 'coach_booking', 1, '李教练线下私教课', 199.00, 1, 199.00);
 
 INSERT IGNORE INTO payment_record (id, order_id, pay_no, pay_channel, pay_amount, pay_status, pay_time) VALUES
-(1, 1, 'PAY202602250001', 'wechat', 199.00, 'PAID', '2026-02-25 10:30:00'),
-(2, 2, 'PAY202602250002', 'alipay', 39.90, 'PAID', '2026-02-25 10:40:00');
+(1, 1, 'PAY202602250001', 'wechat', 199.00, 'PAID', '2026-02-25 10:30:00');
 
 INSERT IGNORE INTO coach_booking (id, user_id, coach_id, schedule_id, order_id, booking_status, pay_status, checkin_time, finish_time) VALUES
 (1, 3, 2, 1, 1, 'COMPLETED', 'PAID', '2026-03-03 17:55:00', '2026-03-03 19:05:00');
 
 INSERT IGNORE INTO coach_review (id, booking_id, user_id, coach_id, score, content) VALUES
 (1, 1, 3, 2, 5, '动作讲解清晰，训练节奏把控很好');
-
-INSERT IGNORE INTO course_enrollment (id, user_id, course_id, schedule_id, order_id, status) VALUES
-(1, 3, 1, 1, 2, 1);
-
-INSERT IGNORE INTO refund_record (id, order_id, refund_no, refund_amount, refund_status, refund_time, reason) VALUES
-(1, 2, 'REF202602250001', 39.90, 'REFUNDED', '2026-02-25 16:00:00', '临时冲突，用户申请退款');
 
 INSERT IGNORE INTO banner (id, title, image_url, link_url, sort, status) VALUES
 (1, '开学季体能提升计划', '/minio/banner/back-to-school.jpg', '/app/plan/1', 1, 1);
@@ -679,4 +663,4 @@ INSERT IGNORE INTO notice (id, title, content, status, publish_time) VALUES
 (1, '平台升级通知', '本周新增训练计划订阅与教练线下预约功能。', 1, '2026-02-25 09:00:00');
 
 INSERT IGNORE INTO operation_log (id, operator_id, module, action, detail, ip, success) VALUES
-(1, 1, 'course', 'create', '创建课程: 新手燃脂循环课', '127.0.0.1', 1);
+(1, 1, 'system', 'bootstrap', '初始化基础演示数据', '127.0.0.1', 1);

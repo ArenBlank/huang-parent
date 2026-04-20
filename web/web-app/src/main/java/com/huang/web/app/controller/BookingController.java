@@ -41,6 +41,14 @@ public class BookingController {
         return Result.ok(bookingBizService.listSchedule(userId, coachId, date));
     }
 
+    @Operation(summary = "档期摘要")
+    @GetMapping("/schedule/summary")
+    public Result<?> scheduleSummary(@RequestParam(required = false) Long coachId) {
+        LoginUser loginUser = LoginUserHolder.getLoginUser();
+        Long userId = loginUser == null ? null : loginUser.getUserId();
+        return Result.ok(bookingBizService.scheduleSummary(userId, coachId));
+    }
+
     @Operation(summary = "创建预约订单")
     @IdempotentSubmit(
             prefix = RedisConstant.APP_BOOKING_CREATE_IDEMPOTENT_PREFIX,

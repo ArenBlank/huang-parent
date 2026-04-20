@@ -6,6 +6,7 @@
         <p>查看教练预约、完成预约、清理超时未支付</p>
       </div>
       <div class="toolbar-actions">
+        <el-button @click="goCoachSchedules">去管理可预约时间段</el-button>
         <el-select v-model="query.status" placeholder="状态" clearable style="width: 150px">
           <el-option label="待支付" value="WAIT_PAY" />
           <el-option label="已支付" value="PAID" />
@@ -170,6 +171,7 @@
 <script setup>
 import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage } from 'element-plus'
+import { useRouter } from 'vue-router'
 import { adminClient } from '../api/client'
 
 const bookings = ref([])
@@ -178,6 +180,7 @@ const closing = ref(false)
 const completing = ref(false)
 const detailVisible = ref(false)
 const selectedBooking = ref(null)
+const router = useRouter()
 
 const query = reactive({
   status: ''
@@ -261,6 +264,10 @@ const openDetail = (row) => {
   detailVisible.value = true
 }
 
+const goCoachSchedules = () => {
+  router.push('/coach-schedules')
+}
+
 const formatBookingStatus = (status) => {
   const map = {
     WAIT_PAY: '待支付',
@@ -301,15 +308,25 @@ const payStatusTag = (status) => {
   return map[status] || 'info'
 }
 
-const formatDateTime = (value) => {
+const normalizeDateTime = (value) => {
   if (!value) return '-'
-  const raw = String(value)
-  if (raw.includes('T')) {
-    const [date, time] = raw.split('T')
-    return `${date} ${time.slice(0, 8)}`
+  if (Array.isArray(value)) {
+    const [year = 0, month = 0, day = 0, hour = 0, minute = 0, second = 0] = value
+    return `${String(year).padStart(4, '0')}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')} ${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}:${String(second).padStart(2, '0')}`
   }
-  if (raw.length >= 16 && raw.includes('-')) return raw.slice(0, 16)
+
+  const raw = String(value)
+  if (/^\d{4}-\d{2}-\d{2}T/.test(raw)) {
+    return raw.replace('T', ' ').slice(0, 19)
+  }
+  if (/^\d{4}-\d{2}-\d{2} /.test(raw)) {
+    return raw.slice(0, 19)
+  }
   return raw
+}
+
+const formatDateTime = (value) => {
+  return normalizeDateTime(value)
 }
 
 onMounted(loadBookings)
