@@ -105,6 +105,56 @@ DELETE FROM notice WHERE title LIKE 'AutoTest Notice%';
 DELETE FROM system_config WHERE config_key LIKE 'autotest.%';
 DELETE FROM task_run_log;
 
+-- restore deterministic course enrollment smoke fixture
+DROP TEMPORARY TABLE IF EXISTS tmp_smoke_course_order_ids;
+CREATE TEMPORARY TABLE tmp_smoke_course_order_ids AS
+SELECT DISTINCT order_id
+FROM course_enrollment
+WHERE schedule_id = 2
+  AND order_id IS NOT NULL;
+
+DELETE FROM order_item
+WHERE order_id IN (SELECT order_id FROM tmp_smoke_course_order_ids);
+
+DELETE FROM payment_record
+WHERE order_id IN (SELECT order_id FROM tmp_smoke_course_order_ids);
+
+DELETE FROM refund_record
+WHERE order_id IN (SELECT order_id FROM tmp_smoke_course_order_ids);
+
+DELETE FROM order_info
+WHERE id IN (SELECT order_id FROM tmp_smoke_course_order_ids);
+
+DELETE FROM course_enrollment
+WHERE schedule_id = 2;
+
+DROP TEMPORARY TABLE IF EXISTS tmp_smoke_course_order_ids;
+
+INSERT INTO course (id, category_id, title, summary, cover_url, level, duration_min, price, status)
+VALUES (1, 1, '基础体能体验课', '用于基础课程报名与并发烟雾验证的最小课程夹具。', '/minio/course/foundation.jpg', 'beginner', 60, 99.00, 1)
+ON DUPLICATE KEY UPDATE
+  category_id = VALUES(category_id),
+  title = VALUES(title),
+  summary = VALUES(summary),
+  cover_url = VALUES(cover_url),
+  level = VALUES(level),
+  duration_min = VALUES(duration_min),
+  price = VALUES(price),
+  status = VALUES(status),
+  is_deleted = 0;
+
+INSERT INTO course_schedule (id, course_id, coach_id, start_time, end_time, capacity, booked_count, status)
+VALUES (2, 1, 2, '2030-03-04 18:00:00', '2030-03-04 19:00:00', 5, 0, 1)
+ON DUPLICATE KEY UPDATE
+  course_id = VALUES(course_id),
+  coach_id = VALUES(coach_id),
+  start_time = VALUES(start_time),
+  end_time = VALUES(end_time),
+  capacity = VALUES(capacity),
+  booked_count = VALUES(booked_count),
+  status = VALUES(status),
+  is_deleted = 0;
+
 -- restore the regression member accounts used by tests and UI walkthroughs
 INSERT INTO user (id, username, password, nickname, email, phone, gender, birth_date, status, user_type)
 VALUES (4, 'user123', '$2a$10$demoMemberPasswordHash', 'Regression User', 'user123@fitness.local', '13800000004', 1, '2001-03-15', 1, 'member')
