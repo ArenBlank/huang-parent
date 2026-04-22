@@ -206,10 +206,15 @@
             <el-empty v-if="!selected.items?.length" description="该计划还没有动作节点" />
             <div v-else class="timeline-list">
               <article v-for="item in selected.items" :key="item.id" class="timeline-item">
-                <div class="timeline-day">DAY {{ item.dayIndex }}</div>
+                <div class="timeline-rail" aria-hidden="true">
+                  <span class="timeline-dot"></span>
+                </div>
                 <div class="timeline-content">
                   <div class="timeline-head">
-                    <strong>{{ item.actionName }}</strong>
+                    <div class="timeline-title">
+                      <span class="day-chip">DAY {{ item.dayIndex }}</span>
+                      <strong>{{ item.actionName }}</strong>
+                    </div>
                     <span class="tag">{{ item.durationMin || 0 }} 分钟</span>
                   </div>
                   <p class="muted">组数 {{ item.sets || 0 }} · 次数 {{ item.reps || 0 }} · 休息 {{ item.restSec || 0 }} 秒</p>
@@ -728,18 +733,40 @@ onMounted(() => {
   background: #ffffff;
   padding: 12px;
   display: grid;
-  grid-template-columns: 90px 1fr;
-  gap: 10px;
+  grid-template-columns: 26px 1fr;
+  gap: 12px;
 }
 
-.timeline-day {
-  border-radius: 12px;
-  border: 1px solid var(--eco-border-strong);
-  background: #f2efff;
-  display: grid;
-  place-items: center;
-  font-size: 12px;
-  font-weight: 800;
+.timeline-rail {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  padding-top: 6px;
+}
+
+.timeline-rail::after {
+  content: "";
+  position: absolute;
+  top: 26px;
+  bottom: -18px;
+  width: 2px;
+  border-radius: 999px;
+  background: rgba(109, 103, 255, 0.18);
+}
+
+.timeline-item:last-child .timeline-rail::after {
+  display: none;
+}
+
+.timeline-dot {
+  position: relative;
+  z-index: 1;
+  width: 12px;
+  height: 12px;
+  border-radius: 999px;
+  border: 3px solid #ffffff;
+  background: var(--eco-primary);
+  box-shadow: 0 0 0 2px rgba(109, 103, 255, 0.22);
 }
 
 .timeline-head {
@@ -747,6 +774,27 @@ onMounted(() => {
   justify-content: space-between;
   gap: 10px;
   align-items: center;
+}
+
+.timeline-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.day-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 26px;
+  border-radius: 999px;
+  border: 1px solid rgba(52, 45, 105, 0.22);
+  background: #f2efff;
+  padding: 0 10px;
+  color: var(--eco-primary);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
 }
 
 .timeline-head strong {
@@ -830,7 +878,7 @@ onMounted(() => {
   }
 
   .timeline-item {
-    grid-template-columns: 1fr;
+    grid-template-columns: 24px 1fr;
   }
 
   .summary-head {

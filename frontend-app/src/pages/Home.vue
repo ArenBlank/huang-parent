@@ -75,9 +75,9 @@
             </div>
           </div>
           <div class="impact-meta">
-            <p class="metric-label">较基线变化</p>
-            <p class="impact-delta">{{ changeRate > 0 ? `-${changeRate}%` : "0%" }}</p>
-            <p class="metric-note">根据打卡时长、打卡次数、订单数量计算。</p>
+            <p class="metric-label">活跃提升</p>
+            <p class="impact-delta">{{ changeRate > 0 ? `+${changeRate}%` : "0%" }}</p>
+            <p class="metric-note">根据打卡时长、打卡次数、订单数量计算，数据不足时保持持平。</p>
           </div>
         </div>
         <div class="progress-list">

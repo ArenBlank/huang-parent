@@ -7,7 +7,7 @@
           <h1 class="hero-title">个人档案与账户安全</h1>
           <p class="hero-subtitle">资料完善度、头像管理、信息更新与密码更新集中在同一页，减少来回切换。</p>
           <div class="hero-badges">
-            <span class="badge-pill is-dark">用户 {{ profile?.username || "-" }}</span>
+        <span class="badge-pill is-dark">账号 {{ profile?.username || "-" }}</span>
             <span class="badge-pill is-dark">完善度 {{ completionRate }}%</span>
             <span class="badge-pill is-dark">{{ profile?.profileCompleted ? "已完善" : "待完善" }}</span>
           </div>
@@ -44,7 +44,7 @@
       </div>
 
       <el-descriptions :column="2" border style="margin-top: 12px">
-        <el-descriptions-item label="用户名">{{ profile?.username || "-" }}</el-descriptions-item>
+        <el-descriptions-item label="账号">{{ profile?.username || "-" }}</el-descriptions-item>
         <el-descriptions-item label="昵称">{{ profile?.nickname || "-" }}</el-descriptions-item>
         <el-descriptions-item label="手机">{{ profile?.phone || "-" }}</el-descriptions-item>
         <el-descriptions-item label="邮箱">{{ profile?.email || "-" }}</el-descriptions-item>
@@ -125,7 +125,9 @@
 import { computed, reactive, ref } from "vue"
 import { ElMessage } from "element-plus"
 import { appClient } from "../api/client"
+import { useAppAuthStore } from "../stores/auth"
 
+const store = useAppAuthStore()
 const profile = ref(null)
 const loading = ref(false)
 const saving = ref(false)
@@ -166,8 +168,8 @@ const avatarFallback = computed(() => {
 })
 
 const completionRate = computed(() => {
-  const raw = profile.value?.completionRate
-  if (Number.isFinite(raw)) return Math.min(Math.max(Number(raw), 0), 100)
+  const raw = Number(profile.value?.completionRate)
+  if (Number.isFinite(raw)) return Math.min(Math.max(Math.round(raw), 0), 100)
   return profile.value?.profileCompleted ? 100 : 0
 })
 
@@ -210,6 +212,11 @@ const loadProfile = async () => {
     const { data } = await appClient.get("/app/profile/info")
     if (data.code !== 200) throw new Error(data.message || "加载资料失败")
     profile.value = data.data
+    store.setSession({
+      accessToken: store.accessToken,
+      refreshToken: store.refreshToken,
+      user: data.data || null
+    })
     form.nickname = data.data?.nickname || ""
     form.email = data.data?.email || ""
     form.phone = data.data?.phone || ""

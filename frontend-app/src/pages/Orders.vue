@@ -493,6 +493,11 @@ const handleOrderSelect = (row) => {
   openOrder(row.id)
 }
 
+const orderExists = (id) => {
+  const normalizedId = Number(id)
+  return Number.isFinite(normalizedId) && normalizedId > 0 && orders.value.some((order) => Number(order.id) === normalizedId)
+}
+
 const loadOrders = async () => {
   try {
     ordersLoading.value = true
@@ -501,12 +506,18 @@ const loadOrders = async () => {
     orders.value = data.data || []
     if (!orders.value.length) {
       detail.value = null
+      orderId.value = null
       return
     }
     const routeId = Number(route.query.orderId)
-    const cachedId = Number(localStorage.getItem("fp_last_order_id"))
-    const preferredId = [orderId.value, routeId, cachedId, orders.value[0].id].find(
-      (item) => Number.isFinite(Number(item)) && Number(item) > 0
+    const cachedRaw = localStorage.getItem("fp_last_order_id")
+    const cachedId = Number(cachedRaw)
+    const isValidCache = orderExists(cachedId)
+    if (cachedRaw && !isValidCache) {
+      localStorage.removeItem("fp_last_order_id")
+    }
+    const preferredId = [orderId.value, routeId, isValidCache ? cachedId : null, orders.value.length ? orders.value[0].id : null].find(
+      (item) => orderExists(item)
     )
     if (preferredId) await openOrder(preferredId)
   } catch (err) {
@@ -538,6 +549,12 @@ const loadFromRoute = () => {
   if (!raw) return
   const parsed = Number(raw)
   if (!Number.isFinite(parsed) || parsed <= 0) return
+  if (!orders.value.length) return
+  if (!orderExists(parsed)) {
+    const fallbackId = orders.value[0]?.id
+    if (fallbackId) openOrder(fallbackId)
+    return
+  }
   orderId.value = parsed
   loadDetail()
 }
@@ -565,7 +582,6 @@ watch(
 )
 
 loadOrders()
-loadFromRoute()
 </script>
 
 <style scoped>

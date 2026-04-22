@@ -1,6 +1,7 @@
 package com.huang.web.app.controller;
 
 import com.huang.common.result.Result;
+import com.anji.captcha.service.CaptchaService;
 import com.huang.model.entity.User;
 import com.huang.web.app.dto.auth.ForgetPasswordDTO;
 import com.huang.web.app.service.biz.auth.AppAuthCacheService;
@@ -36,6 +37,9 @@ class AuthControllerTest {
     @Mock
     private AppAuthCacheService appAuthCacheService;
 
+    @Mock
+    private CaptchaService captchaService;
+
     @Test
     void forgetPassword_shouldIncreaseTokenVersionAndEvictAuthCache() {
         AuthController controller = new AuthController(
@@ -43,7 +47,8 @@ class AuthControllerTest {
                 userCoreService,
                 roleCoreService,
                 userRoleCoreService,
-                appAuthCacheService
+                appAuthCacheService,
+                captchaService
         );
         User user = new User();
         user.setId(8L);

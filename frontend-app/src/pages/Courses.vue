@@ -93,13 +93,11 @@
                 class="itinerary-card"
               >
                 <div class="itinerary-card__cover-wrap">
-                  <el-image
-                    v-if="schedule.coverUrl"
-                    :src="schedule.coverUrl"
-                    fit="cover"
-                    class="itinerary-card__cover"
-                  />
-                  <div v-else class="itinerary-card__cover fallback">待上课</div>
+                  <el-image :src="resolveCourseCover(schedule.coverUrl)" fit="cover" class="itinerary-card__cover">
+                    <template #error>
+                      <img :src="defaultCoverUrl" class="image-fallback" alt="课程封面兜底图" />
+                    </template>
+                  </el-image>
                 </div>
 
                 <div class="itinerary-card__body">
@@ -162,6 +160,8 @@
                 <span class="tag">排期 {{ schedules.length }}</span>
                 <span class="tag">可报 {{ availableSchedules }}</span>
                 <span class="tag">状态 {{ formatCourseStatus(selectedCourse.status) }}</span>
+                <span class="tag" v-if="selectedCourse.level">难度 {{ getDifficultyLabel(selectedCourse.level) }}</span>
+                <span class="tag" v-if="getCourseTarget(selectedCourse)">目标 {{ getTargetLabel(getCourseTarget(selectedCourse)) }}</span>
               </div>
             </div>
 
@@ -183,8 +183,11 @@
                 >
                   <span v-if="selectedCourse?.id === course.id" class="course-card__flag">已选中</span>
                   <div class="course-cover-wrap">
-                    <el-image v-if="course.coverUrl" :src="course.coverUrl" fit="cover" class="course-cover" />
-                    <div v-else class="course-cover fallback">暂无封面</div>
+                    <el-image :src="resolveCourseCover(course.coverUrl)" fit="cover" class="course-cover">
+                      <template #error>
+                        <img :src="defaultCoverUrl" class="image-fallback" alt="课程封面兜底图" />
+                      </template>
+                    </el-image>
                   </div>
                   <div class="course-body">
                     <strong>{{ course.title }}</strong>
@@ -192,7 +195,8 @@
                     <div class="badge-row">
                       <span class="tag">价格 {{ course.price }}</span>
                       <span class="tag">状态 {{ formatCourseStatus(course.status) }}</span>
-                      <span class="tag" v-if="course.level">难度 {{ course.level }}</span>
+                      <span class="tag" v-if="course.level">难度 {{ getDifficultyLabel(course.level) }}</span>
+                      <span class="tag" v-if="getCourseTarget(course)">目标 {{ getTargetLabel(getCourseTarget(course)) }}</span>
                     </div>
                     <span class="course-card__hint">选中后右侧立即更新排期与报名操作</span>
                   </div>
@@ -263,8 +267,11 @@
 
               <div v-else class="selected-course-card">
                 <div class="selected-course-cover-wrap">
-                  <el-image v-if="selectedCourse.coverUrl" :src="selectedCourse.coverUrl" fit="cover" class="course-cover" />
-                  <div v-else class="course-cover fallback">暂无封面</div>
+                  <el-image :src="resolveCourseCover(selectedCourse.coverUrl)" fit="cover" class="course-cover">
+                    <template #error>
+                      <img :src="defaultCoverUrl" class="image-fallback" alt="课程封面兜底图" />
+                    </template>
+                  </el-image>
                 </div>
                 <div class="selected-course-copy">
                   <strong>{{ selectedCourse.title }}</strong>
@@ -272,6 +279,8 @@
                   <div class="selected-course-stats">
                     <span class="tag">价格 {{ selectedCourse.price }}</span>
                     <span class="tag">状态 {{ formatCourseStatus(selectedCourse.status) }}</span>
+                    <span class="tag" v-if="selectedCourse.level">难度 {{ getDifficultyLabel(selectedCourse.level) }}</span>
+                    <span class="tag" v-if="getCourseTarget(selectedCourse)">目标 {{ getTargetLabel(getCourseTarget(selectedCourse)) }}</span>
                     <span class="tag">排期 {{ schedules.length }}</span>
                     <span class="tag">可报 {{ availableSchedules }}</span>
                   </div>
@@ -502,6 +511,29 @@ const STORAGE_ENROLLMENT = "fp_last_enrollment"
 const STORAGE_COURSE_ID = "fp_last_course_id"
 const STORAGE_COURSE_VIEW = "fp_course_workspace_view"
 
+const defaultCoverUrl = "/test.png"
+const staleCoverKeywords = ["127.0.0.1:9000", "localhost:9000"]
+
+const difficultyMap = {
+  BEGINNER: "初级",
+  INTERMEDIATE: "中级",
+  ADVANCED: "高级"
+}
+
+const targetMap = {
+  MUSCLE_GAIN: "增肌",
+  WEIGHT_LOSS: "减脂",
+  FAT_LOSS: "减脂",
+  SHAPING: "塑形",
+  BODY_SHAPING: "塑形",
+  REHABILITATION: "康复",
+  STRENGTH: "力量提升",
+  ENDURANCE: "耐力提升",
+  FLEXIBILITY: "柔韧性",
+  CARDIO: "心肺训练",
+  GENERAL_FITNESS: "综合体能"
+}
+
 const courses = ref([])
 const loading = ref(false)
 const courseKeyword = ref("")
@@ -530,11 +562,43 @@ const refunding = ref(false)
 const refundReason = ref("")
 const refundComposerVisible = ref(false)
 
+const normalizeEnumKey = (value) => String(value || "").trim().replace(/-/g, "_").toUpperCase()
+
+const getDifficultyLabel = (value) => {
+  const key = normalizeEnumKey(value)
+  return difficultyMap[key] || value || "-"
+}
+
+const getCourseTarget = (course) =>
+  course?.target || course?.goal || course?.trainingTarget || course?.courseTarget || ""
+
+const getTargetLabel = (value) => {
+  const key = normalizeEnumKey(value)
+  return targetMap[key] || value || "-"
+}
+
+const isStaleCoverUrl = (value) => staleCoverKeywords.some((keyword) => value.includes(keyword))
+
+const resolveCourseCover = (value) => {
+  const url = String(value || "").trim()
+  if (!url || isStaleCoverUrl(url)) return defaultCoverUrl
+  return url
+}
+
 const filteredCourses = computed(() => {
   const keyword = courseKeyword.value.trim().toLowerCase()
   if (!keyword) return courses.value
   return courses.value.filter((course) => {
-    const haystack = [course.title, course.summary, course.level, course.id].filter(Boolean).join(" ").toLowerCase()
+    const target = getCourseTarget(course)
+    const haystack = [
+      course.title,
+      course.summary,
+      course.level,
+      getDifficultyLabel(course.level),
+      target,
+      target ? getTargetLabel(target) : "",
+      course.id
+    ].filter(Boolean).join(" ").toLowerCase()
     return haystack.includes(keyword)
   })
 })
@@ -1196,6 +1260,13 @@ loadLastEnrollment()
 .course-cover {
   width: 100%;
   height: 100%;
+}
+
+.image-fallback {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
 .fallback {

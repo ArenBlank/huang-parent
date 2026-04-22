@@ -36,6 +36,13 @@ const persistSession = (session) => {
   }))
 }
 
+const createRegisteredUser = (data) => ({
+  id: data.userId,
+  username: data.username,
+  nickname: data.nickname,
+  phone: data.phone
+})
+
 export const useAppAuthStore = defineStore('appAuth', {
   state: () => ({
     ...parseStoredSession()
@@ -47,11 +54,12 @@ export const useAppAuthStore = defineStore('appAuth', {
       this.user = payload.userInfo || payload.user || null
       persistSession(this)
     },
-    async login(account, password) {
+    async login(account, password, captchaVerification) {
       const { data } = await appClient.post('/app/auth/login', {
         account,
         password,
-        loginType: 'password'
+        loginType: 'password',
+        captchaVerification
       })
       if (data.code !== 200) {
         throw new Error(data.message || '登录失败')
@@ -60,6 +68,17 @@ export const useAppAuthStore = defineStore('appAuth', {
         accessToken: data.data.accessToken,
         refreshToken: data.data.refreshToken,
         userInfo: data.data.userInfo || null
+      })
+    },
+    async register(payload) {
+      const { data } = await appClient.post('/app/auth/register', payload)
+      if (data.code !== 200) {
+        throw new Error(data.message || '注册失败')
+      }
+      this.setSession({
+        accessToken: data.data.accessToken,
+        refreshToken: data.data.refreshToken,
+        userInfo: createRegisteredUser(data.data)
       })
     },
     async fetchProfile() {

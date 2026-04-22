@@ -54,6 +54,12 @@
         <span class="mono">ops_admin / ops_admin_123</span>
       </div>
     </el-card>
+
+    <AdminSliderCaptcha
+      :visible="captchaVisible"
+      @success="handleCaptchaSuccess"
+      @close="captchaVisible = false"
+    />
   </div>
 </template>
 
@@ -61,11 +67,13 @@
 import { onMounted, reactive, ref } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
+import AdminSliderCaptcha from '../components/AdminSliderCaptcha.vue'
 import { useAuthStore } from '../stores/auth'
 
 const router = useRouter()
 const authStore = useAuthStore()
 const loading = ref(false)
+const captchaVisible = ref(false)
 
 const form = reactive({
   account: '',
@@ -84,12 +92,17 @@ const submit = async () => {
     ElMessage.warning('请输入账号和密码')
     return
   }
+  captchaVisible.value = true
+}
+
+const handleCaptchaSuccess = async (captchaVerification) => {
+  captchaVisible.value = false
   try {
     loading.value = true
-    await authStore.login(form.account, form.password)
+    await authStore.login(form.account, form.password, captchaVerification)
     ElMessage.success('登录成功')
     localStorage.setItem(STORAGE_KEY, form.account)
-    router.push('/dashboard')
+    await router.push('/dashboard')
   } catch (err) {
     ElMessage.error(err.message || '登录失败')
   } finally {

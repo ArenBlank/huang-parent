@@ -23,14 +23,18 @@ public class UserLoginDTO {
     @NotBlank(message = "密码不能为空")
     private String password;
 
-    @Schema(description = "登录类型：password-密码登录，sms-短信登录", requiredMode = Schema.RequiredMode.REQUIRED, example = "password")
+    @Schema(description = "登录类型：password-密码登录", requiredMode = Schema.RequiredMode.REQUIRED, example = "password")
     @NotBlank(message = "登录类型不能为空")
-    @Pattern(regexp = "^(password|sms)$", message = "登录类型只能为password或sms")
+    @Pattern(regexp = "^password$", message = "登录类型只能为password")
     private String loginType;
 
-    @Schema(description = "短信验证码（短信登录时必填，开发阶段可传固定值123456）", example = "123456")
+    @Schema(description = "短信验证码（已弃用）", example = "123456")
     @Pattern(regexp = "^\\d{6}$", message = "验证码必须为6位数字")
     private String smsCode;
+
+    @Schema(description = "滑块拼图二次校验token", requiredMode = Schema.RequiredMode.REQUIRED)
+    @NotBlank(message = "滑块验证不能为空")
+    private String captchaVerification;
 
     @Schema(description = "设备标识", example = "device_123456")
     private String deviceId;

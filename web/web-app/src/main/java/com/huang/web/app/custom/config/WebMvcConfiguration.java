@@ -14,10 +14,12 @@ public class WebMvcConfiguration implements WebMvcConfigurer {
 
     @Override
     public void addInterceptors(InterceptorRegistry registry) {
-        // App端需要JWT认证，但排除登录相关接口
+        // App side APIs need JWT authentication, but auth and captcha endpoints are public.
         registry.addInterceptor(this.authenticationInterceptor)
                 .addPathPatterns("/app/**")
-                .excludePathPatterns("/app/auth/**",
+                .excludePathPatterns("/app/auth/captcha/get",
+                        "/app/auth/captcha/check",
+                        "/app/auth/**",
                         "/app/test/**",
                         "/app/pay/callback",
                         "/app/banner/list",

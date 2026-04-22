@@ -14,15 +14,67 @@ mvn -pl common,model -am -DskipTests install
 Start-Process powershell -ArgumentList '-NoExit','-Command','mvn -f web/web-admin/pom.xml spring-boot:run'
 Start-Process powershell -ArgumentList '-NoExit','-Command','mvn -f web/web-app/pom.xml spring-boot:run'
 
-# 按端口 8080/8081 快速关闭 admin/app
-Get-NetTCPConnection -LocalPort 8080,80·81 -State Listen -ErrorAction SilentlyContinue |
-Select-Object -ExpandProperty OwningProcess -Unique |
-ForEach-Object { Stop-Process -Id $_ -Force }
+powershell -ExecutionPolicy Bypass -File .\stop-all.ps1
+powershell -ExecutionPolicy Bypass -File .\start-all.ps1
 
-# 兜底方式：按命令行特征关闭 app/admin 的 spring-boot:run Java 进程
-Get-CimInstance Win32_Process |
-Where-Object { $_.Name -eq 'java.exe' -and $_.CommandLine -match 'spring-boot:run' -and $_.CommandLine -match 'web-(admin|app)' } |
-ForEach-Object { Stop-Process -Id $_.ProcessId -Force }
+# 查看 / 关闭 admin/app（先整段执行一次，后面直接用 shw / khw）
+$HuangWebPorts = 8080,8081,8083,8084
+$HuangWebPatterns = @(
+  'com\.huang\.web\.app\.AppWebApplication',
+  'com\.huang\.web\.admin\.AdminWebApplication',
+  'spring-boot:run.+web[\\/]+web-app',
+  'spring-boot:run.+web[\\/]+web-admin',
+  'web[\\/]+web-app[\\/]+target[\\/]+classes',
+  'web[\\/]+web-admin[\\/]+target[\\/]+classes'
+)
+function Test-HuangWebCmdLine {
+  param([string]$CommandLine)
+  foreach ($pattern in $HuangWebPatterns) {
+    if ($CommandLine -match $pattern) { return $true }
+  }
+  return $false
+}
+function Get-HuangWebPid {
+  $pids = [System.Collections.Generic.HashSet[int]]::new()
+  Get-NetTCPConnection -LocalPort $HuangWebPorts -State Listen -ErrorAction SilentlyContinue |
+    Select-Object -ExpandProperty OwningProcess -Unique |
+    ForEach-Object { [void]$pids.Add([int]$_) }
+  Get-CimInstance Win32_Process |
+    Where-Object { $_.CommandLine -and (Test-HuangWebCmdLine $_.CommandLine) } |
+    ForEach-Object {
+      [void]$pids.Add([int]$_.ProcessId)
+      if ($_.ParentProcessId -gt 0) { [void]$pids.Add([int]$_.ParentProcessId) }
+    }
+  @($pids) | Sort-Object -Unique
+}
+function Show-HuangWeb {
+  $ids = Get-HuangWebPid
+  if (-not $ids) { Write-Host '没有找到 web-app / web-admin 相关进程'; return }
+  Get-CimInstance Win32_Process |
+    Where-Object { $ids -contains [int]$_.ProcessId } |
+    Select-Object ProcessId, ParentProcessId, Name, CommandLine |
+    Format-Table -Wrap
+}
+function Stop-HuangWeb {
+  $ids = Get-HuangWebPid
+  if (-not $ids) { Write-Host '没有找到 web-app / web-admin 相关进程'; return }
+  $ids | Sort-Object -Descending | ForEach-Object {
+    try {
+      $proc = Get-Process -Id $_ -ErrorAction Stop
+      Stop-Process -Id $_ -Force -ErrorAction Stop
+      Write-Host "已停止 PID=$($_) 进程=$($proc.ProcessName)"
+    } catch {
+      Write-Warning "停止 PID=$($_) 失败: $($_.Exception.Message)"
+    }
+  }
+}
+Set-Alias shw Show-HuangWeb
+Set-Alias khw Stop-HuangWeb
+
+# 注意：上面这段要按原样带换行执行，不能压成一整行；定义完函数后，需要自己再敲一次 khw 才会真正关闭
+# 用法：shw -> 看当前；khw -> 关闭；shw -> 再确认
+shw
+khw
 
 # 重置回归测试数据
 powershell -ExecutionPolicy Bypass -File tests/reset-test-data.ps1 -ContainerName "mysql-container-huang" -DbName "fitness_platform" -User "root" -Password "root"

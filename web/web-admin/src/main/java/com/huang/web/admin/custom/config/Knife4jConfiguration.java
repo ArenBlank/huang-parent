@@ -80,7 +80,15 @@ public class Knife4jConfiguration {
     public GroupedOpenApi adminOpsGroup(OpenApiCustomizer adminSecurityCustomizer) {
         return GroupedOpenApi.builder()
                 .group("admin-ops-dashboard-video")
-                .pathsToMatch("/admin/ops/**", "/admin/dashboard/**", "/admin/video/**", "/admin/course/**", "/admin/refund/**", "/admin/pay/**")
+                .pathsToMatch(
+                        "/admin/ops/**",
+                        "/admin/dashboard/**",
+                        "/admin/video/**",
+                        "/admin/course/**",
+                        "/admin/upload/**",
+                        "/admin/refund/**",
+                        "/admin/pay/**"
+                )
                 .addOpenApiCustomizer(adminSecurityCustomizer)
                 .build();
     }

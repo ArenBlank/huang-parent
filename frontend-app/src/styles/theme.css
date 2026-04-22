@@ -109,6 +109,72 @@ button,
   line-height: 1.75;
 }
 
+.page > .page-stack > .hero-panel {
+  border-radius: 18px;
+  padding: 14px 18px;
+  background:
+    radial-gradient(circle at 8% 0%, rgba(109, 103, 255, 0.2), transparent 34%),
+    linear-gradient(135deg, #f2efff 0%, #fff8df 100%);
+  color: var(--eco-text);
+  box-shadow: 0 8px 0 rgba(52, 45, 105, 0.1), 0 18px 32px rgba(52, 45, 105, 0.1);
+}
+
+.page > .page-stack > .hero-panel .hero-title {
+  margin-top: 6px;
+  color: var(--eco-text);
+  font-size: clamp(24px, 2.7vw, 36px);
+  line-height: 1.08;
+  max-width: 820px;
+}
+
+.page > .page-stack > .hero-panel .hero-subtitle {
+  margin-top: 6px;
+  color: var(--eco-text-soft);
+  font-size: 13px;
+  line-height: 1.45;
+  max-width: 900px;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+  overflow: hidden;
+}
+
+.page > .page-stack > .hero-panel .quest-kicker {
+  min-height: 30px;
+  padding: 0 11px;
+  box-shadow: 0 4px 0 rgba(52, 45, 105, 0.08);
+}
+
+.page > .page-stack > .hero-panel .hero-badges,
+.page > .page-stack > .hero-panel .badge-row {
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.page > .page-stack > .hero-panel .badge-pill,
+.page > .page-stack > .hero-panel .tag {
+  min-height: 30px;
+  padding: 0 11px;
+  box-shadow: 0 4px 0 rgba(52, 45, 105, 0.08);
+}
+
+.page > .page-stack > .hero-panel .progress-panel {
+  max-width: 560px;
+  padding: 10px 12px;
+  border: 2px solid rgba(42, 35, 86, 0.28);
+  background: rgba(255, 255, 255, 0.72);
+  color: var(--eco-text);
+}
+
+.page > .page-stack > .hero-panel .progress-title {
+  color: var(--eco-text);
+}
+
+.page > .page-stack > .hero-panel .progress-note,
+.page > .page-stack > .hero-panel .progress-ai-note {
+  display: none;
+}
+
 .quest-kicker {
   display: inline-flex;
   align-items: center;

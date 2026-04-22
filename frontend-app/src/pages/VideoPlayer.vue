@@ -89,12 +89,16 @@ const currentIndex = computed(() => {
   return 0
 })
 const currentVideo = computed(() => playlist.value[currentIndex.value] || null)
+const returnTo = computed(() => queryValue('returnTo') || '/plans')
+const actionId = computed(() => currentVideo.value?.id || queryValue('actionId'))
 
 const videoUrl = computed(() => currentVideo.value?.url || queryValue('url'))
 const videoTitle = computed(() => currentVideo.value?.title || queryValue('title') || '训练教学视频')
 const coverUrl = computed(() => currentVideo.value?.cover || queryValue('cover'))
 const sourceName = computed(() => currentVideo.value?.source || queryValue('source') || '训练计划')
-const actionName = computed(() => currentVideo.value?.action || queryValue('action') || '未命名动作')
+const actionName = computed(() => {
+  return currentVideo.value?.action || queryValue('action') || (actionId.value ? `动作 #${actionId.value}` : '未命名动作')
+})
 const actionPosition = computed(() => {
   if (!playlist.value.length) {
     return '当前为独立视频'
@@ -167,7 +171,7 @@ const navigateToIndex = (targetIndex) => {
 
 const playPrevious = () => {
   if (!playlist.value.length || currentIndex.value <= 0) {
-    ElMessage.info('当前已经是第一个的动作了哟')
+    ElMessage.info('当前已经是第一个动作了')
     return
   }
   navigateToIndex(currentIndex.value - 1)
@@ -175,7 +179,7 @@ const playPrevious = () => {
 
 const playNext = () => {
   if (!playlist.value.length || currentIndex.value >= playlist.value.length - 1) {
-    ElMessage.info('当前已经是最后一个的动作了哟')
+    ElMessage.info('当前已经是最后一个动作了')
     return
   }
   navigateToIndex(currentIndex.value + 1)
@@ -186,7 +190,7 @@ const goBack = () => {
     router.back()
     return
   }
-  router.push('/plans')
+  router.push(returnTo.value || '/plans')
 }
 
 watch(

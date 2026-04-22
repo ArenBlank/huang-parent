@@ -35,14 +35,24 @@ const routes = [
 
 const router = createRouter({
   history: createWebHistory(),
-  routes
+  routes,
+  scrollBehavior(to) {
+    if (to.path !== '/login' && to.path !== '/video-player') {
+      return { el: '.app-nav', top: 0, left: 0 }
+    }
+    return { top: 0, left: 0 }
+  }
 })
+
+const publicPaths = new Set(['/login', '/register'])
 
 router.beforeEach((to, from, next) => {
   const store = useAppAuthStore()
-  if (to.meta.requiresAuth && !store.accessToken) {
+  const hasToken = Boolean(store.accessToken)
+
+  if (!publicPaths.has(to.path) && !hasToken) {
     next('/login')
-  } else if (to.path === '/login' && store.accessToken) {
+  } else if (to.path === '/login' && hasToken) {
     next('/home')
   } else {
     next()

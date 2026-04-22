@@ -5,7 +5,7 @@
         <div>
           <p class="quest-kicker">Training Check-in</p>
           <h1 class="hero-title">把每日打卡变成持续进步曲线</h1>
-          <p class="hero-subtitle">先选计划动作，再提交记录，最后在下方回看训练历史。</p>
+          <p class="hero-subtitle">先选训练计划和动作，再填写本次训练记录，最后在下方查看最近打卡历史。</p>
           <div class="hero-badges">
             <span class="badge-pill is-dark">计划 {{ plans.length }}</span>
             <span class="badge-pill is-dark">动作 {{ planItems.length }}</span>
@@ -15,7 +15,7 @@
         <div class="progress-panel">
           <p class="progress-title">本周训练热度 {{ weeklyHeat }}%</p>
           <el-progress :percentage="weeklyHeat" />
-          <p class="muted progress-note">根据周打卡次数与训练时长估算，不使用静态写死数值。</p>
+          <p class="muted progress-note">根据本周打卡次数与训练时长估算，不再显示静态演示数字。</p>
         </div>
       </div>
     </section>
@@ -50,9 +50,9 @@
         </div>
       </div>
 
-      <el-empty v-if="!plans.length" description="暂无可用计划">
+      <el-empty v-if="!plans.length" description="请先去计划大厅订阅计划">
         <div class="empty-actions">
-          <el-button @click="goPlans">去订阅计划</el-button>
+          <el-button @click="goPlans">去计划大厅订阅计划</el-button>
         </div>
       </el-empty>
 
@@ -60,13 +60,25 @@
         <article class="form-card">
           <el-form :model="form" label-position="top">
             <el-form-item label="训练计划">
-              <el-select v-model="form.planId" filterable placeholder="选择计划" style="width: 100%" @change="handlePlanChange">
+              <el-select
+                v-model="form.planId"
+                filterable
+                placeholder="选择训练计划"
+                style="width: 100%"
+                @change="handlePlanChange"
+              >
                 <el-option v-for="plan in plans" :key="plan.id" :label="plan.title" :value="plan.id" />
               </el-select>
             </el-form-item>
 
             <el-form-item label="计划动作">
-              <el-select v-model="form.planItemId" filterable placeholder="选择动作" style="width: 100%" :loading="planItemLoading">
+              <el-select
+                v-model="form.planItemId"
+                filterable
+                placeholder="选择动作"
+                style="width: 100%"
+                :loading="planItemLoading"
+              >
                 <el-option
                   v-for="item in planItems"
                   :key="item.id"
@@ -97,9 +109,17 @@
 
         <article class="quest-card quest-card--accent">
           <p class="quest-kicker">Action Preview</p>
-          <h3 class="preview-title">{{ selectedItem ? selectedItem.actionName : "等待选择动作" }}</h3>
+          <h3 class="preview-title">{{ selectedItem ? selectedItem.actionName : '等待选择动作' }}</h3>
+          <div v-if="selectedItem" class="preview-meta">
+            <span class="preview-day-chip">DAY {{ selectedItem.dayIndex }}</span>
+            <span class="muted">当前计划：{{ currentPlanTitle }}</span>
+          </div>
           <p class="quest-copy">
-            {{ selectedItem ? `当前计划：${currentPlanTitle}，第 ${selectedItem.dayIndex} 天动作` : "选择动作后将展示节点详情与视频资源。" }}
+            {{
+              selectedItem
+                ? '这次打卡将记录到该动作节点，提交后可在训练历史中回看。'
+                : '选择动作后，这里会展示节奏信息和可用的教学视频。'
+            }}
           </p>
           <div v-if="selectedItem" class="badge-row">
             <span class="tag">组数 {{ selectedItem.sets || 0 }}</span>
@@ -108,9 +128,9 @@
           </div>
           <div class="action-row">
             <el-button type="primary" :disabled="!selectedItem?.video?.playUrl" @click="openVideo(selectedItem)">
-              {{ selectedItem?.video?.playUrl ? "查看教学视频" : "暂无视频" }}
+              {{ selectedItem?.video?.playUrl ? '查看教学视频' : '暂无视频' }}
             </el-button>
-            <span class="muted">{{ selectedItem?.video?.title || "当前节点未绑定视频资源" }}</span>
+            <span class="muted">{{ selectedItem?.video?.title || '当前动作还没有绑定教学视频' }}</span>
           </div>
         </article>
       </div>
@@ -128,7 +148,7 @@
       <el-empty v-if="!records.length && !recordsLoading" description="暂无打卡记录">
         <div class="empty-actions">
           <el-button size="small" @click="loadRecords">重试</el-button>
-          <el-button size="small" @click="goPlans">去订阅计划</el-button>
+          <el-button size="small" @click="goPlans">去计划大厅订阅计划</el-button>
         </div>
       </el-empty>
 
@@ -139,7 +159,7 @@
             <span class="tag">{{ record.durationMin || 0 }} 分钟</span>
           </div>
           <p class="muted">热量 {{ record.calories || 0 }}</p>
-          <p class="muted">感受 {{ record.feeling || "无" }}</p>
+          <p class="muted">感受 {{ record.feeling || '无' }}</p>
         </article>
       </div>
     </section>
@@ -147,13 +167,17 @@
 </template>
 
 <script setup>
-import { computed, reactive, ref } from "vue"
+import { computed, onMounted, ref } from "vue"
 import { useRouter } from "vue-router"
 import { ElMessage } from "element-plus"
 import { appClient } from "../api/client"
+import { useTrainingStore } from "../stores/trainingStore"
 import { createVideoPlaylist, saveVideoPlaylist } from "../utils/videoPlaylist"
 
 const router = useRouter()
+const trainingStore = useTrainingStore()
+const form = trainingStore.draft
+
 const stats = ref(null)
 const loading = ref(false)
 const submitting = ref(false)
@@ -163,13 +187,15 @@ const plans = ref([])
 const planItems = ref([])
 const planItemLoading = ref(false)
 
+const isAvailablePlan = (plan) => Boolean(plan?.subscribed) && Number(plan?.status) === 1
+
 const selectedItem = computed(() => {
   if (!form.planItemId) return null
-  return planItems.value.find((item) => item.id === form.planItemId) || null
+  return planItems.value.find((item) => Number(item.id) === Number(form.planItemId)) || null
 })
 
 const currentPlanTitle = computed(() => {
-  const current = plans.value.find((plan) => plan.id === form.planId)
+  const current = plans.value.find((plan) => Number(plan.id) === Number(form.planId))
   return current?.title || "未选择"
 })
 
@@ -180,42 +206,42 @@ const weeklyHeat = computed(() => {
   return Math.max(8, Math.min(Math.round(score), 100))
 })
 
-const formatDate = (date) => {
-  const local = new Date(date.getTime() - date.getTimezoneOffset() * 60000)
-  return local.toISOString().slice(0, 10)
-}
-
-const form = reactive({
-  planId: 1,
-  planItemId: 1,
-  recordDate: formatDate(new Date()),
-  durationMin: 30,
-  calories: 200,
-  feeling: "状态不错"
-})
-
 const loadPlans = async () => {
   try {
     const { data } = await appClient.get("/app/plan/list")
     if (data.code !== 200) throw new Error(data.message || "加载计划失败")
-    plans.value = data.data || []
-    if (plans.value.length) {
-      form.planId = form.planId || plans.value[0].id
-      await loadPlanDetail(form.planId)
+
+    plans.value = (data.data || []).filter(isAvailablePlan)
+    if (!plans.value.length) {
+      planItems.value = []
+      trainingStore.resetWhenNoPlans()
+      return
     }
+
+    const matchedPlan = plans.value.find((plan) => Number(plan.id) === Number(form.planId))
+    const nextPlanId = matchedPlan?.id || plans.value[0].id
+    trainingStore.setPlanSelection(nextPlanId)
+    await loadPlanDetail(nextPlanId)
   } catch (err) {
     ElMessage.error(err.message || "加载计划失败")
   }
 }
 
-const loadPlanDetail = async (planId) => {
-  if (!planId) return
+const loadPlanDetail = async (planId, preferredItemId = form.planItemId) => {
+  if (!planId) {
+    planItems.value = []
+    trainingStore.setActionSelection(null)
+    return
+  }
+
   try {
     planItemLoading.value = true
     const { data } = await appClient.get(`/app/plan/${planId}`)
     if (data.code !== 200) throw new Error(data.message || "加载计划详情失败")
+
     planItems.value = data.data?.items || []
-    form.planItemId = planItems.value.length ? planItems.value[0].id : null
+    const matchedItem = planItems.value.find((item) => Number(item.id) === Number(preferredItemId))
+    trainingStore.setActionSelection(matchedItem?.id || planItems.value[0]?.id || null)
   } catch (err) {
     ElMessage.error(err.message || "加载计划详情失败")
   } finally {
@@ -224,6 +250,7 @@ const loadPlanDetail = async (planId) => {
 }
 
 const handlePlanChange = async (planId) => {
+  trainingStore.setPlanSelection(planId)
   await loadPlanDetail(planId)
 }
 
@@ -240,23 +267,46 @@ const loadStats = async () => {
   }
 }
 
+const loadRecords = async () => {
+  try {
+    recordsLoading.value = true
+    const { data } = await appClient.get("/app/record/my/list", { params: { limit: 20 } })
+    if (data.code !== 200) throw new Error(data.message || "加载记录失败")
+    records.value = data.data || []
+  } catch (err) {
+    ElMessage.error(err.message || "加载记录失败")
+  } finally {
+    recordsLoading.value = false
+  }
+}
+
 const submit = async () => {
   if (!plans.value.length) {
-    ElMessage.warning("暂无可用计划")
+    ElMessage.warning("请先去计划大厅订阅计划")
     return
   }
   if (!form.planId || !form.planItemId || !form.recordDate) {
     ElMessage.warning("请完整填写打卡信息")
     return
   }
+
   try {
     submitting.value = true
-    const payload = { ...form, recordDate: form.recordDate }
+    const payload = {
+      planId: form.planId,
+      planItemId: form.planItemId,
+      recordDate: form.recordDate,
+      durationMin: form.durationMin,
+      calories: form.calories,
+      feeling: form.feeling
+    }
     const { data } = await appClient.post("/app/record/checkin", payload)
     if (data.code !== 200) throw new Error(data.message || "打卡失败")
+
     ElMessage.success("打卡成功")
     await loadRecords()
     await loadStats()
+    trainingStore.resetAfterSubmit()
   } catch (err) {
     ElMessage.error(err.message || "打卡失败")
   } finally {
@@ -274,7 +324,7 @@ const openVideo = (item) => {
     cover: "",
     fallbackTitle: "训练教学视频"
   })
-  const playlistIndex = playlist.findIndex((entry) => entry.id === item?.id)
+  const playlistIndex = playlist.findIndex((entry) => Number(entry.id) === Number(item?.id))
   const playlistKey = saveVideoPlaylist(playlist, `training-${form.planId || "checkin"}`)
 
   router.push({
@@ -286,6 +336,9 @@ const openVideo = (item) => {
       title: item?.video?.title || item?.actionName || "训练教学视频",
       source: currentPlanTitle.value || "训练计划",
       action: item?.actionName || "",
+      actionId: item?.id ? String(item.id) : "",
+      planId: form.planId ? String(form.planId) : "",
+      returnTo: "/training",
       cover: ""
     }
   })
@@ -295,22 +348,11 @@ const goPlans = () => {
   router.push("/plans")
 }
 
-const loadRecords = async () => {
-  try {
-    recordsLoading.value = true
-    const { data } = await appClient.get("/app/record/my/list", { params: { limit: 20 } })
-    if (data.code !== 200) throw new Error(data.message || "加载记录失败")
-    records.value = data.data || []
-  } catch (err) {
-    ElMessage.error(err.message || "加载记录失败")
-  } finally {
-    recordsLoading.value = false
-  }
-}
-
-loadPlans()
-loadStats()
-loadRecords()
+onMounted(() => {
+  loadPlans()
+  loadStats()
+  loadRecords()
+})
 </script>
 
 <style scoped>
@@ -357,6 +399,29 @@ loadRecords()
   margin: 0;
   font-size: 24px;
   line-height: 1.1;
+}
+
+.preview-meta {
+  margin-top: 10px;
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.preview-day-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.56);
+  background: rgba(255, 255, 255, 0.22);
+  padding: 0 12px;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  box-shadow: inset 0 0 0 1px rgba(52, 45, 105, 0.12);
 }
 
 .record-grid {

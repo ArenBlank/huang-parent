@@ -15,4 +15,8 @@ public class AdminLoginDTO {
     @NotBlank
     @Schema(description = "Admin password", example = "root")
     private String password;
+
+    @NotBlank
+    @Schema(description = "AJ-Captcha verification token", example = "encrypted-captcha-verification")
+    private String captchaVerification;
 }

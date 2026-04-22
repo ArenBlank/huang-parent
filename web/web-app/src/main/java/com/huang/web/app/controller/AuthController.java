@@ -1,5 +1,8 @@
 package com.huang.web.app.controller;
 
+import com.anji.captcha.model.common.ResponseModel;
+import com.anji.captcha.model.vo.CaptchaVO;
+import com.anji.captcha.service.CaptchaService;
 import com.huang.common.config.DevelopmentConfig;
 import com.huang.common.constant.RedisConstant;
 import com.huang.common.guard.RateLimit;
@@ -25,6 +28,7 @@ import com.huang.web.app.vo.auth.RegisterVO;
 import com.huang.web.app.vo.auth.UserInfoVO;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.validation.annotation.Validated;
@@ -47,17 +51,34 @@ public class AuthController {
     private final RoleCoreService roleCoreService;
     private final UserRoleCoreService userRoleCoreService;
     private final AppAuthCacheService appAuthCacheService;
+    private final CaptchaService captchaService;
 
     public AuthController(SmsCodeUtil smsCodeUtil,
                           UserCoreService userCoreService,
                           RoleCoreService roleCoreService,
                           UserRoleCoreService userRoleCoreService,
-                          AppAuthCacheService appAuthCacheService) {
+                          AppAuthCacheService appAuthCacheService,
+                          CaptchaService captchaService) {
         this.smsCodeUtil = smsCodeUtil;
         this.userCoreService = userCoreService;
         this.roleCoreService = roleCoreService;
         this.userRoleCoreService = userRoleCoreService;
         this.appAuthCacheService = appAuthCacheService;
+        this.captchaService = captchaService;
+    }
+
+    @Operation(summary = "Get slider captcha", description = "AJ-Captcha standard get endpoint")
+    @PostMapping("/captcha/get")
+    public ResponseModel getCaptcha(@RequestBody CaptchaVO captchaVO, HttpServletRequest request) {
+        captchaVO.setBrowserInfo(clientIdentity(request));
+        return captchaService.get(captchaVO);
+    }
+
+    @Operation(summary = "Check slider captcha", description = "AJ-Captcha standard check endpoint")
+    @PostMapping("/captcha/check")
+    public ResponseModel checkCaptcha(@RequestBody CaptchaVO captchaVO, HttpServletRequest request) {
+        captchaVO.setBrowserInfo(clientIdentity(request));
+        return captchaService.check(captchaVO);
     }
 
     @Operation(summary = "Send SMS code", description = "Send SMS code for register, login or password reset")
@@ -88,11 +109,11 @@ public class AuthController {
     public Result<RegisterVO> register(@Valid @RequestBody UserRegisterDTO dto) {
         log.info("register request: username={}, phone={}", dto.getUsername(), dto.getPhone());
 
+        if (!verifyCaptcha(dto.getCaptchaVerification())) {
+            return Result.fail("Slider captcha is invalid or expired");
+        }
         if (!dto.getPassword().equals(dto.getConfirmPassword())) {
             return Result.fail("Passwords do not match");
-        }
-        if (!smsCodeUtil.verifySmsCode(dto.getPhone(), dto.getSmsCode(), "register")) {
-            return Result.fail("SMS code is invalid or expired");
         }
 
         if (userCoreService.existsByUsername(dto.getUsername())) {
@@ -140,7 +161,7 @@ public class AuthController {
         return Result.ok(vo);
     }
 
-    @Operation(summary = "User login", description = "Password login or SMS login")
+    @Operation(summary = "User login", description = "Password login with slider captcha")
     @RateLimit(
             prefix = RedisConstant.APP_LOGIN_LIMIT_IP_PREFIX,
             key = "#ip",
@@ -159,9 +180,8 @@ public class AuthController {
     public Result<LoginVO> login(@Valid @RequestBody UserLoginDTO dto) {
         log.info("login request: account={}, loginType={}", dto.getAccount(), dto.getLoginType());
 
-        if ("sms".equals(dto.getLoginType())
-                && !smsCodeUtil.verifySmsCode(dto.getAccount(), dto.getSmsCode(), "login")) {
-            return Result.fail("SMS code is invalid or expired");
+        if (!verifyCaptcha(dto.getCaptchaVerification())) {
+            return Result.fail("Slider captcha is invalid or expired");
         }
 
         User user = findByAccount(dto.getAccount());
@@ -282,5 +302,24 @@ public class AuthController {
 
     private int normalizeTokenVersion(User user) {
         return user == null || user.getTokenVersion() == null || user.getTokenVersion() < 0 ? 0 : user.getTokenVersion();
+    }
+
+    private boolean verifyCaptcha(String captchaVerification) {
+        CaptchaVO captchaVO = new CaptchaVO();
+        captchaVO.setCaptchaVerification(captchaVerification);
+        ResponseModel responseModel = captchaService.verification(captchaVO);
+        return responseModel != null && responseModel.isSuccess();
+    }
+
+    private String clientIdentity(HttpServletRequest request) {
+        String forwardedFor = request.getHeader("X-Forwarded-For");
+        if (forwardedFor != null && !forwardedFor.isBlank()) {
+            return forwardedFor.split(",")[0].trim();
+        }
+        String realIp = request.getHeader("X-Real-IP");
+        if (realIp != null && !realIp.isBlank()) {
+            return realIp;
+        }
+        return request.getRemoteAddr();
     }
 }

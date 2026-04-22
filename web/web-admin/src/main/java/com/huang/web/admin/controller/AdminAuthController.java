@@ -1,5 +1,8 @@
 package com.huang.web.admin.controller;
 
+import com.anji.captcha.model.common.ResponseModel;
+import com.anji.captcha.model.vo.CaptchaVO;
+import com.anji.captcha.service.CaptchaService;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.huang.common.constant.RedisConstant;
 import com.huang.common.guard.RateLimit;
@@ -14,6 +17,7 @@ import com.huang.web.admin.service.UserService;
 import com.huang.web.admin.service.core.AdminRoleCoreService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -31,11 +35,28 @@ public class AdminAuthController {
 
     private final UserService userService;
     private final AdminRoleCoreService adminRoleCoreService;
+    private final CaptchaService captchaService;
 
     public AdminAuthController(UserService userService,
-                               AdminRoleCoreService adminRoleCoreService) {
+                               AdminRoleCoreService adminRoleCoreService,
+                               CaptchaService captchaService) {
         this.userService = userService;
         this.adminRoleCoreService = adminRoleCoreService;
+        this.captchaService = captchaService;
+    }
+
+    @Operation(summary = "Get slider captcha", description = "AJ-Captcha standard get endpoint for admin login")
+    @PostMapping("/captcha/get")
+    public ResponseModel getCaptcha(@RequestBody CaptchaVO captchaVO, HttpServletRequest request) {
+        captchaVO.setBrowserInfo(clientIdentity(request));
+        return captchaService.get(captchaVO);
+    }
+
+    @Operation(summary = "Check slider captcha", description = "AJ-Captcha standard check endpoint for admin login")
+    @PostMapping("/captcha/check")
+    public ResponseModel checkCaptcha(@RequestBody CaptchaVO captchaVO, HttpServletRequest request) {
+        captchaVO.setBrowserInfo(clientIdentity(request));
+        return captchaService.check(captchaVO);
     }
 
     @Operation(summary = "Admin login")
@@ -55,6 +76,9 @@ public class AdminAuthController {
     )
     @PostMapping("/login")
     public Result<?> login(@Valid @RequestBody AdminLoginDTO dto) {
+        if (!verifyCaptcha(dto.getCaptchaVerification())) {
+            return Result.fail("Slider captcha is invalid or expired");
+        }
         User user = userService.getOne(new LambdaQueryWrapper<User>()
                 .and(w -> w.eq(User::getUsername, dto.getAccount()).or().eq(User::getPhone, dto.getAccount()))
                 .last("LIMIT 1"));
@@ -108,5 +132,24 @@ public class AdminAuthController {
 
     private int normalizeTokenVersion(User user) {
         return user == null || user.getTokenVersion() == null || user.getTokenVersion() < 0 ? 0 : user.getTokenVersion();
+    }
+
+    private boolean verifyCaptcha(String captchaVerification) {
+        CaptchaVO captchaVO = new CaptchaVO();
+        captchaVO.setCaptchaVerification(captchaVerification);
+        ResponseModel responseModel = captchaService.verification(captchaVO);
+        return responseModel != null && responseModel.isSuccess();
+    }
+
+    private String clientIdentity(HttpServletRequest request) {
+        String forwardedFor = request.getHeader("X-Forwarded-For");
+        if (forwardedFor != null && !forwardedFor.isBlank()) {
+            return forwardedFor.split(",")[0].trim();
+        }
+        String realIp = request.getHeader("X-Real-IP");
+        if (realIp != null && !realIp.isBlank()) {
+            return realIp;
+        }
+        return request.getRemoteAddr();
     }
 }

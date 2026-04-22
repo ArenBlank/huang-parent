@@ -55,10 +55,11 @@ export const useAuthStore = defineStore('auth', {
       this.roles = payload.roleCodes || payload.roles || []
       persistSession(this)
     },
-    async login(account, password) {
+    async login(account, password, captchaVerification) {
       const { data } = await adminClient.post('/admin/auth/login', {
         account,
-        password
+        password,
+        captchaVerification
       })
       if (data.code !== 200) {
         throw new Error(data.message || '登录失败')

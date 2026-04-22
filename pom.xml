@@ -35,6 +35,7 @@
         <minio.version>8.2.0</minio.version>
         <knife4j.version>4.1.0</knife4j.version>
         <aliyun.sms.version>2.0.23</aliyun.sms.version>
+        <ajcaptcha.version>1.4.0</ajcaptcha.version>
         <caffeine.version>3.1.8</caffeine.version>
         <langchain4j.version>1.7.1</langchain4j.version>
     </properties>
@@ -100,6 +101,12 @@
                 <groupId>com.aliyun</groupId>
                 <artifactId>dysmsapi20170525</artifactId>
                 <version>${aliyun.sms.version}</version>
+            </dependency>
+
+            <dependency>
+                <groupId>com.anji-plus</groupId>
+                <artifactId>captcha-spring-boot-starter</artifactId>
+                <version>${ajcaptcha.version}</version>
             </dependency>
 
             <dependency>

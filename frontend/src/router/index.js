@@ -54,11 +54,15 @@ const router = createRouter({
   routes
 })
 
+const publicPaths = new Set(['/login', '/register'])
+
 router.beforeEach((to, from, next) => {
   const store = useAuthStore()
-  if (to.meta.requiresAuth && !store.accessToken) {
+  const hasToken = Boolean(store.accessToken)
+
+  if (!publicPaths.has(to.path) && !hasToken) {
     next('/login')
-  } else if (to.path === '/login' && store.accessToken) {
+  } else if (to.path === '/login' && hasToken) {
     next('/dashboard')
   } else {
     next()

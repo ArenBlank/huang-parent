@@ -105,6 +105,18 @@ DELETE FROM notice WHERE title LIKE 'AutoTest Notice%';
 DELETE FROM system_config WHERE config_key LIKE 'autotest.%';
 DELETE FROM task_run_log;
 
+-- normalize stale course covers and placeholder URLs to a real MinIO image
+UPDATE course
+SET cover_url = 'http://files.localhost/lease/images/upload/20260422/9453a08f36754c23b4689410b1c6f018.png'
+WHERE cover_url IS NULL
+   OR TRIM(cover_url) = ''
+   OR cover_url = '/test.png'
+   OR cover_url LIKE '%127.0.0.1:9000%'
+   OR cover_url LIKE '%localhost:9000%'
+   OR cover_url LIKE '/minio/%'
+   OR cover_url LIKE 'https://example.com/%'
+   OR cover_url LIKE 'http://example.com/%';
+
 -- restore deterministic course enrollment smoke fixture
 DROP TEMPORARY TABLE IF EXISTS tmp_smoke_course_order_ids;
 CREATE TEMPORARY TABLE tmp_smoke_course_order_ids AS
@@ -131,7 +143,7 @@ WHERE schedule_id = 2;
 DROP TEMPORARY TABLE IF EXISTS tmp_smoke_course_order_ids;
 
 INSERT INTO course (id, category_id, title, summary, cover_url, level, duration_min, price, status)
-VALUES (1, 1, '基础体能体验课', '用于基础课程报名与并发烟雾验证的最小课程夹具。', '/minio/course/foundation.jpg', 'beginner', 60, 99.00, 1)
+VALUES (1, 1, '基础体能体验课', '用于基础课程报名与并发烟雾验证的最小课程夹具。', 'http://files.localhost/lease/images/upload/20260422/9453a08f36754c23b4689410b1c6f018.png', 'beginner', 60, 99.00, 1)
 ON DUPLICATE KEY UPDATE
   category_id = VALUES(category_id),
   title = VALUES(title),

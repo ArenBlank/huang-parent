@@ -95,3 +95,12 @@ app:
 cache:
   invalidation:
     channel: cache:evict
+
+aj:
+  captcha:
+    type: blockPuzzle
+    cache-type: redis
+    aes-status: true
+    slip-offset: 5
+    water-mark: FITNESS
+    interference-options: 2

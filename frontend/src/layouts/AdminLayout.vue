@@ -45,18 +45,27 @@
       </div>
 
       <div class="hero-card">
-        <div class="hero-card-title">Academy Radar</div>
-        <div class="hero-card-copy">这里是 4 个快捷入口，不是静态占位卡。</div>
+        <div class="hero-card-head">
+          <div>
+            <div class="hero-card-kicker">Quick Radar</div>
+            <div class="hero-card-title">Academy Radar</div>
+          </div>
+          <div class="hero-card-badge">{{ radarCards.length }} 个入口</div>
+        </div>
+        <div class="hero-card-copy">把课程、核销、训练、权限和订单入口压成一个更好扫读的工作区。</div>
         <div class="hero-card-grid">
           <button
             v-for="card in radarCards"
             :key="card.path"
             type="button"
             class="hero-mini-card radar-link"
-            :class="card.tone"
+            :class="[card.tone, { wide: card.wide }]"
             @click="router.push(card.path)"
           >
-            <span>{{ card.title }}</span>
+            <div class="hero-mini-card-top">
+              <span>{{ card.title }}</span>
+              <em>{{ card.code }}</em>
+            </div>
             <strong>{{ card.headline }}</strong>
             <small>{{ card.note }}</small>
           </button>
@@ -140,7 +149,7 @@ const navSections = [
 
 const pageMeta = {
   '/dashboard': {
-    title: '欢迎来到新的学院主舞台',
+    title: '学院主舞台',
     description: '先看课程目录、学员进度、口碑反馈和行动按钮，再往下进入管理动作。'
   },
   '/permission-center': {
@@ -174,18 +183,17 @@ const pageMeta = {
 }
 
 const heroActions = [
-  { path: '/dashboard', label: '回到主舞台', code: 'HM' },
-  { path: '/training-plans', label: '去训练主线', code: 'PL' },
-  { path: '/check-in-center', label: '去前台核销', code: 'CI' },
-  { path: '/content', label: '去内容工坊', code: 'CT' }
+  { path: '/content', label: '去内容工坊', code: 'CT' },
+  { path: '/videos', label: '去视频实验室', code: 'VD' },
+  { path: '/booking-ops', label: '去预约大厅', code: 'BK' }
 ]
 
 const radarCards = [
-  { path: '/courses', title: '课程目录', headline: 'Catalog', note: '维护课程池', tone: 'peach' },
-  { path: '/check-in-center', title: '前台核销', headline: 'Check-In', note: '扫码枪快速核销', tone: 'mint' },
-  { path: '/training-plans', title: '训练主线', headline: 'Progress', note: '编排计划节点', tone: 'mint' },
-  { path: '/permission-center', title: '权限学院', headline: 'Voices', note: '查看修复闭环', tone: 'butter' },
-  { path: '/orders', title: '订单成绩单', headline: 'Enroll', note: '追踪成交与退款', tone: 'lilac' }
+  { path: '/courses', title: '课程目录', headline: 'Catalog', note: '维护课程池与课程结构', tone: 'peach', code: 'CR' },
+  { path: '/check-in-center', title: '前台核销', headline: 'Check-In', note: '扫码枪快速核销', tone: 'mint', code: 'CI' },
+  { path: '/training-plans', title: '训练主线', headline: 'Progress', note: '编排计划节点', tone: 'mint', code: 'PL' },
+  { path: '/permission-center', title: '权限学院', headline: 'Voices', note: '查看角色修复闭环', tone: 'butter', code: 'AC' },
+  { path: '/orders', title: '订单成绩单', headline: 'Enroll', note: '追踪成交与退款', tone: 'lilac', code: 'OD', wide: true }
 ]
 
 const route = useRoute()
@@ -288,9 +296,10 @@ const handleLogout = () => {
 
 .academy-hero {
   display: grid;
-  grid-template-columns: minmax(0, 1.25fr) minmax(280px, 0.75fr);
-  gap: 18px;
-  padding: 26px;
+  grid-template-columns: minmax(0, 1fr) minmax(520px, 1.04fr);
+  align-items: start;
+  gap: 16px;
+  padding: 22px;
   border-radius: 38px;
   border: 3px solid var(--border);
   background:
@@ -304,9 +313,10 @@ const handleLogout = () => {
 }
 
 .hero-title {
-  margin-top: 16px;
-  font-size: clamp(34px, 4vw, 56px);
-  line-height: 1.02;
+  max-width: 10.5ch;
+  margin-top: 14px;
+  font-size: clamp(32px, 3.6vw, 50px);
+  line-height: 0.98;
 }
 
 .hero-badge {
@@ -327,18 +337,19 @@ const handleLogout = () => {
 }
 
 .hero-copy p {
-  max-width: 680px;
-  margin: 16px 0 0;
+  max-width: 560px;
+  margin: 14px 0 0;
   color: rgba(255, 255, 255, 0.92);
-  font-size: 15px;
-  line-height: 1.8;
+  font-size: 14px;
+  line-height: 1.72;
 }
 
 .hero-actions {
-  display: flex;
-  flex-wrap: wrap;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
-  margin-top: 22px;
+  max-width: 760px;
+  margin-top: 18px;
 }
 
 .hero-pill,
@@ -358,6 +369,10 @@ const handleLogout = () => {
   font-weight: 800;
   box-shadow: 0 8px 0 rgba(52, 45, 105, 0.08);
   transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hero-pill {
+  width: 100%;
 }
 
 .hero-pill:hover,
@@ -383,6 +398,9 @@ const handleLogout = () => {
 }
 
 .hero-card {
+  display: grid;
+  align-content: start;
+  gap: 12px;
   padding: 18px;
   border-radius: 30px;
   border: 3px solid var(--border);
@@ -390,29 +408,64 @@ const handleLogout = () => {
   box-shadow: 0 10px 0 rgba(52, 45, 105, 0.08);
 }
 
+.hero-card-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.hero-card-kicker {
+  color: var(--text-soft);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+}
+
 .hero-card-title {
+  margin-top: 4px;
   font-family: 'Fredoka', sans-serif;
-  font-size: 22px;
+  font-size: 24px;
   font-weight: 700;
+  line-height: 1.05;
+}
+
+.hero-card-badge {
+  display: inline-flex;
+  align-items: center;
+  min-height: 34px;
+  padding: 0 14px;
+  border-radius: 999px;
+  border: 2px solid rgba(42, 35, 86, 0.74);
+  background: #fffaf1;
+  color: var(--text);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  white-space: nowrap;
+  box-shadow: 0 4px 0 rgba(52, 45, 105, 0.08);
 }
 
 .hero-card-copy {
-  margin-top: 6px;
   color: #625b8c;
   font-size: 13px;
+  line-height: 1.55;
 }
 
 .hero-card-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 12px;
-  margin-top: 16px;
 }
 
 .hero-mini-card {
+  display: grid;
+  align-content: start;
+  gap: 6px;
   text-align: left;
-  min-height: 110px;
-  padding: 16px;
+  min-height: 102px;
+  padding: 14px 14px 16px;
   border-radius: 24px;
   border: 3px solid var(--border);
   background: #ffffff;
@@ -420,13 +473,23 @@ const handleLogout = () => {
   transition: transform 0.18s ease, box-shadow 0.18s ease;
 }
 
+.hero-mini-card.wide {
+  grid-column: span 2;
+}
+
 .hero-mini-card:hover {
   transform: translateY(-3px) scale(1.01);
   box-shadow: 0 12px 0 rgba(52, 45, 105, 0.08);
 }
 
+.hero-mini-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
 .hero-mini-card span {
-  display: block;
   color: var(--text-soft);
   font-size: 11px;
   font-weight: 800;
@@ -434,19 +497,32 @@ const handleLogout = () => {
   text-transform: uppercase;
 }
 
+.hero-mini-card em {
+  display: inline-grid;
+  place-items: center;
+  min-width: 34px;
+  height: 28px;
+  padding: 0 8px;
+  border-radius: 999px;
+  border: 2px solid rgba(42, 35, 86, 0.18);
+  background: rgba(255, 255, 255, 0.72);
+  color: #4a4275;
+  font-size: 11px;
+  font-style: normal;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+}
+
 .hero-mini-card strong {
-  display: block;
-  margin-top: 12px;
   font-family: 'Fredoka', sans-serif;
-  font-size: 22px;
+  font-size: 18px;
+  line-height: 1.02;
 }
 
 .hero-mini-card small {
-  display: block;
-  margin-top: 8px;
   color: #625b8c;
   font-size: 12px;
-  line-height: 1.45;
+  line-height: 1.35;
 }
 
 .hero-mini-card.peach {
@@ -518,6 +594,15 @@ const handleLogout = () => {
     align-items: flex-start;
   }
 
+  .hero-actions {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    max-width: 560px;
+  }
+
+  .hero-card-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .nav-group {
     grid-template-columns: 1fr;
   }
@@ -528,8 +613,18 @@ const handleLogout = () => {
 }
 
 @media (max-width: 720px) {
+  .hero-actions,
   .hero-card-grid {
     grid-template-columns: 1fr;
+  }
+
+  .hero-mini-card.wide {
+    grid-column: auto;
+  }
+
+  .hero-card-head {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }
 </style>
