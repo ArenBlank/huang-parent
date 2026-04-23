@@ -72,7 +72,7 @@ public class PlanBizService {
     private final MultiLevelCacheSupport multiLevelCacheSupport;
     private final PersonalTrainerAi personalTrainerAi;
 
-    @Value("${minio.public-endpoint:http://files.localhost}")
+    @Value("${minio.public-endpoint:}")
     private String minioPublicEndpoint;
 
     @Value("${minio.bucket-name:fitness-platform}")

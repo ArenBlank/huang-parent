@@ -7,7 +7,7 @@
         <div class="brand-bubble">FP</div>
         <div>
           <div class="brand-title">健身学院控制台</div>
-          <div class="brand-sub">把训练、内容、订单和权限做成一块更好用的运营画布。</div>
+          <div class="brand-sub">按业务链路整理训练、课程、预约、订单和权限入口，减少菜单理解成本。</div>
         </div>
       </div>
 
@@ -26,7 +26,7 @@
 
     <section class="academy-hero">
       <div class="hero-copy">
-        <div class="hero-badge">Playful Control Deck</div>
+        <div class="hero-badge">Business Flow Navigation</div>
         <h1 class="hero-title">{{ pageTitle }}</h1>
         <p>{{ pageDescription }}</p>
         <div class="hero-actions">
@@ -47,12 +47,12 @@
       <div class="hero-card">
         <div class="hero-card-head">
           <div>
-            <div class="hero-card-kicker">Quick Radar</div>
-            <div class="hero-card-title">Academy Radar</div>
+            <div class="hero-card-kicker">Quick Access</div>
+            <div class="hero-card-title">Flow Shortcuts</div>
           </div>
           <div class="hero-card-badge">{{ radarCards.length }} 个入口</div>
         </div>
-        <div class="hero-card-copy">把课程、核销、训练、权限和订单入口压成一个更好扫读的工作区。</div>
+        <div class="hero-card-copy">把训练计划、课程履约、预约处理、权限治理和订单审计入口集中成一块高频工作区。</div>
         <div class="hero-card-grid">
           <button
             v-for="card in radarCards"
@@ -109,91 +109,142 @@ import { useAuthStore } from '../stores/auth'
 
 const navSections = [
   {
-    title: '首页舞台',
+    title: '平台总览',
     items: [
-      { path: '/dashboard', label: '学院主舞台', code: 'HM' },
-      { path: '/permission-center', label: '权限学院', code: 'AC' },
-      { path: '/content', label: '内容工坊', code: 'CT' }
+      { path: '/dashboard', label: '平台经营总览', code: 'HM' }
     ]
   },
   {
-    title: '训练工作台',
+    title: '训练计划链路',
     items: [
-      { path: '/training-plans', label: '训练主线', code: 'PL' },
-      { path: '/courses', label: '课程目录', code: 'CR' },
-      { path: '/check-in-center', label: '前台核销', code: 'CI' },
-      { path: '/schedules', label: '排期课表', code: 'SC' },
-      { path: '/videos', label: '视频实验室', code: 'VD' }
+      { path: '/training-plans', label: '训练计划编排', code: 'PL' },
+      { path: '/videos', label: '训练视频素材', code: 'VD' }
     ]
   },
   {
-    title: '增长运营',
+    title: '课程报名链路',
     items: [
-      { path: '/orders', label: '订单成绩单', code: 'OD' },
-      { path: '/booking-ops', label: '预约大厅', code: 'BK' },
-      { path: '/coach-schedules', label: '教练档期', code: 'CS' },
-      { path: '/coach-apply', label: '教练招募', code: 'CP' },
-      { path: '/operation-logs', label: '操作足迹', code: 'LG' }
+      { path: '/courses', label: '课程基础管理', code: 'CR' },
+      { path: '/schedules', label: '课程排期管理', code: 'SC' },
+      { path: '/check-in-center', label: '课程签到核销', code: 'CI' }
     ]
   },
   {
-    title: '角色工作室',
+    title: '私教预约链路',
     items: [
-      { path: '/permission-matrix', label: '权限矩阵', code: 'MX' },
-      { path: '/role-permission', label: '角色许可', code: 'RP' },
-      { path: '/role-scope', label: '范围边界', code: 'RS' },
-      { path: '/user-roles', label: '角色档案', code: 'UR' }
+      { path: '/coach-apply', label: '教练申请审核', code: 'CP' },
+      { path: '/coach-schedules', label: '教练预约档期', code: 'CS' },
+      { path: '/booking-ops', label: '预约订单处理', code: 'BK' }
+    ]
+  },
+  {
+    title: '平台内容运营',
+    items: [
+      { path: '/content', label: '前台内容运营', code: 'CT' }
+    ]
+  },
+  {
+    title: '财务与审计',
+    items: [
+      { path: '/orders', label: '订单与退款', code: 'OD' },
+      { path: '/operation-logs', label: '操作日志审计', code: 'LG' }
+    ]
+  },
+  {
+    title: '系统与权限',
+    items: [
+      { path: '/permission-center', label: '权限治理总览', code: 'AC' },
+      { path: '/permission-matrix', label: '权限矩阵维护', code: 'MX' },
+      { path: '/role-permission', label: '角色权限分配', code: 'RP' },
+      { path: '/role-scope', label: '角色课程范围', code: 'RS' },
+      { path: '/user-roles', label: '用户角色分配', code: 'UR' }
     ]
   }
 ]
 
 const pageMeta = {
   '/dashboard': {
-    title: '学院主舞台',
-    description: '先看课程目录、学员进度、口碑反馈和行动按钮，再往下进入管理动作。'
+    title: '平台经营总览',
+    description: '先看全局经营数据，再按训练、课程、预约、订单和权限链路进入具体管理动作。'
   },
   '/permission-center': {
-    title: '权限学院',
-    description: '把角色、矩阵、权限缺口和审计记录组织成更清楚的可视化工作区。'
+    title: '权限治理总览',
+    description: '把角色分配、权限矩阵、缺口修复和治理入口收拢到同一个权限治理工作区。'
   },
   '/content': {
-    title: '内容工坊',
-    description: '用更鲜活的方式管理 Banner、公告和系统配置，而不是普通后台表格。'
+    title: '前台内容运营',
+    description: '集中维护 Banner、公告和系统配置，统一控制用户端首页与全局展示内容。'
   },
   '/training-plans': {
-    title: '训练主线编排室',
-    description: '从课程宇宙的角度安排训练计划、动作节点和视频绑定。'
+    title: '训练计划编排',
+    description: '集中维护训练计划、计划项和视频绑定，保障用户端训练链路内容完整。'
+  },
+  '/courses': {
+    title: '课程基础管理',
+    description: '维护课程模板、定价、封面与课程信息，作为课程报名链路的起点。'
+  },
+  '/schedules': {
+    title: '课程排期管理',
+    description: '为课程配置上课时间、教练和名额，承接课程报名与履约。'
   },
   '/check-in-center': {
-    title: '前台核销中心',
-    description: '给门店前台和课程助教使用的极简核销工作台，支持扫码枪与手动输入。'
+    title: '课程签到核销',
+    description: '给门店前台和课程助教使用的签到核销入口，承接课程到店履约。'
+  },
+  '/booking-ops': {
+    title: '预约订单处理',
+    description: '查看预约订单状态、处理超时未支付订单，并跟进预约履约完成情况。'
+  },
+  '/coach-apply': {
+    title: '教练申请审核',
+    description: '审核用户提交的教练申请，作为私教预约链路的准入入口。'
   },
   '/orders': {
-    title: '订单成绩单',
-    description: '把支付、退款和财务摘要拆成更好扫读的学习成绩卡。'
+    title: '订单与退款',
+    description: '集中查看支付、关闭与退款状态，方便财务对账和交易追踪。'
   },
   '/coach-schedules': {
-    title: '教练档期管理台',
-    description: '在这里编排教练可预约时间段；具体预约单的处理仍然放在预约大厅。'
+    title: '教练预约档期',
+    description: '维护教练可被用户预约的时间段，具体预约单处理统一放在预约订单处理。'
   },
   '/videos': {
-    title: '视频实验室',
-    description: '上传、管理和绑定素材时，也保持同一套 playful 控制台体验。'
+    title: '训练视频素材',
+    description: '上传、管理和绑定训练动作视频，作为训练计划编排的底层素材库。'
+  },
+  '/permission-matrix': {
+    title: '权限矩阵维护',
+    description: '查看系统声明权限、已配置权限和缺失权限，维护权限矩阵完整性。'
+  },
+  '/role-permission': {
+    title: '角色权限分配',
+    description: '为不同角色分配可访问的后台能力，保证岗位职责边界清晰。'
+  },
+  '/role-scope': {
+    title: '角色课程范围',
+    description: '维护角色可管理的课程分类范围，限制不同运营岗位的数据边界。'
+  },
+  '/user-roles': {
+    title: '用户角色分配',
+    description: '为后台用户分配角色、启停账号，并查看用户与角色的绑定关系。'
+  },
+  '/operation-logs': {
+    title: '操作日志审计',
+    description: '统一查看后台关键操作日志，追踪谁在什么时间执行了什么动作。'
   }
 }
 
 const heroActions = [
-  { path: '/content', label: '去内容工坊', code: 'CT' },
-  { path: '/videos', label: '去视频实验室', code: 'VD' },
-  { path: '/booking-ops', label: '去预约大厅', code: 'BK' }
+  { path: '/training-plans', label: '去训练计划编排', code: 'PL' },
+  { path: '/booking-ops', label: '去预约订单处理', code: 'BK' },
+  { path: '/permission-center', label: '去权限治理总览', code: 'AC' }
 ]
 
 const radarCards = [
-  { path: '/courses', title: '课程目录', headline: 'Catalog', note: '维护课程池与课程结构', tone: 'peach', code: 'CR' },
-  { path: '/check-in-center', title: '前台核销', headline: 'Check-In', note: '扫码枪快速核销', tone: 'mint', code: 'CI' },
-  { path: '/training-plans', title: '训练主线', headline: 'Progress', note: '编排计划节点', tone: 'mint', code: 'PL' },
-  { path: '/permission-center', title: '权限学院', headline: 'Voices', note: '查看角色修复闭环', tone: 'butter', code: 'AC' },
-  { path: '/orders', title: '订单成绩单', headline: 'Enroll', note: '追踪成交与退款', tone: 'lilac', code: 'OD', wide: true }
+  { path: '/courses', title: '课程基础管理', headline: 'Course', note: '维护课程模板与课程信息', tone: 'peach', code: 'CR' },
+  { path: '/check-in-center', title: '课程签到核销', headline: 'Check-In', note: '快速处理到店签到核销', tone: 'mint', code: 'CI' },
+  { path: '/training-plans', title: '训练计划编排', headline: 'Training', note: '编排计划节点与动作内容', tone: 'mint', code: 'PL' },
+  { path: '/permission-center', title: '权限治理总览', headline: 'Access', note: '查看角色分配与权限缺口', tone: 'butter', code: 'AC' },
+  { path: '/orders', title: '订单与退款', headline: 'Finance', note: '追踪成交、退款与财务状态', tone: 'lilac', code: 'OD', wide: true }
 ]
 
 const route = useRoute()
@@ -202,8 +253,8 @@ const authStore = useAuthStore()
 
 const userLabel = computed(() => authStore.user?.username || '管理员')
 const roleLabel = computed(() => authStore.roles?.[0] || '未识别')
-const pageTitle = computed(() => pageMeta[route.path]?.title || '健身学院控制台')
-const pageDescription = computed(() => pageMeta[route.path]?.description || '把管理后台变成更友好、更有识别度的控制台。')
+const pageTitle = computed(() => pageMeta[route.path]?.title || '健身平台管理端')
+const pageDescription = computed(() => pageMeta[route.path]?.description || '按业务链路整理管理入口，让不同岗位进入系统后能快速找到自己的工作区。')
 
 const handleLogout = () => {
   authStore.logout()

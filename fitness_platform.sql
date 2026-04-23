@@ -578,7 +578,7 @@ INSERT INTO course_category (name, sort, status) VALUES
 
 INSERT INTO system_config (config_key, config_value, remark) VALUES
 ('site_name', '运动健康管理平台', '站点名称'),
-('default_avatar', '/static/avatar/default.png', '默认头像');
+('default_avatar', '/test.png', '默认头像');
 
 -- Extended base seed data for local development and regression
 

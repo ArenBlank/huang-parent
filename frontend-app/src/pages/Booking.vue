@@ -7,7 +7,7 @@
         <p class="section-sub">筛选、选档、支付和评价收进一个工作台，不再一路向下滚。</p>
       </div>
       <div class="booking-stat-pills">
-        <span class="tag">当前列表 {{ schedules.length }}</span>
+        <span class="tag">当前可约 {{ visibleSchedules.length }}</span>
         <span class="tag">未来可预约 {{ effectiveAvailableSchedules }}</span>
         <span class="tag">我的预约 {{ myBookings.length }}</span>
       </div>
@@ -37,7 +37,7 @@
               <div class="detail-list">
                 <div>订单号：{{ lastBooking.orderNo || "-" }}</div>
                 <div>金额：{{ lastBooking.amount ?? "-" }}</div>
-                <div>教练：{{ lastBooking.coachId ? `#${lastBooking.coachId}` : "-" }}</div>
+                <div>教练：{{ coachDisplayName(lastBooking.coachId) }}</div>
               </div>
               <div class="action-row action-row--wrap">
                 <el-button type="primary" size="small" :loading="paying" @click="mockPay">模拟支付</el-button>
@@ -60,7 +60,7 @@
               <div class="detail-card__headline">{{ formatScheduleTime(selected) }}</div>
               <div class="detail-chip-row">
                 <span class="tag">时间段ID {{ selected.id }}</span>
-                <span class="tag">教练 #{{ selected.coachId }}</span>
+                <span class="tag">教练 {{ coachDisplayName(selected.coachId) }}</span>
                 <span class="tag">价格 {{ selected.price }}</span>
                 <span class="tag">余量 {{ remainingSlots(selected) }}</span>
                 <span class="tag">状态 {{ scheduleStatus(selected).text }}</span>
@@ -90,25 +90,29 @@
             </div>
             <el-form label-position="top">
               <div class="booking-filter-row">
-                <el-form-item label="教练ID">
-                  <el-select
-                    v-model="coachId"
-                    filterable
-                    clearable
-                    allow-create
-                    default-first-option
-                    placeholder="留空查看全部"
-                    style="width: 200px"
-                  >
-                    <el-option v-for="id in coachOptions" :key="id" :label="`教练 ${id}`" :value="id" />
-                  </el-select>
+                <el-form-item label="教练">
+                  <div class="coach-picker-field">
+                    <button type="button" class="coach-picker-trigger" @click="openCoachPicker">
+                      <span v-if="selectedCoachOption">{{ coachDisplayName(selectedCoachOption.coachId) }}</span>
+                      <span v-else class="muted">从教练列表中选择</span>
+                    </button>
+                    <el-button
+                      v-if="coachId !== null && coachId !== undefined && coachId !== ''"
+                      text
+                      type="primary"
+                      @click="setCoach(null)"
+                    >
+                      清空
+                    </el-button>
+                  </div>
                 </el-form-item>
-                <el-form-item label="日期">
-                  <el-date-picker v-model="date" type="date" placeholder="可选" value-format="YYYY-MM-DD" />
+                <el-form-item label="预约服务日期">
+                  <el-date-picker v-model="date" type="date" placeholder="筛选某一天的可预约时间段" value-format="YYYY-MM-DD" />
                 </el-form-item>
                 <el-form-item label="快速操作">
                   <div class="quick-wrap">
                     <el-button size="small" :type="coachId === null ? 'primary' : 'default'" @click="setCoach(null)">全部</el-button>
+                    <el-button size="small" plain @click="openCoachPicker">选择教练</el-button>
                   </div>
                 </el-form-item>
                 <el-form-item label="操作" class="booking-filter-action">
@@ -116,8 +120,9 @@
                 </el-form-item>
               </div>
             </el-form>
-            <p class="muted">当前接口仅支持教练ID筛选，教练姓名筛选将在后续版本扩展。</p>
+            <p class="muted">这里显示的是用户当前真正还能预约的时间段，满员和过期档期不会再混进来。</p>
             <div class="detail-chip-row booking-summary-row">
+              <span class="tag">可预约教练 {{ coachPickerOptions.length }}</span>
               <span class="tag">未来时间段 {{ scheduleSummary.futureSchedules ?? 0 }}</span>
               <span class="tag">可预约时间段 {{ effectiveAvailableSchedules }}</span>
               <span class="tag">最近一次开放时间 {{ formatDate(scheduleSummary.lastScheduleDate) }}</span>
@@ -146,18 +151,19 @@
                     <div class="coach-card__body">
                       <div class="coach-card__top">
                         <div>
-                          <strong class="coach-card__name">{{ coach.name }}</strong>
-                          <p class="coach-card__title">{{ coach.title }}</p>
-                        </div>
-                        <span class="coach-card__rating">{{ coach.availableCount ? "可约" : "满员" }}</span>
-                      </div>
+                      <strong class="coach-card__name">{{ coach.name }}</strong>
+                      <p class="coach-card__title">{{ coach.title }}</p>
+                    </div>
+                    <span class="coach-card__rating">{{ coach.availableCount ? "可约" : "满员" }}</span>
+                  </div>
                       <div class="coach-card__tags">
                         <el-tag v-for="tag in coach.tags" :key="tag" size="small" effect="plain">{{ tag }}</el-tag>
                       </div>
+                      <div class="coach-card__highlight">最近可约 {{ coach.nextTime }}</div>
                       <div class="coach-card__meta">
-                        <span>最近 {{ coach.nextTime }}</span>
-                        <span>¥{{ coach.minPrice }} 起</span>
-                        <span>余量 {{ coach.remaining }}</span>
+                        <span>基础价 ¥{{ coach.minPrice }}</span>
+                        <span>当前余量 {{ coach.remaining }}</span>
+                        <span>可约档期 {{ coach.availableCount }}</span>
                       </div>
                       <div class="coach-card__actions">
                         <el-button size="small" round plain @click="viewCoachReviews(coach)">查看评价</el-button>
@@ -169,15 +175,7 @@
               </div>
 
               <div class="schedule-grid-shell" v-loading="loading">
-                <el-alert
-                  v-if="!loading && schedules.length && !availableSchedules"
-                  type="warning"
-                  show-icon
-                  :closable="false"
-                  title="当前筛选结果中没有可预约时间段"
-                  style="margin-bottom: 12px"
-                />
-                <el-empty v-if="!loading && !schedules.length" description="暂无可预约时间段">
+                <el-empty v-if="!loading && !visibleSchedules.length" description="暂无可预约时间段">
                   <div class="empty-actions">
                     <el-button size="small" @click="loadSchedules">重试</el-button>
                     <el-button size="small" @click="goTo('/courses')">去课程报名</el-button>
@@ -186,7 +184,7 @@
                 </el-empty>
                 <div v-else class="schedule-grid">
                   <button
-                    v-for="row in schedules"
+                    v-for="row in visibleSchedules"
                     :key="row.id"
                     type="button"
                     class="schedule-card"
@@ -203,7 +201,7 @@
                     </div>
                     <strong class="schedule-card__time">{{ formatTime(row.startTime) }} - {{ formatTime(row.endTime) }}</strong>
                     <div class="schedule-card__meta">
-                      <span>教练 #{{ row.coachId }}</span>
+                      <span>教练 {{ coachDisplayName(row.coachId) }}</span>
                       <span>余量 {{ remainingSlots(row) }}</span>
                       <span>¥{{ row.price }}</span>
                     </div>
@@ -230,7 +228,7 @@
                   <template #default="{ row }">
                     <div class="booking-table__slot">
                       <strong>{{ formatScheduleTime(row) }}</strong>
-                      <span class="muted">教练 {{ row.coachId ? `#${row.coachId}` : "-" }}</span>
+                      <span class="muted">教练 {{ coachDisplayName(row.coachId) }}</span>
                     </div>
                   </template>
                 </el-table-column>
@@ -317,6 +315,49 @@
       </el-col>
     </el-row>
   </div>
+
+  <el-dialog v-model="coachPickerVisible" title="选择教练" width="760px">
+    <div class="coach-picker-dialog">
+      <div class="coach-picker-dialog__head">
+        <div>
+          <strong>当前可预约教练 {{ filteredCoachOptions.length }} 位</strong>
+          <p>{{ coachPickerNotice }}</p>
+        </div>
+        <el-input
+          v-model="coachPickerKeyword"
+          clearable
+          placeholder="按姓名、账号或擅长领域筛选"
+          style="width: 260px"
+        />
+      </div>
+      <el-empty v-if="!filteredCoachOptions.length && !coachOptionsLoading" description="暂无可选教练">
+        <p class="empty-tip">{{ scheduleEmptyReason }}</p>
+      </el-empty>
+      <div v-else class="coach-picker-grid" v-loading="coachOptionsLoading">
+        <button
+          v-for="coach in filteredCoachOptions"
+          :key="coach.coachId"
+          type="button"
+          class="coach-picker-card"
+          @click="selectCoachOption(coach)"
+        >
+          <div class="coach-picker-card__top">
+            <strong>{{ coachDisplayName(coach.coachId) }}</strong>
+            <span>档案ID {{ coach.coachId }}</span>
+          </div>
+          <div class="coach-picker-card__meta">
+            <span v-if="coach.expertise">{{ coach.expertise }}</span>
+            <span v-if="coach.years !== null && coach.years !== undefined">教龄 {{ coach.years }} 年</span>
+            <span v-if="coach.rating !== null && coach.rating !== undefined">评分 {{ coach.rating }}</span>
+          </div>
+          <div class="coach-picker-card__footer">
+            <span>{{ coach.username || "-" }}</span>
+            <span v-if="coach.price !== null && coach.price !== undefined">基础价 ¥{{ coach.price }}</span>
+          </div>
+        </button>
+      </div>
+    </div>
+  </el-dialog>
 </template>
 
 <script setup>
@@ -326,6 +367,7 @@ import { ElMessage } from "element-plus"
 import { appClient } from "../api/client"
 
 const router = useRouter()
+const fallbackImage = import.meta.env.VITE_FALLBACK_IMAGE || "/test.png"
 const schedules = ref([])
 const loading = ref(false)
 const submitting = ref(false)
@@ -350,6 +392,11 @@ const reviewForm = reactive({
 
 const coachId = ref(null)
 const date = ref("")
+const coachOptions = ref([])
+const coachOptionsLoading = ref(false)
+const coachOptionsUnavailable = ref(false)
+const coachPickerVisible = ref(false)
+const coachPickerKeyword = ref("")
 const scheduleSummary = ref({
   coachId: null,
   totalSchedules: 0,
@@ -366,26 +413,75 @@ const selectedUnavailable = computed(() => {
   return !isScheduleAvailable(selected.value)
 })
 
+const visibleSchedules = computed(() => schedules.value.filter((row) => isScheduleAvailable(row)))
 const availableSchedules = computed(() => schedules.value.filter((row) => isScheduleAvailable(row)).length)
 const effectiveAvailableSchedules = computed(() => {
   const count = Number(scheduleSummary.value?.availableSchedules)
   return Number.isFinite(count) ? count : availableSchedules.value
 })
 const hasCoachFilter = computed(() => coachId.value !== null && coachId.value !== undefined && String(coachId.value).trim() !== "")
+const derivedCoachOptions = computed(() => {
+  const map = new Map()
+  visibleSchedules.value.forEach((row) => {
+    const id = Number(row?.coachId)
+    if (!Number.isFinite(id) || map.has(id)) return
+    map.set(id, {
+      coachId: id,
+      displayName: row?.coachName || row?.coachDisplayName || `教练档案 ${id}`,
+      username: row?.coachUsername || "",
+      nickname: row?.coachNickname || row?.coachName || "",
+      avatar: row?.coachAvatar || row?.avatar || row?.photoUrl || row?.imageUrl || "",
+      expertise: row?.coachTitle || row?.specialties || row?.tags || coachPersona(id).title,
+      years: row?.coachYears ?? null,
+      price: row?.price ?? null,
+      rating: row?.rating ?? null
+    })
+  })
+  return Array.from(map.values()).sort((a, b) => String(a.displayName || "").localeCompare(String(b.displayName || ""), "zh-CN"))
+})
+const coachPickerOptions = computed(() => (coachOptions.value.length ? coachOptions.value : derivedCoachOptions.value))
+const coachOptionMap = computed(() => {
+  const map = new Map()
+  coachPickerOptions.value.forEach((item) => map.set(Number(item.coachId), item))
+  return map
+})
+const selectedCoachOption = computed(() => coachOptionMap.value.get(Number(coachId.value)) || null)
+const filteredCoachOptions = computed(() => {
+  const keyword = coachPickerKeyword.value.trim().toLowerCase()
+  if (!keyword) return coachPickerOptions.value
+  return coachPickerOptions.value.filter((item) => {
+    return [
+      item.displayName,
+      item.username,
+      item.nickname,
+      item.expertise
+    ].some((field) => String(field || "").toLowerCase().includes(keyword))
+  })
+})
+const coachPickerNotice = computed(() => {
+  if (coachOptions.value.length) {
+    return "这里展示的是当前存在可预约时间段的教练列表。"
+  }
+  if (coachOptionsUnavailable.value) {
+    return "教练名册接口暂时不可用，当前先根据可预约档期自动整理教练列表，不影响继续预约。"
+  }
+  return "这里展示的是当前存在可预约时间段的教练列表。"
+})
 const coachCards = computed(() => {
   const map = new Map()
-  schedules.value.forEach((row) => {
+  visibleSchedules.value.forEach((row) => {
     const id = Number(row?.coachId)
     if (!Number.isFinite(id)) return
+    const meta = coachOptionMap.value.get(id)
     const persona = coachPersona(id)
     if (!map.has(id)) {
       map.set(id, {
         id,
-        name: row.coachName || `教练 #${id}`,
-        title: row.coachTitle || persona.title,
-        tags: normalizeCoachTags(row.specialties || row.tags, persona.tags),
+        name: coachDisplayName(id),
+        title: meta?.expertise || row.coachTitle || persona.title,
+        tags: normalizeCoachTags(meta?.expertise || row.specialties || row.tags, persona.tags),
         photo: resolveCoachPhoto(row),
-        initial: String(row.coachName || id).slice(0, 1),
+        initial: String(meta?.displayName || row.coachName || id).slice(0, 1),
         schedules: [],
         availableCount: 0,
         remaining: 0,
@@ -400,20 +496,19 @@ const coachCards = computed(() => {
     const price = Number(row.price)
     if (Number.isFinite(price)) card.minPrice = card.minPrice === null ? price : Math.min(card.minPrice, price)
     if (!card.nextSchedule || scheduleTimeValue(row) < scheduleTimeValue(card.nextSchedule)) card.nextSchedule = row
-    if (isScheduleAvailable(row)) {
-      card.availableCount += 1
-      if (!card.targetSchedule || scheduleTimeValue(row) < scheduleTimeValue(card.targetSchedule)) card.targetSchedule = row
-    }
+    card.availableCount += 1
+    if (!card.targetSchedule || scheduleTimeValue(row) < scheduleTimeValue(card.targetSchedule)) card.targetSchedule = row
   })
   return Array.from(map.values())
     .map((card) => {
-      const schedule = card.targetSchedule || card.nextSchedule
+      const schedule = card.targetSchedule
       return {
         ...card,
         nextTime: formatScheduleTime(schedule),
         minPrice: card.minPrice ?? "-"
       }
     })
+    .filter((card) => !!card.targetSchedule)
     .sort((a, b) => b.availableCount - a.availableCount || scheduleTimeValue(a.targetSchedule) - scheduleTimeValue(b.targetSchedule))
 })
 
@@ -442,11 +537,13 @@ const scheduleSummaryHint = computed(() => {
 })
 
 const createBookingHint = computed(() => {
-  if (!schedules.value.length) {
+  if (!visibleSchedules.value.length) {
     return "当前没有可选的可预约时间段，先看上方说明或刷新列表。"
   }
   return "请先从上方时间段列表中选择一个可预约时间段。"
 })
+
+const isMissingEndpointMessage = (message) => String(message || "").includes("接口不存在")
 
 const parseCoachId = (value) => {
   if (value === null || value === undefined || value === "") return null
@@ -470,7 +567,17 @@ const normalizeCoachTags = (value, fallback) => {
 }
 
 const resolveCoachPhoto = (row) => {
-  return row?.coachAvatar || row?.avatar || row?.photoUrl || row?.imageUrl || "/test.png"
+  const meta = coachOptionMap.value.get(Number(row?.coachId))
+  return meta?.avatar || row?.coachAvatar || row?.avatar || row?.photoUrl || row?.imageUrl || fallbackImage
+}
+
+const coachDisplayName = (coachIdValue) => {
+  const id = Number(coachIdValue)
+  const coach = coachOptionMap.value.get(id)
+  if (coach?.displayName) return coach.displayName
+  if (coach?.nickname) return coach.nickname
+  if (coach?.username) return coach.username
+  return Number.isFinite(id) ? `教练档案 ${id}` : "-"
 }
 
 const scheduleTimeValue = (row) => {
@@ -532,27 +639,42 @@ const loadScheduleSummary = async () => {
   }
 }
 
+const loadCoachOptions = async () => {
+  try {
+    coachOptionsLoading.value = true
+    const { data } = await appClient.get("/app/booking/coach-options")
+    if (data.code !== 200) throw new Error(data.message || "加载教练列表失败")
+    coachOptions.value = data.data || []
+    coachOptionsUnavailable.value = false
+  } catch (err) {
+    coachOptions.value = []
+    coachOptionsUnavailable.value = true
+    if (!isMissingEndpointMessage(err.message)) {
+      ElMessage.error(err.message || "加载教练列表失败")
+    }
+  } finally {
+    coachOptionsLoading.value = false
+  }
+}
+
 const loadSchedules = async () => {
   try {
     loading.value = true
     const params = {}
     const parsedCoachId = parseCoachId(coachId.value)
     if (coachId.value !== null && coachId.value !== undefined && coachId.value !== "") {
-      if (parsedCoachId === null) {
-        ElMessage.warning("教练ID需为数字")
-        loading.value = false
-        return
-      }
       params.coachId = parsedCoachId
     }
     if (date.value) params.date = date.value
     const { data } = await appClient.get("/app/booking/schedule/list", { params })
     if (data.code !== 200) throw new Error(data.message || "加载可预约时间段失败")
     schedules.value = data.data || []
-    if (schedules.value.length) {
-      selected.value = schedules.value.find((item) => isScheduleAvailable(item)) || schedules.value[0]
-    } else {
+    const nextAvailable = schedules.value.find((item) => isScheduleAvailable(item)) || null
+    if (selected.value && !schedules.value.some((item) => Number(item.id) === Number(selected.value.id) && isScheduleAvailable(item))) {
       selected.value = null
+    }
+    if (!selected.value) {
+      selected.value = nextAvailable
     }
     if (parsedCoachId !== null) localStorage.setItem(STORAGE_COACH_ID, String(parsedCoachId))
     await loadScheduleSummary()
@@ -567,6 +689,19 @@ const setCoach = (value) => {
   coachId.value = value
   if (value === null || value === undefined || value === "") localStorage.removeItem(STORAGE_COACH_ID)
   else localStorage.setItem(STORAGE_COACH_ID, String(value))
+}
+
+const openCoachPicker = async () => {
+  coachPickerVisible.value = true
+  if (!coachOptions.value.length && !coachOptionsLoading.value) {
+    await loadCoachOptions()
+  }
+}
+
+const selectCoachOption = async (coach) => {
+  setCoach(coach?.coachId ?? null)
+  coachPickerVisible.value = false
+  await loadSchedules()
 }
 
 const bookCoach = async (coach) => {
@@ -594,16 +729,6 @@ const viewCoachReviews = async (coach) => {
   await nextTick()
   reviewSectionRef.value?.scrollIntoView?.({ behavior: "smooth", block: "start" })
 }
-
-const coachOptions = computed(() => {
-  const set = new Set()
-  schedules.value.forEach((item) => {
-    if (item?.coachId !== null && item?.coachId !== undefined) set.add(item.coachId)
-  })
-  const parsed = parseCoachId(coachId.value)
-  if (parsed !== null) set.add(parsed)
-  return Array.from(set).sort((a, b) => Number(a) - Number(b))
-})
 
 const selectSchedule = (row) => {
   if (!isScheduleAvailable(row)) {
@@ -894,6 +1019,7 @@ const loadCoachId = () => {
 }
 
 loadCoachId()
+loadCoachOptions()
 loadSchedules()
 loadMyBookings()
 loadLastBooking()
@@ -1027,6 +1153,31 @@ loadLastBooking()
   margin: 0;
 }
 
+.coach-picker-field {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+}
+
+.coach-picker-trigger {
+  min-width: 220px;
+  min-height: 42px;
+  padding: 0 14px;
+  border: 2px solid var(--booking-border-strong);
+  border-radius: 14px;
+  background: #fff;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+  box-shadow: 0 5px 0 rgba(23, 17, 38, 0.08);
+}
+
+.coach-picker-trigger:hover {
+  transform: translateY(-1px);
+}
+
 .booking-filter-action :deep(.el-form-item__label) {
   color: transparent;
 }
@@ -1051,6 +1202,67 @@ loadLastBooking()
 
 .coach-list-toolbar {
   margin-bottom: 10px;
+}
+
+.coach-picker-dialog {
+  display: grid;
+  gap: 16px;
+}
+
+.coach-picker-dialog__head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+}
+
+.coach-picker-dialog__head p {
+  margin: 4px 0 0;
+  color: #4d456d;
+}
+
+.coach-picker-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  min-height: 120px;
+}
+
+.coach-picker-card {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 2px solid var(--booking-border-strong);
+  border-radius: 18px;
+  background: linear-gradient(180deg, #ffffff, #f5f2ff);
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease;
+  box-shadow: 0 6px 0 rgba(23, 17, 38, 0.08);
+}
+
+.coach-picker-card:hover {
+  transform: translateY(-2px);
+}
+
+.coach-picker-card__top,
+.coach-picker-card__footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.coach-picker-card__top span,
+.coach-picker-card__meta,
+.coach-picker-card__footer {
+  color: #4d456d;
+  font-size: 12px;
+}
+
+.coach-picker-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
 }
 
 .coach-list {
@@ -1158,6 +1370,12 @@ loadLastBooking()
   background: #f7f3ff;
   color: var(--eco-primary);
   font-weight: 700;
+}
+
+.coach-card__highlight {
+  color: var(--eco-text);
+  font-size: 14px;
+  font-weight: 800;
 }
 
 .coach-card__meta {

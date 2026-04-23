@@ -26,7 +26,6 @@ const routes = [
   {
     path: '/',
     component: AdminLayout,
-    meta: { requiresAuth: true },
     children: [
       { path: 'dashboard', component: Dashboard },
       { path: 'courses', component: Courses },

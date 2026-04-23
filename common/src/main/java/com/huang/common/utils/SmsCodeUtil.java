@@ -13,6 +13,8 @@ import java.util.concurrent.ThreadLocalRandom;
 @Component
 public class SmsCodeUtil {
 
+    private static final String DEFAULT_DEV_SMS_CODE = "123456";
+
     private final DevelopmentConfig developmentConfig;
     private final RedisCacheSupport redisCacheSupport;
 
@@ -23,8 +25,9 @@ public class SmsCodeUtil {
 
     public String sendSmsCode(String phone, String type) {
         if (developmentConfig.isEnabled()) {
-            log.info("开发模式短信验证码: phone={}, type={}, code={}", phone, type, developmentConfig.getFixedSmsCode());
-            return developmentConfig.getFixedSmsCode();
+            String fixedCode = resolveFixedCode();
+            log.info("开发模式短信验证码: phone={}, type={}, code={}", phone, type, fixedCode);
+            return fixedCode;
         }
 
         String code = generateRandomCode();
@@ -36,7 +39,7 @@ public class SmsCodeUtil {
 
     public boolean verifySmsCode(String phone, String code, String type) {
         if (developmentConfig.isEnabled() && developmentConfig.isSkipSmsValidation()) {
-            boolean isValid = developmentConfig.getFixedSmsCode().equals(code);
+            boolean isValid = resolveFixedCode().equals(code);
             log.info("开发模式验证码校验: phone={}, type={}, success={}", phone, type, isValid);
             return isValid;
         }
@@ -102,5 +105,10 @@ public class SmsCodeUtil {
             }
         }
         redisCacheSupport.setString(failKey, String.valueOf(failCount + 1), RedisConstant.APP_LOGIN_CODE_TTL_SEC);
+    }
+
+    private String resolveFixedCode() {
+        String fixedCode = developmentConfig.getFixedSmsCode();
+        return StringUtils.hasText(fixedCode) ? fixedCode : DEFAULT_DEV_SMS_CODE;
     }
 }

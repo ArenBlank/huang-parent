@@ -44,6 +44,13 @@ public class AdminCoachScheduleController {
         return Result.ok(adminCoachScheduleBizService.listSchedules(coachId, scheduleDate, status));
     }
 
+    @Operation(summary = "Coach options for schedule management")
+    @GetMapping("/coach-options")
+    @RequireAdminPermission({"booking:schedule"})
+    public Result<?> coachOptions() {
+        return Result.ok(adminCoachScheduleBizService.listCoachOptions());
+    }
+
     @Operation(summary = "Create coach schedule")
     @PostMapping
     @RequireAdminPermission({"booking:schedule"})

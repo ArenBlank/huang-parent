@@ -1,0 +1,41 @@
+- generic [ref=e5]:
+  - generic [ref=e6]:
+    - paragraph [ref=e7]: Sustainability Platform
+    - heading "把训练旅程做成一片持续生长的森林" [level=1] [ref=e8]
+    - paragraph [ref=e9]: 训练计划、课程预约和打卡记录会沉淀成你的长期成长档案。登录前保持中性预览，登录后展示真实进度。
+    - generic [ref=e10]:
+      - article [ref=e11]:
+        - paragraph [ref=e12]: 碳足迹预览
+        - paragraph [ref=e13]: 0%
+        - paragraph [ref=e14]: 新用户或样本不足时默认持平，不展示负向暗示。
+      - article [ref=e15]:
+        - paragraph [ref=e16]: 认证徽章
+        - paragraph [ref=e17]: "03"
+        - paragraph [ref=e18]: 绿色训练流程、课程记录、订单数据可追踪。
+      - article [ref=e19]:
+        - paragraph [ref=e20]: 影响指标
+        - paragraph [ref=e21]: LIVE
+        - paragraph [ref=e22]: 登录后查看训练进度、计划状态和关键业务数据。
+  - generic [ref=e23]:
+    - generic [ref=e24]:
+      - paragraph [ref=e25]: App Sign In
+      - heading "进入用户端" [level=2] [ref=e26]
+      - paragraph [ref=e27]: 账号密码通过后再完成滑块拼图验证，验证成功才会提交登录或注册请求。
+    - tablist "登录注册切换" [ref=e28]:
+      - button "登录" [ref=e29] [cursor=pointer]
+      - button "注册" [ref=e30] [cursor=pointer]
+    - generic [ref=e31]:
+      - generic [ref=e32]:
+        - generic [ref=e33]: 账号
+        - textbox "账号" [ref=e37]:
+          - /placeholder: 请输入账号
+      - generic [ref=e38]:
+        - generic [ref=e39]: 密码
+        - textbox "密码" [ref=e43]:
+          - /placeholder: 请输入密码
+      - button "验证并登录" [ref=e44] [cursor=pointer]:
+        - generic [ref=e45]: 验证并登录
+    - generic [ref=e46]:
+      - button "填充测试账号" [ref=e47] [cursor=pointer]:
+        - generic [ref=e48]: 填充测试账号
+      - paragraph [ref=e49]: 常用测试账号：root / root。短信验证码入口已移除。

@@ -2,11 +2,11 @@
   <div class="card">
     <div class="toolbar">
       <div>
-        <h2>预约运维</h2>
-        <p>查看教练预约、完成预约、清理超时未支付</p>
+        <h2>预约订单处理</h2>
+        <p>查看教练预约订单、手动完成履约，并清理超时未支付订单。</p>
       </div>
       <div class="toolbar-actions">
-        <el-button @click="goCoachSchedules">去管理可预约时间段</el-button>
+        <el-button @click="goCoachSchedules">去管理教练预约档期</el-button>
         <el-select v-model="query.status" placeholder="状态" clearable style="width: 150px">
           <el-option label="待支付" value="WAIT_PAY" />
           <el-option label="已支付" value="PAID" />
@@ -61,7 +61,7 @@
     >
       <el-table-column prop="id" label="ID" width="70" />
       <el-table-column prop="userId" label="用户" width="90" />
-      <el-table-column prop="coachId" label="教练" width="90" />
+      <el-table-column prop="coachId" label="教练档案" width="110" />
       <el-table-column prop="scheduleId" label="档期" width="90" />
       <el-table-column prop="orderId" label="订单" width="90" />
       <el-table-column label="预约状态" width="120">
@@ -120,7 +120,7 @@
           <div class="value">{{ selectedBooking.userId }}</div>
         </div>
         <div>
-          <div class="label">教练ID</div>
+          <div class="label">教练档案ID</div>
           <div class="value">{{ selectedBooking.coachId }}</div>
         </div>
         <div>

@@ -15,11 +15,10 @@ import VideoPlayer from '../pages/VideoPlayer.vue'
 const routes = [
   { path: '/', redirect: '/home' },
   { path: '/login', component: Login },
-  { path: '/video-player', component: VideoPlayer, meta: { requiresAuth: true } },
+  { path: '/video-player', component: VideoPlayer },
   {
     path: '/',
     component: AppLayout,
-    meta: { requiresAuth: true },
     children: [
       { path: 'home', component: Home },
       { path: 'plans', component: Plans },

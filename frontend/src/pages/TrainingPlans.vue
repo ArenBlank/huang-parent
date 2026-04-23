@@ -5,7 +5,7 @@
         <div>
           <div class="eyebrow">Training Ops</div>
           <h2>训练计划工作台</h2>
-          <p>集中管理训练计划、计划项和视频绑定，让用户端训练主线始终有内容可推。</p>
+          <p>集中管理训练计划、计划项和视频绑定，让用户端训练计划链路始终有内容可推。</p>
         </div>
         <div class="toolbar-actions">
           <span class="code-pill mono">PLAN OPS / CRUD / BIND VIDEO</span>
@@ -43,7 +43,7 @@
         :closable="false"
         show-icon
         style="margin-top: 16px;"
-        title="当前计划较少。新增更多计划后，用户端才会出现更明显的训练主线切换体验。"
+        title="当前计划较少。新增更多计划后，用户端才会出现更明显的训练计划切换体验。"
       />
     </section>
 
@@ -76,7 +76,7 @@
                 <template #default="{ row }">
                   <div class="plan-summary-cell">
                     <span class="tag">目标 {{ row.goal || '-' }}</span>
-                    <span class="tag">难度 {{ row.level || '-' }}</span>
+                    <span class="tag">难度 {{ getDifficultyLabel(row.level) }}</span>
                     <span class="tag">周期 {{ row.durationWeeks || 0 }} 周</span>
                     <span class="tag">计划项 {{ row.itemCount || 0 }}</span>
                   </div>
@@ -120,7 +120,7 @@
               <div class="plan-title">{{ selectedDetail.plan.title }}</div>
               <div class="chip-row">
                 <span class="tag">目标 {{ selectedDetail.plan.goal || '-' }}</span>
-                <span class="tag">难度 {{ selectedDetail.plan.level || '-' }}</span>
+                <span class="tag">难度 {{ getDifficultyLabel(selectedDetail.plan.level) }}</span>
                 <span class="tag">周期 {{ selectedDetail.plan.durationWeeks || 0 }} 周</span>
               </div>
               <div class="section-copy">
@@ -218,13 +218,59 @@
           <el-input v-model.trim="planForm.goal" placeholder="例如 fat_loss / muscle_gain" />
         </el-form-item>
         <el-form-item label="难度">
-          <el-input v-model.trim="planForm.level" placeholder="例如 beginner / intermediate" />
+          <el-select
+            v-model="planForm.level"
+            placeholder="请选择计划难度"
+            style="width: 100%"
+          >
+            <el-option
+              v-for="option in difficultyOptions"
+              :key="option.value"
+              :label="option.label"
+              :value="option.value"
+            />
+            <el-option
+              v-if="showCustomDifficultyOption"
+              :label="getDifficultyLabel(planForm.level)"
+              :value="planForm.level"
+            />
+          </el-select>
         </el-form-item>
         <el-form-item label="周期（周）">
           <el-input v-model.number="planForm.durationWeeks" />
         </el-form-item>
-        <el-form-item label="封面 URL">
-          <el-input v-model.trim="planForm.coverUrl" placeholder="建议填写可公开访问的图片地址" />
+        <el-form-item label="封面图片">
+          <div class="cover-upload-panel">
+            <el-upload
+              class="cover-uploader"
+              :show-file-list="false"
+              :http-request="uploadCoverImage"
+              :before-upload="beforeCoverUpload"
+              accept="image/png,image/jpeg,image/webp,image/gif"
+              :disabled="uploadingCover"
+            >
+              <template v-if="planForm.coverUrl">
+                <el-image :src="coverPreviewUrl" fit="cover" class="cover-preview drawer-cover-preview">
+                  <template #error>
+                    <img :src="defaultCoverUrl" style="width: 100%; height: 100%; object-fit: cover;" />
+                  </template>
+                </el-image>
+              </template>
+              <template v-else>
+                <div class="cover-uploader-placeholder">+</div>
+              </template>
+            </el-upload>
+
+            <div class="cover-upload-meta">
+              <div class="cover-upload-title">点击上传封面</div>
+              <div class="cover-upload-tip">从当前访问页面的用户本地设备选择图片，上传后会自动存入 MinIO 并回填地址。</div>
+              <div class="cover-upload-actions">
+                <el-button text @click="useDefaultCover">使用默认图</el-button>
+                <el-button text @click="clearCover" :disabled="!planForm.coverUrl">清空封面</el-button>
+                <span v-if="uploadingCover" class="cover-upload-status">正在上传图片...</span>
+              </div>
+            </div>
+          </div>
         </el-form-item>
         <el-form-item label="状态">
           <el-select v-model.number="planForm.status">
@@ -286,6 +332,20 @@ import { computed, onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { adminClient } from '../api/client'
 
+const defaultCoverUrl = import.meta.env.VITE_FALLBACK_IMAGE || '/test.png'
+
+const difficultyMap = {
+  BEGINNER: '初级',
+  INTERMEDIATE: '中级',
+  ADVANCED: '高级'
+}
+
+const difficultyOptions = [
+  { label: difficultyMap.BEGINNER, value: 'beginner' },
+  { label: difficultyMap.INTERMEDIATE, value: 'intermediate' },
+  { label: difficultyMap.ADVANCED, value: 'advanced' }
+]
+
 const plans = ref([])
 const loading = ref(false)
 const detailLoading = ref(false)
@@ -299,6 +359,7 @@ const editingPlanId = ref(null)
 const editingItemId = ref(null)
 const planSaving = ref(false)
 const itemSaving = ref(false)
+const uploadingCover = ref(false)
 
 const activePlanCount = computed(() => plans.value.filter((item) => item.status === 1).length)
 const inactivePlanCount = computed(() => plans.value.filter((item) => item.status !== 1).length)
@@ -311,6 +372,10 @@ const riskHint = computed(() => {
 })
 const planDrawerTitle = computed(() => (editingPlanId.value ? '编辑训练计划' : '新建训练计划'))
 const itemDrawerTitle = computed(() => (editingItemId.value ? '编辑计划项' : '新增计划项'))
+const coverPreviewUrl = computed(() => planForm.coverUrl || defaultCoverUrl)
+const showCustomDifficultyOption = computed(
+  () => Boolean(planForm.level) && !difficultyOptions.some((option) => option.value === planForm.level)
+)
 
 const planForm = reactive({
   title: '',
@@ -331,6 +396,19 @@ const itemForm = reactive({
   videoId: null,
   sort: 1
 })
+
+const normalizeLevelValue = (value) => {
+  const normalized = String(value || '').trim().toLowerCase()
+  if (normalized === 'beginner' || normalized === 'intermediate' || normalized === 'advanced') {
+    return normalized
+  }
+  return normalized || 'beginner'
+}
+
+const getDifficultyLabel = (value) => {
+  const key = String(value || '').trim().toUpperCase()
+  return difficultyMap[key] || value || '-'
+}
 
 const resetPlanForm = () => {
   editingPlanId.value = null
@@ -414,7 +492,7 @@ const openPlanDrawer = (row) => {
     editingPlanId.value = row.id
     planForm.title = row.title || ''
     planForm.goal = row.goal || ''
-    planForm.level = row.level || 'beginner'
+    planForm.level = normalizeLevelValue(row.level)
     planForm.durationWeeks = row.durationWeeks ?? 4
     planForm.coverUrl = row.coverUrl || ''
     planForm.status = row.status ?? 1
@@ -446,12 +524,59 @@ const openItemDrawer = (row) => {
 }
 
 const fillPlanSample = () => {
-  planForm.title = '8周增肌基础计划'
-  planForm.goal = 'muscle_gain'
-  planForm.level = 'intermediate'
+  planForm.title = '8周减脂基础计划'
+  planForm.goal = '减脂塑形'
+  planForm.level = 'beginner'
   planForm.durationWeeks = 8
-  planForm.coverUrl = 'https://images.unsplash.com/photo-1517836357463-d25dfeac3438?w=1200'
+  planForm.coverUrl = defaultCoverUrl
   planForm.status = 1
+}
+
+const useDefaultCover = () => {
+  planForm.coverUrl = defaultCoverUrl
+}
+
+const clearCover = () => {
+  planForm.coverUrl = ''
+}
+
+const beforeCoverUpload = (file) => {
+  const allowTypes = ['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+  const isImage = allowTypes.includes(file.type)
+  if (!isImage) {
+    ElMessage.error('仅支持上传 JPG、PNG、WEBP、GIF 图片')
+    return false
+  }
+  const isLt5M = file.size / 1024 / 1024 < 5
+  if (!isLt5M) {
+    ElMessage.error('图片大小不能超过 5MB')
+    return false
+  }
+  return true
+}
+
+const uploadCoverImage = async (options) => {
+  try {
+    uploadingCover.value = true
+    const formData = new FormData()
+    formData.append('file', options.file)
+    const { data } = await adminClient.post('/admin/upload/image', formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    })
+    if (data.code !== 200 || !data.data) {
+      throw new Error(data.message || '封面上传失败')
+    }
+    planForm.coverUrl = data.data
+    ElMessage.success('封面上传成功')
+    options.onSuccess?.(data.data)
+  } catch (error) {
+    ElMessage.error(error.message || '封面上传失败')
+    options.onError?.(error)
+  } finally {
+    uploadingCover.value = false
+  }
 }
 
 const fillItemSample = () => {
@@ -617,6 +742,75 @@ onMounted(async () => {
   box-shadow: 0 8px 0 rgba(52, 45, 105, 0.08);
 }
 
+.cover-upload-panel {
+  display: flex;
+  align-items: center;
+  gap: 22px;
+}
+
+.cover-uploader :deep(.el-upload) {
+  width: 160px;
+  height: 160px;
+  border: 1px dashed var(--border);
+  border-radius: 20px;
+  overflow: hidden;
+  background: linear-gradient(180deg, #ffffff, #f7f5ff);
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.cover-uploader :deep(.el-upload:hover) {
+  border-color: #6d67ff;
+  box-shadow: 0 10px 24px rgba(52, 45, 105, 0.12);
+}
+
+.drawer-cover-preview {
+  width: 160px;
+  height: 160px;
+  border-radius: 20px;
+  box-shadow: none;
+}
+
+.cover-uploader-placeholder {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  color: #9aa6b2;
+  font-size: 48px;
+}
+
+.cover-upload-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 320px;
+}
+
+.cover-upload-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.cover-upload-tip {
+  color: #8aa0af;
+  font-size: 13px;
+  line-height: 1.7;
+}
+
+.cover-upload-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.cover-upload-status {
+  color: #6d67ff;
+  font-size: 12px;
+}
+
 @media (max-width: 900px) {
   .plan-hero {
     flex-direction: column;
@@ -625,6 +819,11 @@ onMounted(async () => {
   .cover-preview {
     width: 100%;
     max-width: 360px;
+  }
+
+  .cover-upload-panel {
+    flex-direction: column;
+    align-items: flex-start;
   }
 }
 </style>

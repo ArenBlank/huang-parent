@@ -33,7 +33,7 @@ const PERMISSION_NAME_MAP = {
   'course:publish': '课程发布',
   'course:schedule': '课程排期管理',
   'course:checkin': '课程核销',
-  'booking:schedule': '教练档期管理',
+  'booking:schedule': '教练预约档期管理',
   'coach:apply:audit': '教练申请审核',
   'refund:audit': '退款审核',
   'pay:callback:audit': '支付回调审计',

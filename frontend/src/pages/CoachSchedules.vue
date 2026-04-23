@@ -1,17 +1,30 @@
-<template>
+﻿<template>
   <div class="card">
     <div class="toolbar">
       <div>
-        <h2>教练档期</h2>
-        <p>这里管理的是教练可预约时间段，处理具体预约单请前往预约大厅。</p>
+        <h2>教练预约档期</h2>
+        <p>先从教练名册里选人，再为教练创建某一天可预约的服务时间段。这里使用的是教练档案，不是角色管理里的角色 ID。</p>
       </div>
       <div class="toolbar-actions">
-        <el-button @click="goBookingOps">前往预约大厅</el-button>
+        <el-button @click="goBookingOps">前往预约订单处理</el-button>
         <el-button type="primary" @click="openCreateDrawer">新建可预约时间段</el-button>
       </div>
     </div>
 
+    <el-alert
+      type="info"
+      :closable="false"
+      show-icon
+      title="列表中的“档案ID”才是排班、预约和评价链路里真正使用的教练标识，不是角色管理里的角色ID。"
+      class="coach-alert"
+    />
+
     <div class="summary-grid">
+      <div class="summary-card">
+        <div class="summary-label">可排班教练</div>
+        <div class="summary-value">{{ coachOptions.length }}</div>
+        <div class="summary-sub">已审核通过且可用于排班</div>
+      </div>
       <div class="summary-card">
         <div class="summary-label">档期总数</div>
         <div class="summary-value">{{ tableData.length }}</div>
@@ -25,7 +38,7 @@
       <div class="summary-card">
         <div class="summary-label">已有预约</div>
         <div class="summary-value">{{ bookedCount }}</div>
-        <div class="summary-sub">不可删除档期</div>
+        <div class="summary-sub">已有预约的档期不可删除</div>
       </div>
       <div class="summary-card">
         <div class="summary-label">未来可用</div>
@@ -35,25 +48,45 @@
     </div>
 
     <div class="filter-panel">
+      <div class="filter-panel__head">
+        <div>
+          <h3>筛选预约档期</h3>
+          <p>教练必须从列表中选，不再要求手输数字。日期筛选的是“用户实际预约和到店服务的日期”。</p>
+        </div>
+        <el-button plain @click="openCoachPicker('filter')">查看教练名册</el-button>
+      </div>
+
       <el-form :inline="true" class="filter-form">
-        <el-form-item label="教练 ID">
-          <el-input
-            v-model="queryForm.coachId"
-            placeholder="输入教练档案 ID"
-            clearable
-            style="width: 180px"
-          />
+        <el-form-item label="教练">
+          <div class="coach-picker-field">
+            <button type="button" class="coach-picker-trigger" @click="openCoachPicker('filter')">
+              <span v-if="selectedFilterCoach">{{ coachOptionLabel(selectedFilterCoach) }}</span>
+              <span v-else class="muted">从教练列表中选择</span>
+            </button>
+            <el-button
+              v-if="queryForm.coachId !== null"
+              text
+              type="primary"
+              @click="clearSelectedCoach('filter')"
+            >
+              清空
+            </el-button>
+          </div>
+          <div class="field-help">当前共 {{ coachOptions.length }} 位可排班教练。显示名称来自教练档案，不是角色表。</div>
         </el-form-item>
-        <el-form-item label="日期">
+
+        <el-form-item label="预约服务日期">
           <el-date-picker
             v-model="queryForm.scheduleDate"
             type="date"
             value-format="YYYY-MM-DD"
-            placeholder="选择日期"
+            placeholder="筛选某一天的预约档期"
             clearable
-            style="width: 180px"
+            style="width: 220px"
           />
+          <div class="field-help">这一天就是用户实际预约和到店服务的日期，不是创建时间，也不是最晚预约时间。</div>
         </el-form-item>
+
         <el-form-item label="状态">
           <el-select
             v-model="queryForm.status"
@@ -65,6 +98,7 @@
             <el-option label="停用" :value="0" />
           </el-select>
         </el-form-item>
+
         <el-form-item>
           <el-button type="primary" @click="loadSchedules" :loading="loading">查询</el-button>
           <el-button @click="resetQuery">重置</el-button>
@@ -73,15 +107,23 @@
     </div>
 
     <el-table :data="tableData" style="width: 100%" v-loading="loading">
-      <el-table-column prop="id" label="ID" width="70" />
-      <el-table-column prop="coachId" label="教练ID" width="100" />
-      <el-table-column prop="scheduleDate" label="日期" width="140" />
-      <el-table-column label="开始时间" width="140">
+      <el-table-column prop="id" label="档期ID" width="88" />
+      <el-table-column label="教练" min-width="240">
+        <template #default="{ row }">
+          <div class="coach-cell">
+            <strong>{{ coachDisplayName(row.coachId) }}</strong>
+            <span>档案ID {{ row.coachId }}</span>
+            <span v-if="coachDisplayMeta(row.coachId)">{{ coachDisplayMeta(row.coachId) }}</span>
+          </div>
+        </template>
+      </el-table-column>
+      <el-table-column prop="scheduleDate" label="预约服务日期" width="140" />
+      <el-table-column label="开始服务时间" width="140">
         <template #default="{ row }">
           {{ formatTime(row.startTime) }}
         </template>
       </el-table-column>
-      <el-table-column label="结束时间" width="140">
+      <el-table-column label="结束服务时间" width="140">
         <template #default="{ row }">
           {{ formatTime(row.endTime) }}
         </template>
@@ -134,8 +176,8 @@
 
   <el-drawer
     v-model="drawerVisible"
-    :title="drawerMode === 'create' ? '新建可预约时间段' : '编辑教练档期'"
-    size="36%"
+    :title="drawerMode === 'create' ? '新建可预约时间段' : '编辑教练预约档期'"
+    size="38%"
     destroy-on-close
   >
     <el-alert
@@ -154,43 +196,57 @@
       label-position="top"
       class="schedule-form"
     >
-      <el-form-item label="教练 ID" prop="coachId">
-        <el-input-number
-          v-model="form.coachId"
-          :min="1"
-          :disabled="isReadonlyEdit"
-          controls-position="right"
-          style="width: 100%"
-        />
+      <el-form-item label="教练" prop="coachId">
+        <div class="coach-picker-field">
+          <button
+            type="button"
+            class="coach-picker-trigger"
+            :disabled="isReadonlyEdit"
+            @click="openCoachPicker('form')"
+          >
+            <span v-if="selectedFormCoach">{{ coachOptionLabel(selectedFormCoach) }}</span>
+            <span v-else class="muted">从教练列表中选择</span>
+          </button>
+          <el-button
+            v-if="form.coachId !== null && !isReadonlyEdit"
+            text
+            type="primary"
+            @click="clearSelectedCoach('form')"
+          >
+            清空
+          </el-button>
+        </div>
+        <div class="field-help">创建档期前先选择教练档案。这里不再要求手动输入教练ID。</div>
       </el-form-item>
 
-      <el-form-item label="日期" prop="scheduleDate">
+      <el-form-item label="预约服务日期" prop="scheduleDate">
         <el-date-picker
           v-model="form.scheduleDate"
           type="date"
           value-format="YYYY-MM-DD"
-          placeholder="选择日期"
+          placeholder="选择用户实际预约的服务日期"
           :disabled="isReadonlyEdit"
           style="width: 100%"
         />
+        <div class="field-help">这一天就是用户会看到并下单预约的日期，不是创建时间，也不是截止时间。</div>
       </el-form-item>
 
       <div class="time-grid">
-        <el-form-item label="开始时间" prop="startTime">
+        <el-form-item label="开始服务时间" prop="startTime">
           <el-time-picker
             v-model="form.startTime"
             value-format="HH:mm:ss"
-            placeholder="选择开始时间"
+            placeholder="例如 18:00"
             :disabled="isReadonlyEdit"
             style="width: 100%"
           />
         </el-form-item>
 
-        <el-form-item label="结束时间" prop="endTime">
+        <el-form-item label="结束服务时间" prop="endTime">
           <el-time-picker
             v-model="form.endTime"
             value-format="HH:mm:ss"
-            placeholder="选择结束时间"
+            placeholder="例如 19:00"
             :disabled="isReadonlyEdit"
             style="width: 100%"
           />
@@ -247,6 +303,60 @@
       </div>
     </template>
   </el-drawer>
+
+  <el-dialog
+    v-model="coachPickerVisible"
+    :title="coachPickerMode === 'filter' ? '选择筛选教练' : '选择排班教练'"
+    width="760px"
+  >
+    <div class="picker-head">
+      <div>
+        <strong>当前可选教练 {{ visibleCoachOptions.length }} 位</strong>
+        <p>{{ coachOptionsHint }}</p>
+      </div>
+      <el-input
+        v-model="coachKeyword"
+        clearable
+        placeholder="按昵称、账号、手机号或擅长领域筛选"
+        style="width: 260px"
+      />
+    </div>
+
+    <el-alert
+      v-if="coachOptionsError"
+      type="warning"
+      :closable="false"
+      show-icon
+      :title="coachOptionsError"
+      class="picker-alert"
+    />
+
+    <el-empty v-if="!visibleCoachOptions.length && !coachLoading" description="当前没有可选教练" />
+
+    <div v-else class="coach-option-grid" v-loading="coachLoading">
+      <button
+        v-for="coach in visibleCoachOptions"
+        :key="coach.coachId"
+        type="button"
+        class="coach-option-card"
+        @click="selectCoachOption(coach)"
+      >
+        <div class="coach-option-card__top">
+          <strong>{{ coachOptionLabel(coach) }}</strong>
+          <span>档案ID {{ coach.coachId }}</span>
+        </div>
+        <div class="coach-option-card__meta">
+          <span v-if="coach.expertise">{{ coach.expertise }}</span>
+          <span v-if="coach.years !== null && coach.years !== undefined">教龄 {{ coach.years }} 年</span>
+          <span v-if="coach.phone">{{ coach.phone }}</span>
+        </div>
+        <div class="coach-option-card__footer">
+          <span>{{ coach.username || '未设置账号' }}</span>
+          <span v-if="coach.price !== null && coach.price !== undefined">基础价 {{ coach.price }}</span>
+        </div>
+      </button>
+    </div>
+  </el-dialog>
 </template>
 
 <script setup>
@@ -256,24 +366,32 @@ import { useRouter } from 'vue-router'
 import {
   createCoachSchedule,
   deleteCoachSchedule,
+  listCoachScheduleCoachOptions,
   listCoachSchedules,
   updateCoachSchedule,
   updateCoachScheduleStatus
 } from '../api/coachSchedule'
+import { isHandledBusinessError } from '../api/client'
 
 const router = useRouter()
 const loading = ref(false)
+const coachLoading = ref(false)
 const submitting = ref(false)
 const drawerVisible = ref(false)
 const drawerMode = ref('create')
+const coachPickerVisible = ref(false)
+const coachPickerMode = ref('filter')
+const coachKeyword = ref('')
+const coachOptionsError = ref('')
 const formRef = ref(null)
 const tableData = ref([])
+const coachOptions = ref([])
 const currentRow = ref(null)
 const statusLoadingMap = reactive({})
 const deleteLoadingMap = reactive({})
 
 const queryForm = reactive({
-  coachId: '',
+  coachId: null,
   scheduleDate: '',
   status: undefined
 })
@@ -290,6 +408,32 @@ const createDefaultForm = () => ({
 
 const form = reactive(createDefaultForm())
 
+const coachOptionMap = computed(() => {
+  const map = new Map()
+  coachOptions.value.forEach((item) => map.set(Number(item.coachId), item))
+  return map
+})
+
+const selectedFilterCoach = computed(() => coachOptionMap.value.get(Number(queryForm.coachId)) || null)
+const selectedFormCoach = computed(() => coachOptionMap.value.get(Number(form.coachId)) || null)
+const visibleCoachOptions = computed(() => {
+  const keyword = coachKeyword.value.trim().toLowerCase()
+  if (!keyword) return coachOptions.value
+  return coachOptions.value.filter((item) => {
+    return [
+      item.displayName,
+      item.username,
+      item.nickname,
+      item.phone,
+      item.expertise
+    ].some((field) => String(field || '').toLowerCase().includes(keyword))
+  })
+})
+const coachOptionsHint = computed(() => {
+  if (coachOptionsError.value) return coachOptionsError.value
+  return '这里展示的是已审核通过且可用于预约排班的教练档案。'
+})
+
 const enabledCount = computed(() => tableData.value.filter((item) => item.status === 1).length)
 const bookedCount = computed(() => tableData.value.filter((item) => Number(item.bookedCount || 0) > 0).length)
 const futureAvailableCount = computed(() => {
@@ -305,11 +449,11 @@ const isReadonlyEdit = computed(
 )
 
 const rules = {
-  coachId: [{ required: true, message: '请输入教练 ID', trigger: 'change' }],
-  scheduleDate: [{ required: true, message: '请选择日期', trigger: 'change' }],
-  startTime: [{ required: true, message: '请选择开始时间', trigger: 'change' }],
+  coachId: [{ required: true, message: '请选择教练', trigger: 'change' }],
+  scheduleDate: [{ required: true, message: '请选择预约服务日期', trigger: 'change' }],
+  startTime: [{ required: true, message: '请选择开始服务时间', trigger: 'change' }],
   endTime: [
-    { required: true, message: '请选择结束时间', trigger: 'change' },
+    { required: true, message: '请选择结束服务时间', trigger: 'change' },
     {
       validator: (_, value, callback) => {
         if (!value || !form.startTime) {
@@ -317,7 +461,7 @@ const rules = {
           return
         }
         if (parseTimeToSeconds(value) <= parseTimeToSeconds(form.startTime)) {
-          callback(new Error('结束时间必须晚于开始时间'))
+          callback(new Error('结束服务时间必须晚于开始服务时间'))
           return
         }
         callback()
@@ -354,8 +498,27 @@ const rules = {
   status: [{ required: true, message: '请选择状态', trigger: 'change' }]
 }
 
+const coachOptionLabel = (coach) => {
+  if (!coach) return '未选择教练'
+  return `${coach.displayName || coach.nickname || coach.username || '教练'}`
+}
+
+const coachDisplayName = (coachId) => {
+  const coach = coachOptionMap.value.get(Number(coachId))
+  return coach ? coachOptionLabel(coach) : `教练档案 ${coachId ?? '-'}`
+}
+
+const coachDisplayMeta = (coachId) => {
+  const coach = coachOptionMap.value.get(Number(coachId))
+  if (!coach) return ''
+  const chunks = []
+  if (coach.expertise) chunks.push(coach.expertise)
+  if (coach.phone) chunks.push(coach.phone)
+  return chunks.join(' / ')
+}
+
 const buildQueryParams = () => ({
-  coachId: queryForm.coachId !== '' ? Number(queryForm.coachId) : undefined,
+  coachId: queryForm.coachId ?? undefined,
   scheduleDate: queryForm.scheduleDate || undefined,
   status: queryForm.status ?? undefined
 })
@@ -413,6 +576,28 @@ const formatTime = (value) => normalizeTime(value) || '-'
 
 const isBookedRow = (row) => Number(row?.bookedCount || 0) > 0
 
+const loadCoachOptions = async ({ silent = false } = {}) => {
+  try {
+    coachLoading.value = true
+    const { data } = await listCoachScheduleCoachOptions()
+    if (data.code !== 200) {
+      throw new Error(data.message || '加载教练名册失败')
+    }
+    coachOptions.value = data.data || []
+    coachOptionsError.value = ''
+  } catch (error) {
+    coachOptionsError.value =
+      !error?.message || error.message === '失败'
+        ? '教练名册接口暂未生效。请重启管理端后端服务 web-admin，再重新打开此页面。'
+        : error.message
+    if (!silent && !isHandledBusinessError(error)) {
+      ElMessage.error(coachOptionsError.value || '加载教练名册失败')
+    }
+  } finally {
+    coachLoading.value = false
+  }
+}
+
 const loadSchedules = async () => {
   try {
     loading.value = true
@@ -421,18 +606,49 @@ const loadSchedules = async () => {
       throw new Error(data.message || '加载档期失败')
     }
     tableData.value = (data.data || []).map(normalizeScheduleRow)
-  } catch (err) {
-    ElMessage.error(err.message || '加载档期失败')
+  } catch (error) {
+    ElMessage.error(error.message || '加载档期失败')
   } finally {
     loading.value = false
   }
 }
 
 const resetQuery = async () => {
-  queryForm.coachId = ''
+  queryForm.coachId = null
   queryForm.scheduleDate = ''
   queryForm.status = undefined
   await loadSchedules()
+}
+
+const openCoachPicker = async (mode) => {
+  coachPickerMode.value = mode
+  coachKeyword.value = ''
+  if (!coachOptions.value.length) {
+    await loadCoachOptions()
+  }
+  coachPickerVisible.value = true
+}
+
+const selectCoachOption = (coach) => {
+  const coachId = Number(coach?.coachId)
+  if (!Number.isFinite(coachId)) return
+  if (coachPickerMode.value === 'form') {
+    form.coachId = coachId
+    if ((form.price === null || form.price === undefined || Number(form.price) === 0) && coach.price !== null && coach.price !== undefined) {
+      form.price = Number(coach.price)
+    }
+  } else {
+    queryForm.coachId = coachId
+  }
+  coachPickerVisible.value = false
+}
+
+const clearSelectedCoach = (mode) => {
+  if (mode === 'form') {
+    form.coachId = null
+    return
+  }
+  queryForm.coachId = null
 }
 
 const openCreateDrawer = async () => {
@@ -448,7 +664,7 @@ const openEditDrawer = async (row) => {
   drawerMode.value = 'edit'
   currentRow.value = row
   Object.assign(form, {
-    coachId: row.coachId,
+    coachId: Number(row.coachId),
     scheduleDate: normalizeDate(row.scheduleDate),
     startTime: normalizeTime(row.startTime),
     endTime: normalizeTime(row.endTime),
@@ -490,9 +706,9 @@ const submitForm = async () => {
     ElMessage.success(drawerMode.value === 'create' ? '档期已创建' : '档期已更新')
     drawerVisible.value = false
     await loadSchedules()
-  } catch (err) {
-    if (err?.message) {
-      ElMessage.error(err.message || '保存档期失败')
+  } catch (error) {
+    if (error?.message) {
+      ElMessage.error(error.message || '保存档期失败')
     }
   } finally {
     submitting.value = false
@@ -509,8 +725,8 @@ const toggleStatus = async (row) => {
     }
     ElMessage.success(nextStatus === 1 ? '档期已启用' : '档期已停用')
     await loadSchedules()
-  } catch (err) {
-    ElMessage.error(err.message || '更新状态失败')
+  } catch (error) {
+    ElMessage.error(error.message || '更新状态失败')
   } finally {
     statusLoadingMap[row.id] = false
   }
@@ -525,8 +741,8 @@ const removeSchedule = async (row) => {
     }
     ElMessage.success('档期已删除')
     await loadSchedules()
-  } catch (err) {
-    ElMessage.error(err.message || '删除档期失败')
+  } catch (error) {
+    ElMessage.error(error.message || '删除档期失败')
   } finally {
     deleteLoadingMap[row.id] = false
   }
@@ -536,7 +752,10 @@ const goBookingOps = () => {
   router.push('/booking-ops')
 }
 
-onMounted(loadSchedules)
+onMounted(async () => {
+  await loadSchedules()
+  loadCoachOptions({ silent: true })
+})
 </script>
 
 <style scoped>
@@ -556,6 +775,7 @@ onMounted(loadSchedules)
   margin: 0;
   color: #8aa0af;
   font-size: 13px;
+  line-height: 1.6;
 }
 
 .toolbar-actions {
@@ -563,6 +783,10 @@ onMounted(loadSchedules)
   align-items: center;
   gap: 8px;
   flex-wrap: wrap;
+}
+
+.coach-alert {
+  margin-bottom: 16px;
 }
 
 .summary-grid {
@@ -573,10 +797,10 @@ onMounted(loadSchedules)
 }
 
 .summary-card {
-  padding: 12px;
-  border-radius: 14px;
+  padding: 14px;
+  border-radius: 16px;
   border: 1px solid var(--border);
-  background: #ffffffcc;
+  background: #ffffffd9;
 }
 
 .summary-label {
@@ -585,9 +809,9 @@ onMounted(loadSchedules)
 }
 
 .summary-value {
-  font-size: 22px;
+  margin: 8px 0 4px;
+  font-size: 24px;
   font-weight: 700;
-  margin: 6px 0;
 }
 
 .summary-sub {
@@ -598,13 +822,85 @@ onMounted(loadSchedules)
 .filter-panel {
   margin-bottom: 16px;
   padding: 16px;
-  border-radius: 16px;
+  border-radius: 18px;
   border: 1px solid var(--border);
   background: #ffffffc7;
 }
 
+.filter-panel__head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.filter-panel__head h3 {
+  margin: 0 0 6px;
+}
+
+.filter-panel__head p {
+  margin: 0;
+  color: #6b7280;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
 .filter-form {
   margin-bottom: -18px;
+}
+
+.coach-picker-field {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+}
+
+.coach-picker-trigger {
+  width: 260px;
+  min-height: 42px;
+  padding: 0 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: #fff;
+  color: var(--text);
+  text-align: left;
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.coach-picker-trigger:hover {
+  border-color: #6d67ff;
+  box-shadow: 0 0 0 3px rgba(109, 103, 255, 0.08);
+}
+
+.coach-picker-trigger:disabled {
+  cursor: not-allowed;
+  color: #9ca3af;
+  background: #f3f4f6;
+}
+
+.field-help {
+  margin-top: 6px;
+  color: #6b7280;
+  font-size: 12px;
+  line-height: 1.5;
+  max-width: 360px;
+}
+
+.coach-cell {
+  display: grid;
+  gap: 4px;
+}
+
+.coach-cell strong {
+  font-size: 14px;
+}
+
+.coach-cell span {
+  color: #6b7280;
+  font-size: 12px;
 }
 
 .table-actions {
@@ -619,11 +915,11 @@ onMounted(loadSchedules)
 }
 
 .drawer-alert {
-  margin-bottom: 16px;
+  margin-bottom: 14px;
 }
 
 .schedule-form {
-  padding-top: 4px;
+  padding-bottom: 12px;
 }
 
 .time-grid {
@@ -639,14 +935,92 @@ onMounted(loadSchedules)
   width: 100%;
 }
 
+.picker-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 16px;
+}
+
+.picker-head strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+.picker-head p {
+  margin: 0;
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.picker-alert {
+  margin-bottom: 16px;
+}
+
+.coach-option-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  min-height: 120px;
+}
+
+.coach-option-card {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: linear-gradient(180deg, #ffffff, #faf7ff);
+  text-align: left;
+  cursor: pointer;
+  transition: transform 0.18s ease, box-shadow 0.18s ease, border-color 0.18s ease;
+}
+
+.coach-option-card:hover {
+  transform: translateY(-2px);
+  border-color: #6d67ff;
+  box-shadow: 0 12px 24px rgba(23, 17, 38, 0.08);
+}
+
+.coach-option-card__top,
+.coach-option-card__footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.coach-option-card__top span,
+.coach-option-card__meta,
+.coach-option-card__footer {
+  color: #6b7280;
+  font-size: 12px;
+}
+
+.coach-option-card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.muted {
+  color: #9ca3af;
+}
+
 @media (max-width: 860px) {
-  .toolbar {
+  .toolbar,
+  .filter-panel__head,
+  .picker-head {
     flex-direction: column;
     align-items: flex-start;
   }
 
   .time-grid {
     grid-template-columns: 1fr;
+  }
+
+  .coach-picker-trigger {
+    width: 100%;
   }
 }
 </style>

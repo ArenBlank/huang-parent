@@ -19,3 +19,22 @@ minio:
   access-key: ${MINIO_ACCESS_KEY}
   secret-key: ${MINIO_SECRET_KEY}
   bucket-name: ${MINIO_BUCKET:lease}
+
+development:
+  enabled: ${FITNESS_DEV_ENABLED:false}
+  fixed-sms-code: ${FITNESS_DEV_FIXED_SMS_CODE:}
+  skip-sms-validation: ${FITNESS_DEV_SKIP_SMS:false}
+  skip-captcha-validation: ${FITNESS_DEV_SKIP_CAPTCHA:false}
+  test-username: ${FITNESS_DEV_TEST_USERNAME:}
+  test-password: ${FITNESS_DEV_TEST_PASSWORD:}
+
+fitness:
+  jwt:
+    secret: ${FITNESS_JWT_SECRET:}
+    app-access-expire-ms: ${FITNESS_JWT_APP_ACCESS_EXPIRE_MS:7200000}
+    app-refresh-expire-ms: ${FITNESS_JWT_APP_REFRESH_EXPIRE_MS:1296000000}
+    admin-access-expire-ms: ${FITNESS_JWT_ADMIN_ACCESS_EXPIRE_MS:1800000}
+    admin-refresh-expire-ms: ${FITNESS_JWT_ADMIN_REFRESH_EXPIRE_MS:604800000}
+  auth:
+    captcha:
+      enabled: ${FITNESS_AUTH_CAPTCHA_ENABLED:true}

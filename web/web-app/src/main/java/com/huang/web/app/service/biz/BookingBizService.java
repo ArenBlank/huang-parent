@@ -5,20 +5,25 @@ import com.huang.common.constant.BizStatusConstant;
 import com.huang.common.constant.RedisConstant;
 import com.huang.common.redis.RedisGuardSupport;
 import com.huang.model.entity.CoachBooking;
+import com.huang.model.entity.CoachProfile;
 import com.huang.model.entity.CoachReview;
 import com.huang.model.entity.CoachSchedule;
 import com.huang.model.entity.OrderInfo;
 import com.huang.model.entity.OrderItem;
 import com.huang.model.entity.PaymentRecord;
+import com.huang.model.entity.User;
 import com.huang.web.app.dto.booking.BookingReviewDTO;
 import com.huang.web.app.dto.booking.CreateBookingDTO;
 import com.huang.web.app.mapper.CoachBookingMapper;
+import com.huang.web.app.mapper.CoachProfileMapper;
 import com.huang.web.app.mapper.CoachReviewMapper;
 import com.huang.web.app.mapper.CoachScheduleMapper;
 import com.huang.web.app.mapper.OrderInfoMapper;
 import com.huang.web.app.mapper.OrderItemMapper;
 import com.huang.web.app.mapper.PaymentRecordMapper;
+import com.huang.web.app.service.UserService;
 import com.huang.web.app.vo.booking.BookingHistoryVO;
+import com.huang.web.app.vo.booking.BookingCoachOptionVO;
 import com.huang.web.app.vo.booking.BookingScheduleSummaryVO;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -33,10 +38,13 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.function.Function;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -47,29 +55,90 @@ public class BookingBizService {
 
     private final CoachScheduleMapper coachScheduleMapper;
     private final CoachBookingMapper coachBookingMapper;
+    private final CoachProfileMapper coachProfileMapper;
     private final CoachReviewMapper coachReviewMapper;
     private final OrderInfoMapper orderInfoMapper;
     private final OrderItemMapper orderItemMapper;
     private final PaymentRecordMapper paymentRecordMapper;
     private final RedisGuardSupport redisGuardSupport;
+    private final UserService userService;
 
     public BookingBizService(CoachScheduleMapper coachScheduleMapper,
                              CoachBookingMapper coachBookingMapper,
+                             CoachProfileMapper coachProfileMapper,
                              CoachReviewMapper coachReviewMapper,
                              OrderInfoMapper orderInfoMapper,
                              OrderItemMapper orderItemMapper,
                              PaymentRecordMapper paymentRecordMapper,
-                             RedisGuardSupport redisGuardSupport) {
+                             RedisGuardSupport redisGuardSupport,
+                             UserService userService) {
         this.coachScheduleMapper = coachScheduleMapper;
         this.coachBookingMapper = coachBookingMapper;
+        this.coachProfileMapper = coachProfileMapper;
         this.coachReviewMapper = coachReviewMapper;
         this.orderInfoMapper = orderInfoMapper;
         this.orderItemMapper = orderItemMapper;
         this.paymentRecordMapper = paymentRecordMapper;
         this.redisGuardSupport = redisGuardSupport;
+        this.userService = userService;
+    }
+
+    public List<BookingCoachOptionVO> listCoachOptions(Long userId) {
+        LocalDate today = LocalDate.now();
+        LocalTime now = LocalTime.now();
+        List<CoachSchedule> schedules = coachScheduleMapper.selectList(new LambdaQueryWrapper<CoachSchedule>()
+                .eq(CoachSchedule::getStatus, 1)
+                .orderByAsc(CoachSchedule::getScheduleDate, CoachSchedule::getStartTime, CoachSchedule::getId));
+        Set<Long> coachIds = schedules.stream()
+                .filter(item -> isFutureSchedule(item, today, now))
+                .filter(this::hasCapacity)
+                .filter(item -> !hasBooked(userId, item.getId()))
+                .map(CoachSchedule::getCoachId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+        if (coachIds.isEmpty()) {
+            return List.of();
+        }
+
+        List<CoachProfile> profiles = coachProfileMapper.selectList(new LambdaQueryWrapper<CoachProfile>()
+                .in(CoachProfile::getId, coachIds)
+                .eq(CoachProfile::getCertStatus, 1)
+                .eq(CoachProfile::getStatus, 1));
+        if (profiles == null || profiles.isEmpty()) {
+            return List.of();
+        }
+
+        Map<Long, User> userMap = userService.listByIds(
+                        profiles.stream().map(CoachProfile::getUserId).filter(Objects::nonNull).toList()
+                ).stream()
+                .collect(Collectors.toMap(User::getId, Function.identity(), (left, right) -> left));
+
+        List<BookingCoachOptionVO> result = new ArrayList<>();
+        for (CoachProfile profile : profiles) {
+            User user = userMap.get(profile.getUserId());
+            if (user == null || user.getStatus() == null || user.getStatus() != 1) {
+                continue;
+            }
+            BookingCoachOptionVO row = new BookingCoachOptionVO();
+            row.setCoachId(profile.getId());
+            row.setUserId(user.getId());
+            row.setDisplayName(resolveCoachDisplayName(user));
+            row.setUsername(user.getUsername());
+            row.setNickname(user.getNickname());
+            row.setAvatar(user.getAvatar());
+            row.setExpertise(profile.getExpertise());
+            row.setYears(profile.getYears());
+            row.setPrice(profile.getPrice());
+            row.setRating(profile.getRating());
+            result.add(row);
+        }
+        result.sort(Comparator.comparing(BookingCoachOptionVO::getDisplayName, String.CASE_INSENSITIVE_ORDER));
+        return result;
     }
 
     public List<CoachSchedule> listSchedule(Long userId, Long coachId, LocalDate date) {
+        LocalDate today = LocalDate.now();
+        LocalTime now = LocalTime.now();
         LambdaQueryWrapper<CoachSchedule> wrapper = new LambdaQueryWrapper<CoachSchedule>()
                 .eq(CoachSchedule::getStatus, 1)
                 .apply("booked_count < capacity")
@@ -86,7 +155,9 @@ public class BookingBizService {
                     userId
             );
         }
-        return coachScheduleMapper.selectList(wrapper);
+        return coachScheduleMapper.selectList(wrapper).stream()
+                .filter(item -> isFutureSchedule(item, today, now))
+                .toList();
     }
 
     public BookingScheduleSummaryVO scheduleSummary(Long userId, Long coachId) {
@@ -146,6 +217,10 @@ public class BookingBizService {
             CoachSchedule schedule = coachScheduleMapper.selectById(dto.getScheduleId());
             if (schedule == null || schedule.getStatus() == null || schedule.getStatus() != 1) {
                 reason = "schedule_invalid";
+                return null;
+            }
+            if (!isFutureSchedule(schedule, LocalDate.now(), LocalTime.now())) {
+                reason = "schedule_expired";
                 return null;
             }
 
@@ -421,5 +496,18 @@ public class BookingBizService {
         if (TransactionSynchronizationManager.isActualTransactionActive()) {
             TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
         }
+    }
+
+    private String resolveCoachDisplayName(User user) {
+        if (user == null) {
+            return "-";
+        }
+        if (user.getNickname() != null && !user.getNickname().isBlank()) {
+            return user.getNickname().trim();
+        }
+        if (user.getUsername() != null && !user.getUsername().isBlank()) {
+            return user.getUsername().trim();
+        }
+        return "教练";
     }
 }

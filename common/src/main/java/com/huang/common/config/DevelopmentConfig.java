@@ -15,32 +15,32 @@ public class DevelopmentConfig {
     /**
      * 是否为开发模式
      */
-    private boolean enabled = true;
+    private boolean enabled;
 
     /**
      * 开发模式下的固定验证码
      */
-    private String fixedSmsCode = "123456";
+    private String fixedSmsCode;
 
     /**
      * 是否跳过短信验证码验证
      */
-    private boolean skipSmsValidation = true;
+    private boolean skipSmsValidation;
 
     /**
      * 是否跳过图形验证码验证
      */
-    private boolean skipCaptchaValidation = true;
+    private boolean skipCaptchaValidation;
 
     /**
      * 开发模式下的测试用户名
      */
-    private String testUsername = "testuser";
+    private String testUsername;
 
     /**
      * 开发模式下的测试密码
      */
-    private String testPassword = "123456";
+    private String testPassword;
 
     // Getters and Setters
     public boolean isEnabled() {

@@ -19,3 +19,11 @@ minio:
   access-key: ${MINIO_ACCESS_KEY:root}
   secret-key: ${MINIO_SECRET_KEY:rootroot}
   bucket-name: ${MINIO_BUCKET:lease}
+
+development:
+  enabled: ${FITNESS_DEV_ENABLED:true}
+  fixed-sms-code: ${FITNESS_DEV_FIXED_SMS_CODE:123456}
+  skip-sms-validation: ${FITNESS_DEV_SKIP_SMS:true}
+  skip-captcha-validation: ${FITNESS_DEV_SKIP_CAPTCHA:true}
+  test-username: ${FITNESS_DEV_TEST_USERNAME:testuser}
+  test-password: ${FITNESS_DEV_TEST_PASSWORD:123456}

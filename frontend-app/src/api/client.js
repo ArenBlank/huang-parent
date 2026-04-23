@@ -156,7 +156,7 @@ appClient.interceptors.response.use(
       return Promise.reject(new Error('\u8bf7\u6c42\u8d85\u65f6\uff0c\u8bf7\u68c0\u67e5\u540e\u7aef\u670d\u52a1\u662f\u5426\u542f\u52a8'))
     }
     if (!error?.response) {
-      return Promise.reject(new Error('\u65e0\u6cd5\u8fde\u63a5\u540e\u7aef\uff0c\u8bf7\u786e\u8ba4 8081 \u670d\u52a1\u5df2\u542f\u52a8'))
+      return Promise.reject(new Error('\u65e0\u6cd5\u8fde\u63a5\u540e\u7aef\uff0c\u8bf7\u786e\u8ba4 App \u670d\u52a1\u5df2\u542f\u52a8'))
     }
     const status = error.response?.status
     if (status === 401) {

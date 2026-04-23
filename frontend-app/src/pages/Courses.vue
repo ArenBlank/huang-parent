@@ -511,8 +511,11 @@ const STORAGE_ENROLLMENT = "fp_last_enrollment"
 const STORAGE_COURSE_ID = "fp_last_course_id"
 const STORAGE_COURSE_VIEW = "fp_course_workspace_view"
 
-const defaultCoverUrl = "/test.png"
-const staleCoverKeywords = ["127.0.0.1:9000", "localhost:9000"]
+const defaultCoverUrl = import.meta.env.VITE_FALLBACK_IMAGE || "/test.png"
+const staleCoverKeywords = (import.meta.env.VITE_STALE_COVER_KEYWORDS || "127.0.0.1:9000,localhost:9000")
+  .split(",")
+  .map((item) => item.trim())
+  .filter(Boolean)
 
 const difficultyMap = {
   BEGINNER: "初级",

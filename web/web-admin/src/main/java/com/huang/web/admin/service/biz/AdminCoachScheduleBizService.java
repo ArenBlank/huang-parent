@@ -4,17 +4,26 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.huang.common.exception.HuangException;
 import com.huang.model.entity.CoachProfile;
 import com.huang.model.entity.CoachSchedule;
+import com.huang.model.entity.User;
 import com.huang.web.admin.constant.AdminErrorCode;
 import com.huang.web.admin.dto.coach.CoachScheduleUpsertDTO;
 import com.huang.web.admin.mapper.CoachProfileMapper;
 import com.huang.web.admin.mapper.CoachScheduleMapper;
+import com.huang.web.admin.service.UserService;
+import com.huang.web.admin.vo.coach.AdminCoachOptionVO;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 public class AdminCoachScheduleBizService {
@@ -25,11 +34,14 @@ public class AdminCoachScheduleBizService {
 
     private final CoachScheduleMapper coachScheduleMapper;
     private final CoachProfileMapper coachProfileMapper;
+    private final UserService userService;
 
     public AdminCoachScheduleBizService(CoachScheduleMapper coachScheduleMapper,
-                                        CoachProfileMapper coachProfileMapper) {
+                                        CoachProfileMapper coachProfileMapper,
+                                        UserService userService) {
         this.coachScheduleMapper = coachScheduleMapper;
         this.coachProfileMapper = coachProfileMapper;
+        this.userService = userService;
     }
 
     public List<CoachSchedule> listSchedules(Long coachId, LocalDate scheduleDate, Integer status) {
@@ -45,6 +57,41 @@ public class AdminCoachScheduleBizService {
             wrapper.eq(CoachSchedule::getStatus, status);
         }
         return coachScheduleMapper.selectList(wrapper);
+    }
+
+    public List<AdminCoachOptionVO> listCoachOptions() {
+        List<CoachProfile> profiles = coachProfileMapper.selectList(new LambdaQueryWrapper<CoachProfile>()
+                .eq(CoachProfile::getCertStatus, CERT_APPROVED)
+                .eq(CoachProfile::getStatus, STATUS_ENABLED)
+                .orderByDesc(CoachProfile::getUpdateTime, CoachProfile::getId));
+        if (profiles == null || profiles.isEmpty()) {
+            return List.of();
+        }
+        Map<Long, User> userMap = userService.listByIds(
+                        profiles.stream().map(CoachProfile::getUserId).filter(Objects::nonNull).toList()
+                ).stream()
+                .collect(Collectors.toMap(User::getId, Function.identity(), (left, right) -> left));
+
+        List<AdminCoachOptionVO> result = new ArrayList<>();
+        for (CoachProfile profile : profiles) {
+            User user = userMap.get(profile.getUserId());
+            if (user == null || user.getStatus() == null || user.getStatus() != STATUS_ENABLED) {
+                continue;
+            }
+            AdminCoachOptionVO row = new AdminCoachOptionVO();
+            row.setCoachId(profile.getId());
+            row.setUserId(user.getId());
+            row.setDisplayName(resolveCoachDisplayName(user));
+            row.setUsername(user.getUsername());
+            row.setNickname(user.getNickname());
+            row.setPhone(user.getPhone());
+            row.setExpertise(profile.getExpertise());
+            row.setYears(profile.getYears());
+            row.setPrice(profile.getPrice());
+            result.add(row);
+        }
+        result.sort(Comparator.comparing(AdminCoachOptionVO::getDisplayName, String.CASE_INSENSITIVE_ORDER));
+        return result;
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -164,5 +211,18 @@ public class AdminCoachScheduleBizService {
                 || !Objects.equals(exists.getPrice(), dto.getPrice())
                 || !Objects.equals(exists.getCapacity(), dto.getCapacity())
                 || !Objects.equals(exists.getStatus(), dto.getStatus());
+    }
+
+    private String resolveCoachDisplayName(User user) {
+        if (user == null) {
+            return "-";
+        }
+        if (StringUtils.hasText(user.getNickname())) {
+            return user.getNickname().trim();
+        }
+        if (StringUtils.hasText(user.getUsername())) {
+            return user.getUsername().trim();
+        }
+        return "教练";
     }
 }

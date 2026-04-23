@@ -258,7 +258,7 @@ import { computed, nextTick, onMounted, reactive, ref } from 'vue'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { adminClient } from '../api/client'
 
-const defaultCoverUrl = '/test.png'
+const defaultCoverUrl = import.meta.env.VITE_FALLBACK_IMAGE || '/test.png'
 
 const difficultyMap = {
   BEGINNER: '初级',

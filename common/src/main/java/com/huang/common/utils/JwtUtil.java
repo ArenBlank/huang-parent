@@ -5,8 +5,10 @@ import com.huang.common.result.ResultCodeEnum;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.util.StringUtils;
 
 import javax.crypto.SecretKey;
+import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
@@ -19,7 +21,17 @@ import java.util.Map;
 @Slf4j
 public class JwtUtil {
 
-    private static final SecretKey secretKey = Keys.hmacShaKeyFor("CY29Eb04RPNyQPxACH2jBNWFGn0ypMhc".getBytes());
+    private static final String DEFAULT_SECRET = "CY29Eb04RPNyQPxACH2jBNWFGn0ypMhc";
+    private static final long DEFAULT_APP_ACCESS_TOKEN_EXPIRE_TIME = 2 * 60 * 60 * 1000L;
+    private static final long DEFAULT_APP_REFRESH_TOKEN_EXPIRE_TIME = 15L * 24 * 60 * 60 * 1000L;
+    private static final long DEFAULT_ADMIN_ACCESS_TOKEN_EXPIRE_TIME = 30 * 60 * 1000L;
+    private static final long DEFAULT_ADMIN_REFRESH_TOKEN_EXPIRE_TIME = 7L * 24 * 60 * 60 * 1000L;
+
+    private static volatile SecretKey secretKey;
+    private static volatile long appAccessTokenExpireTime;
+    private static volatile long appRefreshTokenExpireTime;
+    private static volatile long adminAccessTokenExpireTime;
+    private static volatile long adminRefreshTokenExpireTime;
 
     public static final String CLAIM_USER_ID = "userId";
     public static final String CLAIM_USERNAME = "username";
@@ -31,10 +43,59 @@ public class JwtUtil {
     public static final String PLATFORM_APP = "app";
     public static final String PLATFORM_ADMIN = "admin";
 
-    private static final long APP_ACCESS_TOKEN_EXPIRE_TIME = 2 * 60 * 60 * 1000L;
-    private static final long APP_REFRESH_TOKEN_EXPIRE_TIME = 15L * 24 * 60 * 60 * 1000L;
-    private static final long ADMIN_ACCESS_TOKEN_EXPIRE_TIME = 30 * 60 * 1000L;
-    private static final long ADMIN_REFRESH_TOKEN_EXPIRE_TIME = 7L * 24 * 60 * 60 * 1000L;
+    static {
+        initFromEnvironment();
+    }
+
+    private JwtUtil() {
+    }
+
+    public static synchronized void configure(String secret,
+                                              long appAccessExpireMs,
+                                              long appRefreshExpireMs,
+                                              long adminAccessExpireMs,
+                                              long adminRefreshExpireMs) {
+        String effectiveSecret = StringUtils.hasText(secret) ? secret.trim() : DEFAULT_SECRET;
+        if (!StringUtils.hasText(secret)) {
+            log.warn("fitness.jwt.secret 未配置，正在使用默认值。建议在环境变量或配置中显式设置。");
+        }
+
+        secretKey = Keys.hmacShaKeyFor(effectiveSecret.getBytes(StandardCharsets.UTF_8));
+        appAccessTokenExpireTime = positiveOrDefault(appAccessExpireMs, DEFAULT_APP_ACCESS_TOKEN_EXPIRE_TIME);
+        appRefreshTokenExpireTime = positiveOrDefault(appRefreshExpireMs, DEFAULT_APP_REFRESH_TOKEN_EXPIRE_TIME);
+        adminAccessTokenExpireTime = positiveOrDefault(adminAccessExpireMs, DEFAULT_ADMIN_ACCESS_TOKEN_EXPIRE_TIME);
+        adminRefreshTokenExpireTime = positiveOrDefault(adminRefreshExpireMs, DEFAULT_ADMIN_REFRESH_TOKEN_EXPIRE_TIME);
+    }
+
+    private static void initFromEnvironment() {
+        String secret = firstNonBlank(
+                System.getProperty("fitness.jwt.secret"),
+                System.getenv("FITNESS_JWT_SECRET")
+        );
+
+        long appAccessExpire = resolveLong(
+                System.getProperty("fitness.jwt.app-access-expire-ms"),
+                System.getenv("FITNESS_JWT_APP_ACCESS_EXPIRE_MS"),
+                DEFAULT_APP_ACCESS_TOKEN_EXPIRE_TIME
+        );
+        long appRefreshExpire = resolveLong(
+                System.getProperty("fitness.jwt.app-refresh-expire-ms"),
+                System.getenv("FITNESS_JWT_APP_REFRESH_EXPIRE_MS"),
+                DEFAULT_APP_REFRESH_TOKEN_EXPIRE_TIME
+        );
+        long adminAccessExpire = resolveLong(
+                System.getProperty("fitness.jwt.admin-access-expire-ms"),
+                System.getenv("FITNESS_JWT_ADMIN_ACCESS_EXPIRE_MS"),
+                DEFAULT_ADMIN_ACCESS_TOKEN_EXPIRE_TIME
+        );
+        long adminRefreshExpire = resolveLong(
+                System.getProperty("fitness.jwt.admin-refresh-expire-ms"),
+                System.getenv("FITNESS_JWT_ADMIN_REFRESH_EXPIRE_MS"),
+                DEFAULT_ADMIN_REFRESH_TOKEN_EXPIRE_TIME
+        );
+
+        configure(secret, appAccessExpire, appRefreshExpire, adminAccessExpire, adminRefreshExpire);
+    }
 
     /**
      * 创建Token（原有方法，保持向后兼容）
@@ -51,7 +112,7 @@ public class JwtUtil {
     }
 
     public static String generateAppAccessToken(Long userId, String username, Integer tokenVersion) {
-        return generateToken(userId, username, TOKEN_TYPE_ACCESS, PLATFORM_APP, tokenVersion, APP_ACCESS_TOKEN_EXPIRE_TIME);
+        return generateToken(userId, username, TOKEN_TYPE_ACCESS, PLATFORM_APP, tokenVersion, appAccessTokenExpireTime);
     }
 
     /**
@@ -62,7 +123,7 @@ public class JwtUtil {
     }
 
     public static String generateAppRefreshToken(Long userId, String username, Integer tokenVersion) {
-        return generateToken(userId, username, TOKEN_TYPE_REFRESH, PLATFORM_APP, tokenVersion, APP_REFRESH_TOKEN_EXPIRE_TIME);
+        return generateToken(userId, username, TOKEN_TYPE_REFRESH, PLATFORM_APP, tokenVersion, appRefreshTokenExpireTime);
     }
 
     public static String generateAdminAccessToken(Long userId, String username) {
@@ -70,7 +131,7 @@ public class JwtUtil {
     }
 
     public static String generateAdminAccessToken(Long userId, String username, Integer tokenVersion) {
-        return generateToken(userId, username, TOKEN_TYPE_ACCESS, PLATFORM_ADMIN, tokenVersion, ADMIN_ACCESS_TOKEN_EXPIRE_TIME);
+        return generateToken(userId, username, TOKEN_TYPE_ACCESS, PLATFORM_ADMIN, tokenVersion, adminAccessTokenExpireTime);
     }
 
     public static String generateAdminRefreshToken(Long userId, String username) {
@@ -78,7 +139,7 @@ public class JwtUtil {
     }
 
     public static String generateAdminRefreshToken(Long userId, String username, Integer tokenVersion) {
-        return generateToken(userId, username, TOKEN_TYPE_REFRESH, PLATFORM_ADMIN, tokenVersion, ADMIN_REFRESH_TOKEN_EXPIRE_TIME);
+        return generateToken(userId, username, TOKEN_TYPE_REFRESH, PLATFORM_ADMIN, tokenVersion, adminRefreshTokenExpireTime);
     }
 
     public static String generateAccessToken(Long userId, String username, String platform, Integer tokenVersion) {
@@ -88,7 +149,7 @@ public class JwtUtil {
                 TOKEN_TYPE_ACCESS,
                 platform,
                 tokenVersion,
-                PLATFORM_ADMIN.equalsIgnoreCase(platform) ? ADMIN_ACCESS_TOKEN_EXPIRE_TIME : APP_ACCESS_TOKEN_EXPIRE_TIME
+                PLATFORM_ADMIN.equalsIgnoreCase(platform) ? adminAccessTokenExpireTime : appAccessTokenExpireTime
         );
     }
 
@@ -99,7 +160,7 @@ public class JwtUtil {
                 TOKEN_TYPE_REFRESH,
                 platform,
                 tokenVersion,
-                PLATFORM_ADMIN.equalsIgnoreCase(platform) ? ADMIN_REFRESH_TOKEN_EXPIRE_TIME : APP_REFRESH_TOKEN_EXPIRE_TIME
+                PLATFORM_ADMIN.equalsIgnoreCase(platform) ? adminRefreshTokenExpireTime : appRefreshTokenExpireTime
         );
     }
 
@@ -273,18 +334,41 @@ public class JwtUtil {
     }
 
     public static long accessTokenExpireMs(String platform) {
-        return PLATFORM_ADMIN.equalsIgnoreCase(platform) ? ADMIN_ACCESS_TOKEN_EXPIRE_TIME : APP_ACCESS_TOKEN_EXPIRE_TIME;
+        return PLATFORM_ADMIN.equalsIgnoreCase(platform) ? adminAccessTokenExpireTime : appAccessTokenExpireTime;
     }
 
     public static long refreshTokenExpireMs(String platform) {
-        return PLATFORM_ADMIN.equalsIgnoreCase(platform) ? ADMIN_REFRESH_TOKEN_EXPIRE_TIME : APP_REFRESH_TOKEN_EXPIRE_TIME;
+        return PLATFORM_ADMIN.equalsIgnoreCase(platform) ? adminRefreshTokenExpireTime : appRefreshTokenExpireTime;
     }
 
     private static int normalizeTokenVersion(Integer tokenVersion) {
         return tokenVersion == null || tokenVersion < 0 ? 0 : tokenVersion;
     }
 
-    public static void main(String[] args) {
-        System.out.println(createToken(1L, "13888888888"));
+    private static long positiveOrDefault(long value, long fallback) {
+        return value > 0 ? value : fallback;
     }
+
+    private static long resolveLong(String preferred, String fallback, long defaultValue) {
+        String value = firstNonBlank(preferred, fallback);
+        if (!StringUtils.hasText(value)) {
+            return defaultValue;
+        }
+        try {
+            return Long.parseLong(value.trim());
+        } catch (NumberFormatException e) {
+            log.warn("JWT 过期时间配置非法，使用默认值: {}", defaultValue);
+            return defaultValue;
+        }
+    }
+
+    private static String firstNonBlank(String... values) {
+        for (String value : values) {
+            if (StringUtils.hasText(value)) {
+                return value;
+            }
+        }
+        return null;
+    }
+
 }

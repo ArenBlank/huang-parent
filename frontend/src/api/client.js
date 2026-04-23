@@ -196,8 +196,8 @@ const attachErrorHandler = (client, serviceLabel, businessHandler) => {
   )
 }
 
-attachErrorHandler(adminClient, '8080', handleAdminBusinessCode)
-attachErrorHandler(appClient, '8081', null)
+attachErrorHandler(adminClient, 'Admin', handleAdminBusinessCode)
+attachErrorHandler(appClient, 'App', null)
 
 const isHandledBusinessError = (error) =>
   Boolean(error?.__handled || error?.isGlobalHandled || error?.name === HANDLED_ERROR)

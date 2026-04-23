@@ -4,6 +4,10 @@ export function listCoachSchedules(params) {
   return adminClient.get('/admin/coach-schedule/list', { params })
 }
 
+export function listCoachScheduleCoachOptions() {
+  return adminClient.get('/admin/coach-schedule/coach-options')
+}
+
 export function createCoachSchedule(payload) {
   return adminClient.post('/admin/coach-schedule', payload)
 }

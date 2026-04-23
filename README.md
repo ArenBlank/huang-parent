@@ -192,9 +192,11 @@ powershell -ExecutionPolicy Bypass -File tests/reset-test-data.ps1
 
 ### 3. 常用本地地址
 
-- Admin 后端：`http://localhost:8080`
-- App 后端实例一：`http://localhost:8081`
-- App 后端实例二：`http://localhost:8082`
+- 管理端 后端：`http://localhost:8080`
+- 用户端 后端实例一：`http://localhost:8081`
+- 用户端 后端实例二：`http://localhost:8082`
+- 管理端 前端：`http://localhost:5173`
+- 用户端 前端：`http://localhost:5174`
 - Nginx：`http://localhost`
 
 ### 4. 双实例验证

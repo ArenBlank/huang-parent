@@ -69,7 +69,7 @@ services:
       HOST_APP_API_1: ${HOST_APP_API_1:-host.docker.internal:8081}
       HOST_APP_API_2: ${HOST_APP_API_2:-host.docker.internal:8082}
       HOST_ADMIN_API: ${HOST_ADMIN_API:-host.docker.internal:8080}
-      HOST_MINIO_API: ${HOST_MINIO_API:-host.docker.internal:9000}
+      HOST_MINIO_API: ${HOST_MINIO_API:-minio:9000}
       NGINX_ENVSUBST_FILTER: APP_DOMAIN|ADMIN_DOMAIN|FILES_DOMAIN|HOST_APP_API_1|HOST_APP_API_2|HOST_ADMIN_API|HOST_MINIO_API
     ports:
       - 80:80

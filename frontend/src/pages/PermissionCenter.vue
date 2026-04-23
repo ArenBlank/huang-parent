@@ -4,12 +4,12 @@
       <div class="page-heading">
         <div>
           <div class="eyebrow">Access Academy</div>
-          <h2>权限学院</h2>
-          <p>把权限矩阵、角色分配、缺口修复和审计记录做成一组更直观的学院任务卡。</p>
+          <h2>权限治理总览</h2>
+          <p>把权限矩阵、角色分配、缺口修复和治理入口集中到一个更直观的权限工作区。</p>
         </div>
         <div class="toolbar-actions">
           <span class="code-pill">FIX · SYNC · DEMO</span>
-          <el-button type="primary" :loading="loading" @click="loadAll">刷新学院数据</el-button>
+          <el-button type="primary" :loading="loading" @click="loadAll">刷新治理数据</el-button>
         </div>
       </div>
 
@@ -70,7 +70,7 @@
           <div class="toolbar">
             <div>
               <div class="section-title-sm">快速入口</div>
-              <div class="section-copy">权限学院的几个核心入口都做成可点击任务卡。</div>
+              <div class="section-copy">权限治理链路的几个核心入口都做成可点击任务卡。</div>
             </div>
           </div>
           <div class="quick-grid">

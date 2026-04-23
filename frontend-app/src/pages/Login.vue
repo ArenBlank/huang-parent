@@ -162,7 +162,7 @@ const handleCaptchaSuccess = async (captchaVerification) => {
   } catch (err) {
     const message = err?.message || `${modeLabel.value}失败`
     if (message.includes("无法连接后端")) {
-      ElMessage.error("后端未启动，请先启动 app 服务：8081")
+      ElMessage.error("后端未启动，请先启动 App 服务")
     } else if (message.includes("请求超时")) {
       ElMessage.error("请求超时，请检查后端状态")
     } else if (message.includes("account") || message.includes("password") || message.includes("密码")) {

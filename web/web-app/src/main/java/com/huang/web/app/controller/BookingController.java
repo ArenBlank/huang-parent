@@ -49,6 +49,14 @@ public class BookingController {
         return Result.ok(bookingBizService.scheduleSummary(userId, coachId));
     }
 
+    @Operation(summary = "可预约教练列表")
+    @GetMapping("/coach-options")
+    public Result<?> coachOptions() {
+        LoginUser loginUser = LoginUserHolder.getLoginUser();
+        Long userId = loginUser == null ? null : loginUser.getUserId();
+        return Result.ok(bookingBizService.listCoachOptions(userId));
+    }
+
     @Operation(summary = "创建预约订单")
     @IdempotentSubmit(
             prefix = RedisConstant.APP_BOOKING_CREATE_IDEMPOTENT_PREFIX,

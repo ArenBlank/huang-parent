@@ -2,19 +2,19 @@
   <div class="section-stack">
     <section class="card surface-lilac landing-hero">
       <div class="landing-copy">
-        <div class="eyebrow">学院首页</div>
-        <h2 class="display-title">把管理动作收进一张更好用的学院首页</h2>
+        <div class="eyebrow">平台总览</div>
+        <h2 class="display-title">把管理入口按业务链路收进一张更清楚的总览页</h2>
         <p>
-          首页只保留真实可用的数据和入口，不放假占位。你可以从这里直接进入训练主线、内容工坊和订单成绩单。
+          首页只保留真实可用的数据和入口，不放假占位。你可以从这里直接进入训练计划编排、前台内容运营和订单与退款。
         </p>
         <div class="hero-actions">
           <button type="button" class="hero-pill active" @click="router.push('/training-plans')">
             <span class="hero-pill-code">PL</span>
-            <span>进入训练主线</span>
+            <span>进入训练计划编排</span>
           </button>
           <button type="button" class="hero-pill" @click="router.push('/content')">
             <span class="hero-pill-code">CT</span>
-            <span>打开内容工坊</span>
+            <span>打开前台内容运营</span>
           </button>
           <button type="button" class="hero-pill" @click="loadDashboardData">
             <span class="hero-pill-code">RF</span>
@@ -25,7 +25,7 @@
 
       <div class="hero-metrics">
         <button type="button" class="hero-metric-card peach interactive-card" @click="router.push('/courses')">
-          <span>课程目录</span>
+          <span>课程管理</span>
           <strong>{{ metrics.courseCount }}</strong>
           <small>{{ metrics.courseCount === 0 ? '当前后端返回课程数为 0' : '当前课程资源数' }}</small>
         </button>
@@ -44,8 +44,8 @@
 
     <section class="dashboard-grid">
       <div class="card surface-peach">
-        <div class="section-title-sm">课程目录预览</div>
-        <div class="section-copy">用课程目录的方式组织管理入口，让首页更像教育产品，而不是传统后台。</div>
+        <div class="section-title-sm">高频业务入口</div>
+        <div class="section-copy">按完整链路展示训练、订单和内容入口，让首页更像管理总览而不是概念包装页。</div>
         <div class="catalog-grid">
           <button
             v-for="item in catalogPreview"
@@ -179,21 +179,21 @@ const percentWidth = (numerator, denominator) => {
 const catalogPreview = computed(() => [
   {
     badge: '主线',
-    label: '训练主线',
+    label: '训练计划编排',
     value: metrics.trainingPlanCount,
     note: metrics.trainingPlanCount === 0 ? '当前暂时没有训练计划' : '去编排训练计划和动作节点',
     path: '/training-plans'
   },
   {
     badge: '订单',
-    label: '订单成绩单',
+    label: '订单与退款',
     value: metrics.orderCount,
     note: metrics.orderCount === 0 ? '当前暂时没有订单样本' : '查看支付、关闭和退款情况',
     path: '/orders'
   },
   {
     badge: '内容',
-    label: '内容工坊',
+    label: '前台内容运营',
     value: metrics.bannerCount + metrics.noticeCount,
     note: metrics.bannerCount + metrics.noticeCount === 0 ? '当前没有 Banner 或公告' : '维护 Banner、公告和配置',
     path: '/content'
@@ -231,13 +231,13 @@ const dynamicTags = computed(() => [
   {
     kicker: '课程',
     title: `课程资源 ${metrics.courseCount}`,
-    note: metrics.courseCount === 0 ? '后端当前返回课程数为 0' : '点击进入课程目录维护',
+    note: metrics.courseCount === 0 ? '后端当前返回课程数为 0' : '点击进入课程基础管理',
     path: '/courses'
   },
   {
     kicker: '内容',
     title: `活动入口 ${metrics.bannerCount + metrics.noticeCount}`,
-    note: metrics.bannerCount + metrics.noticeCount === 0 ? '当前没有 Banner 或公告' : '点击进入内容工坊',
+    note: metrics.bannerCount + metrics.noticeCount === 0 ? '当前没有 Banner 或公告' : '点击进入前台内容运营',
     path: '/content'
   }
 ])
@@ -246,18 +246,18 @@ const ctaLinks = [
   {
     kicker: '计划',
     title: '新建训练计划',
-    note: '进入训练主线开始编排',
+    note: '进入训练计划编排页开始维护',
     path: '/training-plans'
   },
   {
     kicker: '订单',
-    title: '查看订单成绩单',
+    title: '查看订单与退款',
     note: '进入订单与退款详情',
     path: '/orders'
   },
   {
     kicker: '权限',
-    title: '修复权限学院',
+    title: '进入权限治理总览',
     note: '查看角色权限与修复入口',
     path: '/permission-center'
   }
