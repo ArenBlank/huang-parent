@@ -31,6 +31,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.util.StringUtils;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -52,6 +54,7 @@ public class AuthController {
     private final UserRoleCoreService userRoleCoreService;
     private final AppAuthCacheService appAuthCacheService;
     private final CaptchaService captchaService;
+    private boolean captchaEnabled = true;
 
     public AuthController(SmsCodeUtil smsCodeUtil,
                           UserCoreService userCoreService,
@@ -65,6 +68,11 @@ public class AuthController {
         this.userRoleCoreService = userRoleCoreService;
         this.appAuthCacheService = appAuthCacheService;
         this.captchaService = captchaService;
+    }
+
+    @Value("${fitness.auth.captcha.enabled:true}")
+    public void setCaptchaEnabled(boolean captchaEnabled) {
+        this.captchaEnabled = captchaEnabled;
     }
 
     @Operation(summary = "Get slider captcha", description = "AJ-Captcha standard get endpoint")
@@ -305,6 +313,12 @@ public class AuthController {
     }
 
     private boolean verifyCaptcha(String captchaVerification) {
+        if (!captchaEnabled) {
+            return true;
+        }
+        if (!StringUtils.hasText(captchaVerification)) {
+            return false;
+        }
         CaptchaVO captchaVO = new CaptchaVO();
         captchaVO.setCaptchaVerification(captchaVerification);
         ResponseModel responseModel = captchaService.verification(captchaVO);

@@ -104,3 +104,8 @@ aj:
     slip-offset: 5
     water-mark: FITNESS
     interference-options: 2
+
+fitness:
+  auth:
+    captcha:
+      enabled: true

@@ -72,8 +72,7 @@
         </el-form>
 
         <div class="login-actions">
-          <el-button v-if="!isRegister" @click="fillAccount('root', 'root')">填充测试账号</el-button>
-          <p class="muted">常用测试账号：root / root。短信验证码入口已移除。</p>
+          <p class="muted">短信验证码入口已移除，登录与注册均需先完成滑块拼图验证。</p>
         </div>
       </div>
     </section>
@@ -113,11 +112,6 @@ const modeLabel = computed(() => (isRegister.value ? "注册" : "登录"))
 const switchMode = (registerMode) => {
   isRegister.value = registerMode
   captchaVisible.value = false
-}
-
-const fillAccount = (account, password) => {
-  form.account = account
-  form.password = password
 }
 
 const validateForm = () => {

@@ -110,8 +110,8 @@ jobs:
 
       - name: Start admin and app
         run: |
-          nohup mvn -B -ntp -f web/web-admin/pom.xml -DskipTests spring-boot:run -Dspring-boot.run.arguments="--spring.data.redis.password=" > admin.log 2>&1 &
-          nohup mvn -B -ntp -f web/web-app/pom.xml -DskipTests spring-boot:run -Dspring-boot.run.arguments="--spring.data.redis.password=" > app.log 2>&1 &
+          nohup mvn -B -ntp -f web/web-admin/pom.xml -DskipTests spring-boot:run -Dspring-boot.run.arguments="--spring.data.redis.password= --fitness.auth.captcha.enabled=false" > admin.log 2>&1 &
+          nohup mvn -B -ntp -f web/web-app/pom.xml -DskipTests spring-boot:run -Dspring-boot.run.arguments="--spring.data.redis.password= --fitness.auth.captcha.enabled=false" > app.log 2>&1 &
 
       - name: Wait services up
         run: |
@@ -229,9 +229,9 @@ jobs:
 
       - name: Start admin and dual app instances
         run: |
-          nohup mvn -B -ntp -f web/web-admin/pom.xml -DskipTests spring-boot:run -Dspring-boot.run.arguments="--spring.data.redis.password=" > admin.log 2>&1 &
-          nohup mvn -B -ntp -f web/web-app/pom.xml -DskipTests spring-boot:run -Dspring-boot.run.arguments="--server.port=8081 --spring.data.redis.password=" > app-8081.log 2>&1 &
-          nohup mvn -B -ntp -f web/web-app/pom.xml -DskipTests spring-boot:run -Dspring-boot.run.arguments="--server.port=8082 --spring.data.redis.password=" > app-8082.log 2>&1 &
+          nohup mvn -B -ntp -f web/web-admin/pom.xml -DskipTests spring-boot:run -Dspring-boot.run.arguments="--spring.data.redis.password= --fitness.auth.captcha.enabled=false" > admin.log 2>&1 &
+          nohup mvn -B -ntp -f web/web-app/pom.xml -DskipTests spring-boot:run -Dspring-boot.run.arguments="--server.port=8081 --spring.data.redis.password= --fitness.auth.captcha.enabled=false" > app-8081.log 2>&1 &
+          nohup mvn -B -ntp -f web/web-app/pom.xml -DskipTests spring-boot:run -Dspring-boot.run.arguments="--server.port=8082 --spring.data.redis.password= --fitness.auth.captcha.enabled=false" > app-8082.log 2>&1 &
 
       - name: Start nginx upstream
         run: |

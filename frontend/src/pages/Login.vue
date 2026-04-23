@@ -31,7 +31,7 @@
 
       <el-form :model="form" label-position="top" @keyup.enter="submit">
         <el-form-item label="账号">
-          <el-input v-model.trim="form.account" placeholder="root_admin / admin / ops_admin / audit_admin" />
+          <el-input v-model.trim="form.account" placeholder="请输入管理端账号" />
         </el-form-item>
         <el-form-item label="密码">
           <el-input v-model="form.password" type="password" show-password placeholder="请输入密码" />
@@ -41,18 +41,7 @@
         </el-button>
       </el-form>
 
-      <div class="quick-row">
-        <el-button size="small" @click="fillAccount('root_admin', 'root')">填充 root_admin</el-button>
-        <el-button size="small" @click="fillAccount('ops_admin', 'ops_admin_123')">填充 ops_admin</el-button>
-        <el-button size="small" @click="fillAccount('audit_admin', 'audit_admin_123')">填充 audit_admin</el-button>
-      </div>
-
-      <div class="login-hint">
-        推荐账号：
-        <span class="mono">root_admin / root</span>
-        ，或
-        <span class="mono">ops_admin / ops_admin_123</span>
-      </div>
+      <div class="login-hint">登录与安全校验通过后进入管理端控制台。</div>
     </el-card>
 
     <AdminSliderCaptcha
@@ -81,11 +70,6 @@ const form = reactive({
 })
 
 const STORAGE_KEY = 'admin_last_account'
-
-const fillAccount = (account, password) => {
-  form.account = account
-  form.password = password
-}
 
 const submit = async () => {
   if (!form.account || !form.password) {
@@ -219,13 +203,6 @@ onMounted(() => {
 .login-button {
   width: 100%;
   margin-top: 10px;
-}
-
-.quick-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-  margin-top: 14px;
 }
 
 .login-hint {

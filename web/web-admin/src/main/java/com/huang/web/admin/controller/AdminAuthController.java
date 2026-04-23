@@ -19,6 +19,8 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -36,6 +38,7 @@ public class AdminAuthController {
     private final UserService userService;
     private final AdminRoleCoreService adminRoleCoreService;
     private final CaptchaService captchaService;
+    private boolean captchaEnabled = true;
 
     public AdminAuthController(UserService userService,
                                AdminRoleCoreService adminRoleCoreService,
@@ -43,6 +46,11 @@ public class AdminAuthController {
         this.userService = userService;
         this.adminRoleCoreService = adminRoleCoreService;
         this.captchaService = captchaService;
+    }
+
+    @Value("${fitness.auth.captcha.enabled:true}")
+    public void setCaptchaEnabled(boolean captchaEnabled) {
+        this.captchaEnabled = captchaEnabled;
     }
 
     @Operation(summary = "Get slider captcha", description = "AJ-Captcha standard get endpoint for admin login")
@@ -135,6 +143,12 @@ public class AdminAuthController {
     }
 
     private boolean verifyCaptcha(String captchaVerification) {
+        if (!captchaEnabled) {
+            return true;
+        }
+        if (!StringUtils.hasText(captchaVerification)) {
+            return false;
+        }
         CaptchaVO captchaVO = new CaptchaVO();
         captchaVO.setCaptchaVerification(captchaVerification);
         ResponseModel responseModel = captchaService.verification(captchaVO);

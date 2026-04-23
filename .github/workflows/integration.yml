@@ -83,8 +83,8 @@ jobs:
 
       - name: Start admin and app
         run: |
-          nohup mvn -B -ntp -f web/web-admin/pom.xml -DskipTests spring-boot:run -Dspring-boot.run.arguments="--spring.data.redis.password=" > admin.log 2>&1 &
-          nohup mvn -B -ntp -f web/web-app/pom.xml -DskipTests spring-boot:run -Dspring-boot.run.arguments="--spring.data.redis.password= --payment.sign.mode=hmac --payment.sign.secret=ci-pay-secret" > app.log 2>&1 &
+          nohup mvn -B -ntp -f web/web-admin/pom.xml -DskipTests spring-boot:run -Dspring-boot.run.arguments="--spring.data.redis.password= --fitness.auth.captcha.enabled=false" > admin.log 2>&1 &
+          nohup mvn -B -ntp -f web/web-app/pom.xml -DskipTests spring-boot:run -Dspring-boot.run.arguments="--spring.data.redis.password= --payment.sign.mode=hmac --payment.sign.secret=ci-pay-secret --fitness.auth.captcha.enabled=false" > app.log 2>&1 &
 
       - name: Wait services up
         run: |
