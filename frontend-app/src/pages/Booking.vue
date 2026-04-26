@@ -11,43 +11,54 @@
         <span class="tag">未来可预约 {{ effectiveAvailableSchedules }}</span>
         <span class="tag">我的预约 {{ myBookings.length }}</span>
       </div>
-      <el-button type="primary" @click="loadSchedules" :loading="loading">刷新可预约时间</el-button>
+      <el-button type="primary" :loading="loading" @click="loadSchedules">刷新预约工作台</el-button>
     </section>
 
     <el-row :gutter="20" class="booking-dashboard">
       <el-col :xs="24" :md="8">
         <aside class="booking-sidebar">
-          <section class="workspace-card">
+          <section v-if="lastBooking" class="workspace-card">
             <div class="toolbar">
               <div>
-                <h2 class="section-title-sm">最近预约</h2>
-                <p class="section-sub">支付、完结和订单详情固定在这里。</p>
+                <h2 class="section-title-sm">当前待办</h2>
+                <p class="section-sub">快速处理你手头的预约单。</p>
               </div>
             </div>
-            <el-empty v-if="!lastBooking" description="暂无最近预约" />
-            <div v-else class="detail detail-card">
-              <div class="detail-card__title">最近一次预约</div>
+            <div class="detail detail-card">
+              <div class="detail-card__title">当前待处理预约</div>
               <div class="detail-card__headline">{{ formatScheduleTime(lastBooking) }}</div>
               <div class="detail-chip-row">
                 <span class="tag">预约ID {{ lastBooking.bookingId || lastBooking.id }}</span>
-                <span class="tag">订单ID {{ lastBooking.orderId || "-" }}</span>
+                <span class="tag">订单ID {{ lastBooking.orderId || '-' }}</span>
                 <span class="tag">预约状态 {{ formatBookingStatus(lastBooking.bookingStatus) }}</span>
                 <span class="tag">支付状态 {{ formatPayStatus(lastBooking.payStatus) }}</span>
               </div>
               <div class="detail-list">
-                <div>订单号：{{ lastBooking.orderNo || "-" }}</div>
-                <div>金额：{{ lastBooking.amount ?? "-" }}</div>
-                <div>教练：{{ coachDisplayName(lastBooking.coachId) }}</div>
+                <div>订单号：{{ lastBooking.orderNo || '-' }}</div>
+                <div>金额：{{ lastBooking.amount ?? '-' }}</div>
+                <div>教练：{{ bookingCoachDisplayName(lastBooking) }}</div>
               </div>
               <div class="action-row action-row--wrap">
-                <el-button type="primary" size="small" :loading="paying" @click="mockPay">模拟支付</el-button>
-                <el-button type="success" size="small" :loading="completing" @click="completeBooking">确认完成</el-button>
+                <el-button type="primary" size="small" :loading="paying" :disabled="!canMockPay(lastBooking)" @click="mockPay">模拟支付</el-button>
+                <el-button
+                  type="danger"
+                  size="small"
+                  plain
+                  :loading="isCancellingBooking(lastBooking)"
+                  :disabled="!canCancelBooking(lastBooking)"
+                  @click="cancelBooking(lastBooking)"
+                >
+                  取消预约
+                </el-button>
+                <el-button type="success" size="small" :loading="completing" :disabled="!canCompleteBooking(lastBooking)" @click="completeBooking">
+                  确认完成
+                </el-button>
                 <el-button size="small" :disabled="!lastBooking?.orderId" @click="goToOrder(lastBooking)">订单详情</el-button>
               </div>
             </div>
           </section>
 
-          <section class="workspace-card create-card" ref="createBookingRef">
+          <section ref="createBookingRef" class="workspace-card create-card">
             <div class="toolbar">
               <div>
                 <h2 class="section-title-sm">创建预约</h2>
@@ -65,13 +76,7 @@
                 <span class="tag">余量 {{ remainingSlots(selected) }}</span>
                 <span class="tag">状态 {{ scheduleStatus(selected).text }}</span>
               </div>
-              <el-button
-                type="success"
-                class="create-submit"
-                :disabled="!selected || selectedUnavailable"
-                :loading="submitting"
-                @click="createBooking"
-              >
+              <el-button type="success" class="create-submit" :disabled="!selected || selectedUnavailable" :loading="submitting" @click="createBooking">
                 提交预约
               </el-button>
             </div>
@@ -93,7 +98,7 @@
                 <el-form-item label="教练">
                   <div class="coach-picker-field">
                     <button type="button" class="coach-picker-trigger" @click="openCoachPicker">
-                      <span v-if="selectedCoachOption">{{ coachDisplayName(selectedCoachOption.coachId) }}</span>
+                      <span v-if="selectedCoachLabel">{{ selectedCoachLabel }}</span>
                       <span v-else class="muted">从教练列表中选择</span>
                     </button>
                     <el-button
@@ -107,7 +112,7 @@
                   </div>
                 </el-form-item>
                 <el-form-item label="预约服务日期">
-                  <el-date-picker v-model="date" type="date" placeholder="筛选某一天的可预约时间段" value-format="YYYY-MM-DD" />
+                  <el-date-picker v-model="date" type="date" value-format="YYYY-MM-DD" placeholder="筛选某一天的可预约时间段" />
                 </el-form-item>
                 <el-form-item label="快速操作">
                   <div class="quick-wrap">
@@ -151,11 +156,11 @@
                     <div class="coach-card__body">
                       <div class="coach-card__top">
                         <div>
-                      <strong class="coach-card__name">{{ coach.name }}</strong>
-                      <p class="coach-card__title">{{ coach.title }}</p>
-                    </div>
-                    <span class="coach-card__rating">{{ coach.availableCount ? "可约" : "满员" }}</span>
-                  </div>
+                          <strong class="coach-card__name">{{ coach.name }}</strong>
+                          <p class="coach-card__title">{{ coach.title }}</p>
+                        </div>
+                        <span class="coach-card__rating">{{ coach.availableCount ? '可约' : '满员' }}</span>
+                      </div>
                       <div class="coach-card__tags">
                         <el-tag v-for="tag in coach.tags" :key="tag" size="small" effect="plain">{{ tag }}</el-tag>
                       </div>
@@ -188,10 +193,7 @@
                     :key="row.id"
                     type="button"
                     class="schedule-card"
-                    :class="{
-                      'schedule-card--active': selected?.id === row.id,
-                      'schedule-card--disabled': !isScheduleAvailable(row)
-                    }"
+                    :class="{ 'schedule-card--active': selected?.id === row.id, 'schedule-card--disabled': !isScheduleAvailable(row) }"
                     :data-schedule-id="row.id"
                     @click="selectSchedule(row)"
                   >
@@ -201,7 +203,7 @@
                     </div>
                     <strong class="schedule-card__time">{{ formatTime(row.startTime) }} - {{ formatTime(row.endTime) }}</strong>
                     <div class="schedule-card__meta">
-                      <span>教练 {{ coachDisplayName(row.coachId) }}</span>
+                      <span>教练 {{ bookingCoachDisplayName(row) }}</span>
                       <span>余量 {{ remainingSlots(row) }}</span>
                       <span>¥{{ row.price }}</span>
                     </div>
@@ -218,7 +220,7 @@
                 </div>
                 <div class="action-row">
                   <el-button size="small" @click="fillReviewFromCompleted">自动选择已完成预约</el-button>
-                  <el-button type="primary" size="small" @click="loadMyBookings" :loading="myLoading">刷新</el-button>
+                  <el-button type="primary" size="small" :loading="myLoading" @click="loadMyBookings">刷新</el-button>
                 </div>
               </div>
               <el-empty v-if="!myBookings.length && !myLoading" description="暂无预约记录" />
@@ -228,7 +230,7 @@
                   <template #default="{ row }">
                     <div class="booking-table__slot">
                       <strong>{{ formatScheduleTime(row) }}</strong>
-                      <span class="muted">教练 {{ coachDisplayName(row.coachId) }}</span>
+                      <span class="muted">教练 {{ bookingCoachDisplayName(row) }}</span>
                     </div>
                   </template>
                 </el-table-column>
@@ -241,11 +243,19 @@
                 <el-table-column label="订单" min-width="220">
                   <template #default="{ row }">
                     <div class="booking-table__order">
-                      <strong class="order-no">{{ row.orderNo || `订单ID ${row.orderId || "-"}` }}</strong>
+                      <strong class="order-no">{{ row.orderNo || ('订单ID ' + (row.orderId || '-')) }}</strong>
                       <div class="booking-table__order-actions">
                         <span class="muted">金额 {{ formatAmount(row.amount) }}</span>
-                        <el-button size="small" type="primary" plain :disabled="!row.orderId" @click="goToOrder(row)">
-                          查看订单详情
+                        <el-button size="small" type="primary" plain :disabled="!row.orderId" @click="goToOrder(row)">查看订单详情</el-button>
+                        <el-button
+                          size="small"
+                          type="danger"
+                          plain
+                          :loading="isCancellingBooking(row)"
+                          :disabled="!canCancelBooking(row)"
+                          @click="cancelBooking(row)"
+                        >
+                          取消预约
                         </el-button>
                       </div>
                     </div>
@@ -253,9 +263,7 @@
                 </el-table-column>
                 <el-table-column label="评价" width="120">
                   <template #default="{ row }">
-                    <el-button size="small" type="primary" plain :disabled="row.bookingStatus !== 'COMPLETED'" @click="openReview(row)">
-                      写评价
-                    </el-button>
+                    <el-button size="small" type="primary" plain :disabled="row.bookingStatus !== 'COMPLETED'" @click="openReview(row)">写评价</el-button>
                   </template>
                 </el-table-column>
                 <el-table-column label="创建时间" min-width="170">
@@ -263,16 +271,16 @@
                 </el-table-column>
               </el-table>
 
-              <section v-if="reviewPanelVisible" class="review-panel" ref="reviewSectionRef">
+              <section v-if="reviewPanelVisible" ref="reviewSectionRef" class="review-panel">
                 <div class="toolbar">
                   <div>
-                    <h2 class="section-title-sm">预约评价</h2>
-                    <p class="section-sub">评价仅支持已完成预约。</p>
+                    <h2 class="section-title-sm">写评价</h2>
+                    <p class="section-sub">选中已完成预约后填写评价。</p>
                   </div>
                 </div>
                 <div v-if="selectedReviewBooking" class="detail">
                   <div>预约ID：{{ selectedReviewBooking.id }}</div>
-                  <div class="muted">状态：{{ formatBookingStatus(selectedReviewBooking.bookingStatus) }}</div>
+                  <div class="muted">预约状态：{{ formatBookingStatus(selectedReviewBooking.bookingStatus) }}</div>
                   <div class="muted">订单ID：{{ selectedReviewBooking.orderId }}</div>
                   <div class="muted">预约时间：{{ formatScheduleTime(selectedReviewBooking) }}</div>
                 </div>
@@ -282,7 +290,7 @@
                   </el-form-item>
                   <el-form-item label="评分">
                     <el-select v-model.number="reviewForm.score" style="width: 180px">
-                      <el-option v-for="n in 5" :key="n" :label="`${n} 分`" :value="n" />
+                      <el-option v-for="n in 5" :key="n" :label="n + ' 星'" :value="n" />
                     </el-select>
                   </el-form-item>
                   <el-form-item label="评价内容">
@@ -292,7 +300,7 @@
                       :rows="4"
                       maxlength="500"
                       show-word-limit
-                      placeholder="填写训练体验、动作指导、服务感受"
+                      placeholder="说说教练安排、沟通和训练感受"
                     />
                   </el-form-item>
                   <div class="action-row">
@@ -301,14 +309,7 @@
                   </div>
                 </el-form>
               </section>
-              <el-alert
-                v-else
-                type="info"
-                show-icon
-                :closable="false"
-                title="点击已完成预约的“写评价”后，会在这里打开评价面板"
-                style="margin-top: 14px"
-              />
+              <el-alert v-else type="info" show-icon :closable="false" title="请先在左侧列表选择一条已完成预约，再来写评价。" style="margin-top: 14px" />
             </el-tab-pane>
           </el-tabs>
         </main>
@@ -323,27 +324,16 @@
           <strong>当前可预约教练 {{ filteredCoachOptions.length }} 位</strong>
           <p>{{ coachPickerNotice }}</p>
         </div>
-        <el-input
-          v-model="coachPickerKeyword"
-          clearable
-          placeholder="按姓名、账号或擅长领域筛选"
-          style="width: 260px"
-        />
+        <el-input v-model="coachPickerKeyword" clearable placeholder="按姓名、账号或擅长领域筛选" style="width: 260px" />
       </div>
       <el-empty v-if="!filteredCoachOptions.length && !coachOptionsLoading" description="暂无可选教练">
         <p class="empty-tip">{{ scheduleEmptyReason }}</p>
       </el-empty>
       <div v-else class="coach-picker-grid" v-loading="coachOptionsLoading">
-        <button
-          v-for="coach in filteredCoachOptions"
-          :key="coach.coachId"
-          type="button"
-          class="coach-picker-card"
-          @click="selectCoachOption(coach)"
-        >
+        <button v-for="coach in filteredCoachOptions" :key="coach.coachId" type="button" class="coach-picker-card" @click="selectCoachOption(coach)">
           <div class="coach-picker-card__top">
             <strong>{{ coachDisplayName(coach.coachId) }}</strong>
-            <span>档案ID {{ coach.coachId }}</span>
+            <span>教练ID {{ coach.coachId }}</span>
           </div>
           <div class="coach-picker-card__meta">
             <span v-if="coach.expertise">{{ coach.expertise }}</span>
@@ -351,7 +341,7 @@
             <span v-if="coach.rating !== null && coach.rating !== undefined">评分 {{ coach.rating }}</span>
           </div>
           <div class="coach-picker-card__footer">
-            <span>{{ coach.username || "-" }}</span>
+            <span>{{ coach.username || '-' }}</span>
             <span v-if="coach.price !== null && coach.price !== undefined">基础价 ¥{{ coach.price }}</span>
           </div>
         </button>
@@ -361,11 +351,12 @@
 </template>
 
 <script setup>
-import { computed, nextTick, reactive, ref } from "vue"
-import { useRouter } from "vue-router"
-import { ElMessage } from "element-plus"
+import { computed, nextTick, reactive, ref, watch } from "vue"
+import { useRoute, useRouter } from "vue-router"
+import { ElMessage, ElMessageBox } from "element-plus"
 import { appClient } from "../api/client"
 
+const route = useRoute()
 const router = useRouter()
 const fallbackImage = import.meta.env.VITE_FALLBACK_IMAGE || "/test.png"
 const schedules = ref([])
@@ -375,6 +366,7 @@ const selected = ref(null)
 const lastBooking = ref(null)
 const paying = ref(false)
 const completing = ref(false)
+const cancelingBookingId = ref(null)
 const createBookingRef = ref(null)
 const reviewSectionRef = ref(null)
 const activeBookingTab = ref("schedules")
@@ -405,8 +397,11 @@ const scheduleSummary = ref({
   lastScheduleDate: null,
   nextScheduleDate: null
 })
+const coachNameCache = reactive({})
 const STORAGE_BOOKING = "fp_last_booking"
 const STORAGE_COACH_ID = "fp_last_coach_id"
+const BOOKING_KEEP_ALIVE_MS = 60 * 60 * 1000
+const BOOKING_TABS = new Set(["schedules", "bookings"])
 
 const selectedUnavailable = computed(() => {
   if (!selected.value) return false
@@ -427,7 +422,7 @@ const derivedCoachOptions = computed(() => {
     if (!Number.isFinite(id) || map.has(id)) return
     map.set(id, {
       coachId: id,
-      displayName: row?.coachName || row?.coachDisplayName || `教练档案 ${id}`,
+      displayName: row?.coachName || row?.coachDisplayName || `鏁欑粌妗ｆ ${id}`,
       username: row?.coachUsername || "",
       nickname: row?.coachNickname || row?.coachName || "",
       avatar: row?.coachAvatar || row?.avatar || row?.photoUrl || row?.imageUrl || "",
@@ -446,6 +441,11 @@ const coachOptionMap = computed(() => {
   return map
 })
 const selectedCoachOption = computed(() => coachOptionMap.value.get(Number(coachId.value)) || null)
+const selectedCoachLabel = computed(() => {
+  if (selectedCoachOption.value) return coachDisplayName(selectedCoachOption.value.coachId)
+  const parsedCoachId = parseCoachId(coachId.value)
+  return parsedCoachId === null ? "" : coachDisplayName(parsedCoachId)
+})
 const filteredCoachOptions = computed(() => {
   const keyword = coachPickerKeyword.value.trim().toLowerCase()
   if (!keyword) return coachPickerOptions.value
@@ -467,6 +467,7 @@ const coachPickerNotice = computed(() => {
   }
   return "这里展示的是当前存在可预约时间段的教练列表。"
 })
+
 const coachCards = computed(() => {
   const map = new Map()
   visibleSchedules.value.forEach((row) => {
@@ -537,10 +538,13 @@ const scheduleSummaryHint = computed(() => {
 })
 
 const createBookingHint = computed(() => {
+  if (lastBooking.value?.bookingStatus === "WAIT_PAY") {
+    return "你有一笔待支付预约，请先处理左侧卡片或在列表中完成支付。"
+  }
   if (!visibleSchedules.value.length) {
     return "当前没有可选的可预约时间段，先看上方说明或刷新列表。"
   }
-  return "请先从上方时间段列表中选择一个可预约时间段。"
+  return "← 请从右侧选择一个时间段开始创建。"
 })
 
 const isMissingEndpointMessage = (message) => String(message || "").includes("接口不存在")
@@ -562,8 +566,37 @@ const coachPersona = (id) => coachPersonas[Math.abs(Math.trunc(Number(id) || 0))
 
 const normalizeCoachTags = (value, fallback) => {
   if (Array.isArray(value)) return value.filter(Boolean).slice(0, 3)
-  if (typeof value === "string" && value.trim()) return value.split(/[、,，\s]+/).filter(Boolean).slice(0, 3)
+  if (typeof value === "string" && value.trim()) return value.split(/[、，,\s]+/).filter(Boolean).slice(0, 3)
   return fallback
+}
+
+const normalizeCoachName = (value) => {
+  const text = String(value || "").trim()
+  if (!text || text === "-" || text === "教练") return ""
+  if (/^[?？]+$/u.test(text)) return ""
+  if (/^教练档案\s*\d+$/u.test(text)) return ""
+  return text
+}
+
+const rememberCoachName = (coachIdValue, ...candidates) => {
+  const id = Number(coachIdValue)
+  if (!Number.isFinite(id)) return ""
+  const name = candidates.map((item) => normalizeCoachName(item)).find(Boolean) || ""
+  if (!name) return ""
+  coachNameCache[id] = name
+  return name
+}
+
+const rememberCoachNamesFromOptions = (items = []) => {
+  items.forEach((item) => {
+    rememberCoachName(item?.coachId, item?.displayName, item?.nickname, item?.username)
+  })
+}
+
+const rememberCoachNamesFromRows = (rows = []) => {
+  rows.forEach((row) => {
+    rememberCoachName(row?.coachId, row?.coachName, row?.coachDisplayName, row?.coachNickname, row?.coachUsername)
+  })
 }
 
 const resolveCoachPhoto = (row) => {
@@ -573,11 +606,77 @@ const resolveCoachPhoto = (row) => {
 
 const coachDisplayName = (coachIdValue) => {
   const id = Number(coachIdValue)
+  if (!Number.isFinite(id)) return "-"
+  if (coachNameCache[id]) return coachNameCache[id]
   const coach = coachOptionMap.value.get(id)
-  if (coach?.displayName) return coach.displayName
-  if (coach?.nickname) return coach.nickname
-  if (coach?.username) return coach.username
-  return Number.isFinite(id) ? `教练档案 ${id}` : "-"
+  const cached = rememberCoachName(id, coach?.displayName, coach?.nickname, coach?.username)
+  if (cached) return cached
+  return `鏁欑粌妗ｆ ${id}`
+}
+
+const bookingCoachDisplayName = (row) => {
+  if (!row) return "-"
+  const inline = rememberCoachName(row.coachId, row.coachName, row.coachDisplayName, row.coachNickname, row.coachUsername)
+  return inline || coachDisplayName(row.coachId)
+}
+
+const cachedCoachDisplayName = (coachIdValue) => {
+  const id = Number(coachIdValue)
+  if (!Number.isFinite(id)) return ""
+  if (coachNameCache[id]) return coachNameCache[id]
+  const coach = coachOptionMap.value.get(id)
+  return rememberCoachName(id, coach?.displayName, coach?.nickname, coach?.username)
+}
+
+const hydrateBookingCoachName = (item) => {
+  const normalized = toRecentBooking(item)
+  if (!normalized) return null
+  const inline = rememberCoachName(
+    normalized.coachId,
+    normalized.coachName,
+    normalized.coachDisplayName,
+    normalized.coachNickname,
+    normalized.coachUsername
+  )
+  if (inline) return normalized
+  const currentBookingId = Number(lastBooking.value?.bookingId || lastBooking.value?.id)
+  const targetBookingId = Number(normalized.bookingId || normalized.id)
+  const currentCoachName = currentBookingId === targetBookingId
+    ? rememberCoachName(
+        normalized.coachId,
+        lastBooking.value?.coachName,
+        lastBooking.value?.coachDisplayName,
+        lastBooking.value?.coachNickname,
+        lastBooking.value?.coachUsername
+      )
+    : ""
+  const cached = currentCoachName || cachedCoachDisplayName(normalized.coachId)
+  return cached ? { ...normalized, coachName: cached } : normalized
+}
+
+const ensureSelectedCoachName = async () => {
+  if (!selected.value) return ""
+  let name = rememberCoachName(
+    selected.value.coachId,
+    selected.value.coachName,
+    selected.value.coachDisplayName,
+    selectedCoachOption.value?.displayName,
+    selectedCoachOption.value?.nickname,
+    selectedCoachOption.value?.username
+  )
+  if (name) return name
+  if (!coachOptions.value.length && !coachOptionsLoading.value) {
+    await loadCoachOptions()
+    name = rememberCoachName(
+      selected.value.coachId,
+      selected.value.coachName,
+      selected.value.coachDisplayName,
+      selectedCoachOption.value?.displayName,
+      selectedCoachOption.value?.nickname,
+      selectedCoachOption.value?.username
+    )
+  }
+  return name || cachedCoachDisplayName(selected.value.coachId)
 }
 
 const scheduleTimeValue = (row) => {
@@ -593,25 +692,55 @@ const toRecentBooking = (item) => {
   }
 }
 
+const clearLastBooking = () => {
+  lastBooking.value = null
+  localStorage.removeItem(STORAGE_BOOKING)
+}
+
+const persistLastBooking = () => {
+  if (!lastBooking.value) {
+    localStorage.removeItem(STORAGE_BOOKING)
+    return
+  }
+  localStorage.setItem(STORAGE_BOOKING, JSON.stringify(lastBooking.value))
+}
+
+const isUrgentBooking = (item) => ["WAIT_PAY", "PAID"].includes(item?.bookingStatus)
+
+const canMockPay = (item) => item?.bookingStatus === "WAIT_PAY" && item?.payStatus === "UNPAID"
+const canCancelBooking = (item) => item?.bookingStatus === "WAIT_PAY" && item?.payStatus === "UNPAID"
+const canCompleteBooking = (item) => item?.bookingStatus === "PAID" && item?.payStatus === "PAID"
+const isCancellingBooking = (item) => Number(cancelingBookingId.value) === Number(item?.bookingId || item?.id)
+
+const isRecentPassiveBooking = (item) => {
+  if (!["COMPLETED", "CANCELLED"].includes(item?.bookingStatus)) return false
+  const createdAt = new Date(item?.createTime || 0).getTime()
+  if (!Number.isFinite(createdAt) || createdAt <= 0) return false
+  return Date.now() - createdAt <= BOOKING_KEEP_ALIVE_MS
+}
+
 const syncLastBooking = (rows) => {
-  const normalizedRows = (rows || []).map((item) => toRecentBooking(item))
-  const currentId = Number(lastBooking.value?.bookingId ?? lastBooking.value?.id ?? 0)
-  const matched = currentId ? normalizedRows.find((item) => Number(item.bookingId) === currentId) : null
-  if (matched) {
-    lastBooking.value = {
-      ...lastBooking.value,
-      ...matched
-    }
-  } else if (normalizedRows.length) {
-    lastBooking.value = {
-      ...normalizedRows[0],
-      orderNo: lastBooking.value?.orderId === normalizedRows[0].orderId ? lastBooking.value?.orderNo : normalizedRows[0].orderNo,
-      amount: lastBooking.value?.orderId === normalizedRows[0].orderId ? lastBooking.value?.amount : normalizedRows[0].amount
-    }
+  const normalizedRows = (rows || []).map((item) => hydrateBookingCoachName(item)).filter(Boolean)
+  if (!normalizedRows.length) {
+    clearLastBooking()
+    return
   }
-  if (lastBooking.value) {
-    localStorage.setItem(STORAGE_BOOKING, JSON.stringify(lastBooking.value))
+
+  const urgentBooking = normalizedRows.find((item) => isUrgentBooking(item))
+  if (urgentBooking) {
+    lastBooking.value = urgentBooking
+    persistLastBooking()
+    return
   }
+
+  const passiveBooking = normalizedRows.find((item) => ["COMPLETED", "CANCELLED"].includes(item?.bookingStatus))
+  if (passiveBooking && isRecentPassiveBooking(passiveBooking)) {
+    lastBooking.value = passiveBooking
+    persistLastBooking()
+    return
+  }
+
+  clearLastBooking()
 }
 
 const loadScheduleSummary = async () => {
@@ -622,7 +751,7 @@ const loadScheduleSummary = async () => {
       params.coachId = parsedCoachId
     }
     const { data } = await appClient.get("/app/booking/schedule/summary", { params })
-    if (data.code !== 200) throw new Error(data.message || "加载可预约时间摘要失败")
+    if (data.code !== 200) throw new Error(data.message || "加载预约摘要失败")
     scheduleSummary.value = {
       ...scheduleSummary.value,
       ...(data.data || {})
@@ -645,6 +774,7 @@ const loadCoachOptions = async () => {
     const { data } = await appClient.get("/app/booking/coach-options")
     if (data.code !== 200) throw new Error(data.message || "加载教练列表失败")
     coachOptions.value = data.data || []
+    rememberCoachNamesFromOptions(coachOptions.value)
     coachOptionsUnavailable.value = false
   } catch (err) {
     coachOptions.value = []
@@ -657,9 +787,18 @@ const loadCoachOptions = async () => {
   }
 }
 
-const loadSchedules = async () => {
+const refreshBookingWorkspace = async ({ keepSelection = true } = {}) => {
+  await Promise.all([
+    loadCoachOptions(),
+    loadSchedules({ keepSelection }),
+    loadMyBookings()
+  ])
+}
+
+const loadSchedules = async ({ keepSelection = true } = {}) => {
   try {
     loading.value = true
+    const currentSelectedId = keepSelection ? Number(selected.value?.id) : null
     const params = {}
     const parsedCoachId = parseCoachId(coachId.value)
     if (coachId.value !== null && coachId.value !== undefined && coachId.value !== "") {
@@ -667,19 +806,22 @@ const loadSchedules = async () => {
     }
     if (date.value) params.date = date.value
     const { data } = await appClient.get("/app/booking/schedule/list", { params })
-    if (data.code !== 200) throw new Error(data.message || "加载可预约时间段失败")
+    if (data.code !== 200) throw new Error(data.message || "鍔犺浇鍙绾︽椂闂存澶辫触")
     schedules.value = data.data || []
+    rememberCoachNamesFromRows(schedules.value)
     const nextAvailable = schedules.value.find((item) => isScheduleAvailable(item)) || null
-    if (selected.value && !schedules.value.some((item) => Number(item.id) === Number(selected.value.id) && isScheduleAvailable(item))) {
+    if (!keepSelection) {
+      selected.value = null
+    } else if (currentSelectedId && !schedules.value.some((item) => Number(item.id) === currentSelectedId && isScheduleAvailable(item))) {
       selected.value = null
     }
-    if (!selected.value) {
+    if (!selected.value && lastBooking.value?.bookingStatus !== "WAIT_PAY") {
       selected.value = nextAvailable
     }
     if (parsedCoachId !== null) localStorage.setItem(STORAGE_COACH_ID, String(parsedCoachId))
     await loadScheduleSummary()
   } catch (err) {
-    ElMessage.error(err.message || "加载可预约时间段失败")
+    ElMessage.error(err.message || "鍔犺浇鍙绾︽椂闂存澶辫触")
   } finally {
     loading.value = false
   }
@@ -706,7 +848,7 @@ const selectCoachOption = async (coach) => {
 
 const bookCoach = async (coach) => {
   if (!coach?.targetSchedule) {
-    ElMessage.warning("该教练当前没有可预约时间段")
+    ElMessage.warning("当前教练暂无可预约时间段")
     return
   }
   setCoach(coach.id)
@@ -724,7 +866,7 @@ const viewCoachReviews = async (coach) => {
     reviewPanelVisible.value = true
     activeBookingTab.value = "bookings"
   } else {
-    ElMessage.info("暂无该教练的已完成预约评价，可先预约体验")
+    ElMessage.info("已同步到当前待办，请优先处理左侧预约单。")
   }
   await nextTick()
   reviewSectionRef.value?.scrollIntoView?.({ behavior: "smooth", block: "start" })
@@ -732,7 +874,7 @@ const viewCoachReviews = async (coach) => {
 
 const selectSchedule = (row) => {
   if (!isScheduleAvailable(row)) {
-    ElMessage.warning("这个时间段当前不可预约，请选择其他时间")
+    ElMessage.warning("这个时间段当前不可预约，请换一个可预约档期。")
     return
   }
   selected.value = row
@@ -741,17 +883,26 @@ const selectSchedule = (row) => {
 
 const createBooking = async () => {
   if (!selected.value?.id) {
-    ElMessage.warning("请先选择一个可预约时间段")
+    ElMessage.warning("请先选择一个时间段")
     return
   }
   try {
     submitting.value = true
     const { data } = await appClient.post("/app/booking/create", { scheduleId: selected.value.id })
-    if (data.code !== 200) throw new Error(data.message || "预约失败")
-    ElMessage.success("预约成功")
+    if (data.code !== 200) throw new Error(data.message || "提交失败")
+    ElMessage.success("预约已创建")
+    const selectedCoachName = rememberCoachName(
+      selected.value.coachId,
+      selected.value.coachName,
+      selected.value.coachDisplayName,
+      selectedCoachOption.value?.displayName,
+      selectedCoachOption.value?.nickname,
+      selectedCoachOption.value?.username
+    )
     lastBooking.value = toRecentBooking({
       ...data.data,
       coachId: selected.value.coachId,
+      coachName: selectedCoachName || coachDisplayName(selected.value.coachId),
       scheduleDate: selected.value.scheduleDate,
       startTime: selected.value.startTime,
       endTime: selected.value.endTime,
@@ -759,12 +910,13 @@ const createBooking = async () => {
       payStatus: "UNPAID"
     })
     if (data.data?.bookingId) {
-      localStorage.setItem(STORAGE_BOOKING, JSON.stringify(lastBooking.value))
+      persistLastBooking()
       localStorage.setItem("fp_last_order_id", String(data.data.orderId || ""))
     }
-    await loadMyBookings()
+    selected.value = null
+    await refreshBookingWorkspace({ keepSelection: false })
   } catch (err) {
-    ElMessage.error(err.message || "预约失败")
+    ElMessage.error(err.message || "操作失败")
   } finally {
     submitting.value = false
   }
@@ -773,15 +925,25 @@ const createBooking = async () => {
 const loadLastBooking = () => {
   try {
     const cached = localStorage.getItem(STORAGE_BOOKING)
-    if (cached) lastBooking.value = toRecentBooking(JSON.parse(cached))
+    if (!cached) {
+      lastBooking.value = null
+      return
+    }
+    const normalized = toRecentBooking(JSON.parse(cached))
+    rememberCoachName(normalized?.coachId, normalized?.coachName, normalized?.coachDisplayName, normalized?.coachNickname, normalized?.coachUsername)
+    if (isUrgentBooking(normalized) || isRecentPassiveBooking(normalized)) {
+      lastBooking.value = normalized
+      return
+    }
+    clearLastBooking()
   } catch {
-    lastBooking.value = null
+    clearLastBooking()
   }
 }
 
 const mockPay = async () => {
   if (!lastBooking.value?.bookingId) {
-    ElMessage.warning("暂无预约可支付")
+    ElMessage.warning("当前没有可处理的预约")
     return
   }
   try {
@@ -789,11 +951,11 @@ const mockPay = async () => {
     const { data } = await appClient.post("/app/booking/pay-success", null, {
       params: { bookingId: lastBooking.value.bookingId }
     })
-    if (data.code !== 200) throw new Error(data.message || "模拟支付失败")
-    ElMessage.success("支付状态已更新")
+    if (data.code !== 200) throw new Error(data.message || "操作失败")
+    ElMessage.success("模拟支付完成")
     await loadMyBookings()
   } catch (err) {
-    ElMessage.error(err.message || "模拟支付失败")
+    ElMessage.error(err.message || "操作失败")
   } finally {
     paying.value = false
   }
@@ -801,7 +963,7 @@ const mockPay = async () => {
 
 const completeBooking = async () => {
   if (!lastBooking.value?.bookingId) {
-    ElMessage.warning("暂无预约可完结")
+    ElMessage.warning("当前没有可处理的预约")
     return
   }
   try {
@@ -819,12 +981,64 @@ const completeBooking = async () => {
   }
 }
 
+const cancelBooking = async (row = lastBooking.value) => {
+  const bookingId = Number(row?.bookingId || row?.id)
+  if (!Number.isFinite(bookingId) || bookingId <= 0) {
+    ElMessage.warning("当前预约无法取消")
+    return
+  }
+  if (!canCancelBooking(row)) {
+    ElMessage.warning("当前预约无法取消")
+    return
+  }
+  try {
+    await ElMessageBox.confirm(
+      "取消后会释放当前预约占用的名额，确认继续吗？",
+      "取消待支付预约",
+      {
+        confirmButtonText: "确认取消",
+        cancelButtonText: "先不取消",
+        type: "warning"
+      }
+    )
+  } catch {
+    return
+  }
+
+  try {
+    cancelingBookingId.value = bookingId
+    const isCurrentLastBooking = Number(lastBooking.value?.bookingId || lastBooking.value?.id) === bookingId
+    if (isCurrentLastBooking) {
+      clearLastBooking()
+    }
+    if (Number(selectedReviewBooking.value?.id) === bookingId) {
+      selectedReviewBooking.value = null
+      reviewPanelVisible.value = false
+      reviewForm.bookingId = ""
+      reviewForm.content = ""
+    }
+    const { data } = await appClient.post("/app/booking/cancel-unpaid", null, {
+      params: { bookingId }
+    })
+    if (data.code !== 200) throw new Error(data.message || "操作失败")
+    ElMessage.success("预约已取消，名额已释放")
+    selected.value = null
+    await refreshBookingWorkspace({ keepSelection: false })
+  } catch (err) {
+    ElMessage.error(err.message || "操作失败")
+    await loadMyBookings()
+  } finally {
+    cancelingBookingId.value = null
+  }
+}
+
 const loadMyBookings = async () => {
   try {
     myLoading.value = true
     const { data } = await appClient.get("/app/booking/my/list")
     if (data.code !== 200) throw new Error(data.message || "加载我的预约失败")
     myBookings.value = (data.data || []).map((item) => toRecentBooking(item))
+    rememberCoachNamesFromRows(myBookings.value)
     syncLastBooking(myBookings.value)
     if (!selectedReviewBooking.value) fillReviewFromCompleted(false)
   } catch (err) {
@@ -837,7 +1051,7 @@ const loadMyBookings = async () => {
 const fillReviewFromCompleted = (showMessage = true) => {
   const target = myBookings.value.find((row) => row.bookingStatus === "COMPLETED")
   if (!target) {
-    if (showMessage) ElMessage.warning("暂无可评价的已完成预约")
+    if (showMessage) ElMessage.warning("当前没有可评价的已完成预约")
     return false
   }
   selectedReviewBooking.value = target
@@ -853,12 +1067,12 @@ const fillReviewSample = () => {
     if (!ok) return
   }
   reviewForm.score = 5
-  reviewForm.content = "训练安排合理，动作指导清晰，整体体验很好。"
+  reviewForm.content = "教练节奏安排得很稳，讲解清楚，训练后反馈也很及时。"
 }
 
 const openReview = (row) => {
   if (row.bookingStatus !== "COMPLETED") {
-    ElMessage.warning("只有已完成预约可评价")
+    ElMessage.warning("只有已完成预约才能评价")
     return
   }
   selectedReviewBooking.value = row
@@ -878,7 +1092,7 @@ const submitReview = async () => {
     return
   }
   if (!reviewForm.content.trim()) {
-    ElMessage.warning("请输入评价内容")
+    ElMessage.warning("请填写评价内容")
     return
   }
   try {
@@ -888,12 +1102,12 @@ const submitReview = async () => {
       score: reviewForm.score,
       content: reviewForm.content.trim()
     })
-    if (data.code !== 200) throw new Error(data.message || "评价失败")
-    ElMessage.success("评价成功")
+    if (data.code !== 200) throw new Error(data.message || "提交失败")
+    ElMessage.success("评价已提交")
     reviewForm.content = ""
     await loadMyBookings()
   } catch (err) {
-    ElMessage.error(err.message || "评价失败")
+    ElMessage.error(err.message || "操作失败")
   } finally {
     reviewing.value = false
   }
@@ -904,11 +1118,13 @@ const goToOrder = (payload) => {
   if (!orderId) return
   const query = {
     orderId: String(orderId),
-    from: "booking"
+    from: "booking",
+    bookingTab: activeBookingTab.value
   }
+  if (coachId.value !== null && coachId.value !== undefined && String(coachId.value).trim() !== "") query.coachId = String(coachId.value)
+  if (date.value) query.date = String(date.value)
   if (payload && typeof payload === "object") {
     if (payload.id || payload.bookingId) query.bookingId = String(payload.id || payload.bookingId)
-    if (payload.coachId) query.coachId = String(payload.coachId)
     if (payload.scheduleDate) query.scheduleDate = String(payload.scheduleDate)
     if (payload.startTime) query.startTime = String(payload.startTime)
     if (payload.endTime) query.endTime = String(payload.endTime)
@@ -997,7 +1213,7 @@ const scheduleStatus = (row) => {
   if (row.status !== null && row.status !== undefined && Number(row.status) !== 1) return { text: "停用", type: "info" }
   const start = resolveScheduleStart(row)
   if (start && start.getTime() < Date.now() - 60 * 1000) return { text: "已过期", type: "warning" }
-  if (remainingSlots(row) <= 0) return { text: "已满", type: "danger" }
+  if (remainingSlots(row) <= 0) return { text: "满员", type: "danger" }
   return { text: "可预约", type: "success" }
 }
 
@@ -1018,11 +1234,49 @@ const loadCoachId = () => {
   }
 }
 
-loadCoachId()
+const restoreBookingWorkspace = () => {
+  loadCoachId()
+  const routeCoachId = parseCoachId(route.query.coachId)
+  if (routeCoachId !== null) coachId.value = routeCoachId
+  const routeDate = typeof route.query.date === "string" ? route.query.date.trim() : ""
+  date.value = routeDate
+  const routeTab = typeof route.query.bookingTab === "string" ? route.query.bookingTab : ""
+  if (BOOKING_TABS.has(routeTab)) {
+    activeBookingTab.value = routeTab
+  }
+}
+
+const buildBookingRouteQuery = () => {
+  const query = {}
+  if (BOOKING_TABS.has(activeBookingTab.value)) query.bookingTab = activeBookingTab.value
+  const parsedCoachId = parseCoachId(coachId.value)
+  if (parsedCoachId !== null) query.coachId = String(parsedCoachId)
+  if (date.value) query.date = String(date.value)
+  return query
+}
+
+const syncBookingRouteQuery = async () => {
+  if (route.path !== "/booking") return
+  const nextQuery = buildBookingRouteQuery()
+  const currentBookingTab = typeof route.query.bookingTab === "string" ? route.query.bookingTab : ""
+  const currentCoachId = typeof route.query.coachId === "string" ? route.query.coachId : ""
+  const currentDate = typeof route.query.date === "string" ? route.query.date : ""
+  const nextBookingTab = typeof nextQuery.bookingTab === "string" ? nextQuery.bookingTab : ""
+  const nextCoachId = typeof nextQuery.coachId === "string" ? nextQuery.coachId : ""
+  const nextDate = typeof nextQuery.date === "string" ? nextQuery.date : ""
+  if (currentBookingTab === nextBookingTab && currentCoachId === nextCoachId && currentDate === nextDate) return
+  await router.replace({ path: "/booking", query: nextQuery })
+}
+
+watch([activeBookingTab, coachId, date], () => {
+  syncBookingRouteQuery().catch(() => {})
+})
+
+restoreBookingWorkspace()
+loadLastBooking()
 loadCoachOptions()
 loadSchedules()
 loadMyBookings()
-loadLastBooking()
 </script>
 
 <style scoped>

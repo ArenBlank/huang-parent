@@ -27,6 +27,9 @@ public class BookingHistoryVO {
     @Schema(description = "教练ID")
     private Long coachId;
 
+    @Schema(description = "教练名称")
+    private String coachName;
+
     @Schema(description = "档期ID")
     private Long scheduleId;
 

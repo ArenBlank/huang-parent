@@ -106,6 +106,17 @@ public class BookingController {
         return ok ? Result.ok("预约已完成") : Result.fail("当前状态不可完成");
     }
 
+    @Operation(summary = "取消未支付预约")
+    @PostMapping("/cancel-unpaid")
+    public Result<?> cancelUnpaid(@RequestParam Long bookingId) {
+        LoginUser loginUser = LoginUserHolder.getLoginUser();
+        if (loginUser == null) {
+            return Result.fail("未登录");
+        }
+        boolean ok = bookingBizService.cancelUnpaid(bookingId, loginUser.getUserId());
+        return ok ? Result.ok("预约已取消，名额已释放") : Result.fail("取消失败，仅支持待支付预约");
+    }
+
     @Operation(summary = "提交评价")
     @PostMapping("/review")
     public Result<?> review(@Valid @RequestBody BookingReviewDTO dto) {

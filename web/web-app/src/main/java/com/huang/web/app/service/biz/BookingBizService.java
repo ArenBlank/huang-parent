@@ -1,6 +1,7 @@
 package com.huang.web.app.service.biz;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.huang.common.constant.BizStatusConstant;
 import com.huang.common.constant.RedisConstant;
 import com.huang.common.redis.RedisGuardSupport;
@@ -151,7 +152,12 @@ public class BookingBizService {
         }
         if (userId != null) {
             wrapper.apply(
-                    "NOT EXISTS (SELECT 1 FROM coach_booking cb WHERE cb.schedule_id = coach_schedule.id AND cb.user_id = {0})",
+                    "NOT EXISTS (SELECT 1 FROM coach_booking cb " +
+                            "WHERE cb.schedule_id = coach_schedule.id " +
+                            "AND cb.user_id = {0} " +
+                            "AND cb.is_deleted = 0 " +
+                            "AND cb.booking_status IN ('WAIT_PAY', 'PAID', 'COMPLETED') " +
+                            "AND cb.pay_status IN ('UNPAID', 'PAID'))",
                     userId
             );
         }
@@ -222,6 +228,21 @@ public class BookingBizService {
             if (!isFutureSchedule(schedule, LocalDate.now(), LocalTime.now())) {
                 reason = "schedule_expired";
                 return null;
+            }
+
+            CoachBooking existingBooking = coachBookingMapper.selectOne(
+                    new LambdaQueryWrapper<CoachBooking>()
+                            .eq(CoachBooking::getUserId, userId)
+                            .eq(CoachBooking::getScheduleId, schedule.getId())
+                            .orderByDesc(CoachBooking::getId)
+                            .last("LIMIT 1")
+            );
+            if (isBlockingBooking(existingBooking)) {
+                reason = "schedule_already_booked";
+                return null;
+            }
+            if (existingBooking != null && !isBlockingBooking(existingBooking)) {
+                coachBookingMapper.deleteById(existingBooking.getId());
             }
 
             Long duplicated = coachBookingMapper.countAnyByUserAndSchedule(userId, schedule.getId());
@@ -378,6 +399,41 @@ public class BookingBizService {
     }
 
     @Transactional(rollbackFor = Exception.class)
+    public boolean cancelUnpaid(Long bookingId, Long userId) {
+        CoachBooking booking = coachBookingMapper.selectById(bookingId);
+        if (booking == null || !Objects.equals(booking.getUserId(), userId)) {
+            return false;
+        }
+
+        OrderInfo orderInfo = orderInfoMapper.selectById(booking.getOrderId());
+        if (orderInfo == null) {
+            return false;
+        }
+        if (!BizStatusConstant.PayStatus.UNPAID.equals(orderInfo.getPayStatus())) {
+            return false;
+        }
+        if (!BizStatusConstant.BookingStatus.WAIT_PAY.equals(booking.getBookingStatus())
+                || !BizStatusConstant.PayStatus.UNPAID.equals(booking.getPayStatus())) {
+            return false;
+        }
+
+        orderInfo.setOrderStatus(BizStatusConstant.OrderStatus.CLOSED);
+        orderInfo.setPayStatus(BizStatusConstant.PayStatus.CLOSED);
+        orderInfoMapper.updateById(orderInfo);
+
+        paymentRecordMapper.update(
+                null,
+                new LambdaUpdateWrapper<PaymentRecord>()
+                        .eq(PaymentRecord::getOrderId, orderInfo.getId())
+                        .set(PaymentRecord::getPayStatus, BizStatusConstant.PayStatus.CLOSED)
+        );
+
+        coachScheduleMapper.releaseSlot(booking.getScheduleId());
+        coachBookingMapper.deleteById(booking.getId());
+        return true;
+    }
+
+    @Transactional(rollbackFor = Exception.class)
     public boolean review(Long userId, BookingReviewDTO dto) {
         CoachBooking booking = coachBookingMapper.selectById(dto.getBookingId());
         if (booking == null || !booking.getUserId().equals(userId)) {
@@ -421,6 +477,10 @@ public class BookingBizService {
                 .map(CoachBooking::getOrderId)
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
+        Set<Long> coachIds = bookings.stream()
+                .map(CoachBooking::getCoachId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
 
         Map<Long, CoachSchedule> scheduleMap = scheduleIds.isEmpty()
                 ? Map.of()
@@ -434,18 +494,31 @@ public class BookingBizService {
                 .stream()
                 .collect(Collectors.toMap(OrderInfo::getId, item -> item));
 
+        Map<Long, String> coachNameMap = coachIds.isEmpty()
+                ? Map.of()
+                : buildCoachNameMap(coachIds);
+
         return bookings.stream()
-                .map(item -> toBookingHistoryVO(item, scheduleMap.get(item.getScheduleId()), orderMap.get(item.getOrderId())))
+                .map(item -> toBookingHistoryVO(
+                        item,
+                        scheduleMap.get(item.getScheduleId()),
+                        orderMap.get(item.getOrderId()),
+                        coachNameMap.get(item.getCoachId())
+                ))
                 .toList();
     }
 
-    private BookingHistoryVO toBookingHistoryVO(CoachBooking booking, CoachSchedule schedule, OrderInfo orderInfo) {
+    private BookingHistoryVO toBookingHistoryVO(CoachBooking booking,
+                                                CoachSchedule schedule,
+                                                OrderInfo orderInfo,
+                                                String coachName) {
         BookingHistoryVO vo = new BookingHistoryVO();
         vo.setId(booking.getId());
         vo.setOrderId(booking.getOrderId());
         vo.setOrderNo(orderInfo == null ? null : orderInfo.getOrderNo());
         vo.setAmount(orderInfo == null ? null : orderInfo.getTotalAmount());
         vo.setCoachId(booking.getCoachId());
+        vo.setCoachName(coachName);
         vo.setScheduleId(booking.getScheduleId());
         if (schedule != null) {
             vo.setScheduleDate(schedule.getScheduleDate());
@@ -457,6 +530,35 @@ public class BookingBizService {
         vo.setCreateTime(booking.getCreateTime());
         vo.setFinishTime(booking.getFinishTime());
         return vo;
+    }
+
+    private Map<Long, String> buildCoachNameMap(Set<Long> coachIds) {
+        List<CoachProfile> profiles = coachProfileMapper.selectList(new LambdaQueryWrapper<CoachProfile>()
+                .in(CoachProfile::getId, coachIds));
+        if (profiles == null || profiles.isEmpty()) {
+            return Map.of();
+        }
+
+        Map<Long, User> userMap = userService.listByIds(
+                        profiles.stream()
+                                .map(CoachProfile::getUserId)
+                                .filter(Objects::nonNull)
+                                .toList()
+                ).stream()
+                .collect(Collectors.toMap(User::getId, Function.identity(), (left, right) -> left));
+
+        Map<Long, String> result = new HashMap<>();
+        for (CoachProfile profile : profiles) {
+            if (profile.getId() == null) {
+                continue;
+            }
+            User user = userMap.get(profile.getUserId());
+            if (user == null) {
+                continue;
+            }
+            result.put(profile.getId(), resolveCoachDisplayName(user));
+        }
+        return result;
     }
 
     private String genNo(String prefix) {
@@ -492,6 +594,20 @@ public class BookingBizService {
         return count != null && count > 0;
     }
 
+    private boolean isBlockingBooking(CoachBooking booking) {
+        if (booking == null) {
+            return false;
+        }
+        return List.of(
+                BizStatusConstant.BookingStatus.WAIT_PAY,
+                BizStatusConstant.BookingStatus.PAID,
+                BizStatusConstant.BookingStatus.COMPLETED
+        ).contains(booking.getBookingStatus()) && List.of(
+                BizStatusConstant.PayStatus.UNPAID,
+                BizStatusConstant.PayStatus.PAID
+        ).contains(booking.getPayStatus());
+    }
+
     private void markCurrentTransactionRollbackOnly() {
         if (TransactionSynchronizationManager.isActualTransactionActive()) {
             TransactionAspectSupport.currentTransactionStatus().setRollbackOnly();
@@ -502,12 +618,23 @@ public class BookingBizService {
         if (user == null) {
             return "-";
         }
-        if (user.getNickname() != null && !user.getNickname().isBlank()) {
+        if (isMeaningfulCoachName(user.getNickname())) {
             return user.getNickname().trim();
         }
-        if (user.getUsername() != null && !user.getUsername().isBlank()) {
+        if (isMeaningfulCoachName(user.getUsername())) {
             return user.getUsername().trim();
         }
         return "教练";
+    }
+
+    private boolean isMeaningfulCoachName(String value) {
+        if (value == null) {
+            return false;
+        }
+        String normalized = value.trim();
+        if (normalized.isBlank()) {
+            return false;
+        }
+        return !normalized.matches("[?？]+");
     }
 }

@@ -1,6 +1,9 @@
 ﻿{
-    "started_at":  "2026-02-25T19:32:17",
-    "use_external_infra":  true,
-    "admin_pid":  37672,
-    "app_pid":  30004
+    "app2_java_pid":  44628,
+    "admin_java_pid":  85592,
+    "admin_wrapper_pid":  12832,
+    "app1_wrapper_pid":  80184,
+    "app2_wrapper_pid":  59044,
+    "app1_java_pid":  56136,
+    "started_at":  "2026-04-24T14:48:23"
 }

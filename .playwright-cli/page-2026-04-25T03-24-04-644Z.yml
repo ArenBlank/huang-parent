@@ -1,0 +1,425 @@
+- generic [ref=e4]:
+  - banner [ref=e5]:
+    - generic [ref=e6]:
+      - paragraph [ref=e7]: Fitness Platform App
+      - heading "把训练、课程、订单与成长放到同一控制台" [level=1] [ref=e8]
+      - paragraph [ref=e9]: 风格、配色和交互语言与 admin 端对齐，优先保证页面流畅度和操作清晰度。
+      - generic [ref=e10]:
+        - generic [ref=e11]: 当前页面 订单中心
+        - generic [ref=e12]: 当前用户 Regression Member
+    - complementary [ref=e13]:
+      - generic [ref=e14]:
+        - generic [ref=e15]: 训练身份
+        - strong [ref=e16]: 25岁
+      - generic [ref=e17]:
+        - generic [ref=e18]: R
+        - strong [ref=e19]: Regression Member
+      - button "退出登录" [ref=e20] [cursor=pointer]:
+        - generic [ref=e21]: 退出登录
+  - navigation [ref=e22]:
+    - button "HM 首页舞台" [ref=e23] [cursor=pointer]:
+      - generic [ref=e24]: HM
+      - generic [ref=e25]: 首页舞台
+    - button "PL 训练计划" [ref=e26] [cursor=pointer]:
+      - generic [ref=e27]: PL
+      - generic [ref=e28]: 训练计划
+    - button "CR 课程目录" [ref=e29] [cursor=pointer]:
+      - generic [ref=e30]: CR
+      - generic [ref=e31]: 课程目录
+    - button "BK 预约大厅" [ref=e32] [cursor=pointer]:
+      - generic [ref=e33]: BK
+      - generic [ref=e34]: 预约大厅
+    - button "TR 打卡成长" [ref=e35] [cursor=pointer]:
+      - generic [ref=e36]: TR
+      - generic [ref=e37]: 打卡成长
+    - button "OD 订单中心" [ref=e38] [cursor=pointer]:
+      - generic [ref=e39]: OD
+      - generic [ref=e40]: 订单中心
+    - button "CP 教练申请" [ref=e41] [cursor=pointer]:
+      - generic [ref=e42]: CP
+      - generic [ref=e43]: 教练申请
+    - button "ME 个人档案" [ref=e44] [cursor=pointer]:
+      - generic [ref=e45]: ME
+      - generic [ref=e46]: 个人档案
+  - main [ref=e47]:
+    - generic [ref=e482]:
+      - generic [ref=e484]:
+        - generic [ref=e485]:
+          - paragraph [ref=e486]: Orders Center
+          - heading "订单列表留在左侧，详情固定在右侧" [level=1] [ref=e487]
+          - paragraph [ref=e488]: 切换订单时不再把人带到长页面下方。现在可以边看订单列表，边在旁边查看详情、资金说明和退款原因。
+          - generic [ref=e489]:
+            - generic [ref=e490]: 订单 19
+            - generic [ref=e491]: 明细 1
+            - generic [ref=e492]: 当前状态 新建
+        - generic [ref=e493]:
+          - button "返回我的预约" [ref=e494] [cursor=pointer]:
+            - generic [ref=e495]: 返回我的预约
+          - button "回到订单列表" [ref=e496] [cursor=pointer]:
+            - generic [ref=e497]: 回到订单列表
+          - button "刷新订单" [ref=e498] [cursor=pointer]:
+            - generic [ref=e499]: 刷新订单
+      - generic [ref=e500]:
+        - generic [ref=e501]:
+          - generic [ref=e503]:
+            - heading "订单浏览区" [level=2] [ref=e504]
+            - paragraph [ref=e505]: 订单列表保持在当前视野里，查看一单后还能立即切换下一单。
+          - generic [ref=e506]:
+            - textbox "搜索订单号、类型、状态或金额" [ref=e509]
+            - generic [ref=e510]:
+              - generic [ref=e511]: 显示 19
+              - generic [ref=e512]: 总计 19
+          - generic [ref=e513]:
+            - generic [ref=e514]:
+              - paragraph [ref=e515]: 当前选中订单
+              - strong [ref=e516]: ORD20260424234329471657800f09c7b
+              - paragraph [ref=e517]: 订单ID 201， 教练预约， 新建， 右侧详情已同步。
+            - generic [ref=e518]:
+              - generic [ref=e519]: 订单ID 201
+              - generic [ref=e520]: 金额 188
+              - generic [ref=e521]: 支付 未支付
+              - generic [ref=e522]: 时间 2026-04-24 23:43:29
+          - generic [ref=e524]:
+            - button "教练预约 · 订单ID 201 ORD20260424234329471657800f09c7b 188 支付 未支付 订单 新建 2026-04-24 23:43:29 查看详情" [ref=e525] [cursor=pointer]:
+              - generic [ref=e526]:
+                - generic [ref=e527]:
+                  - paragraph [ref=e528]: 教练预约 · 订单ID 201
+                  - strong [ref=e529]: ORD20260424234329471657800f09c7b
+                - generic [ref=e530]: "188"
+              - generic [ref=e531]:
+                - generic [ref=e532]: 支付 未支付
+                - generic [ref=e533]: 订单 新建
+              - generic [ref=e534]:
+                - generic [ref=e535]: 2026-04-24 23:43:29
+                - generic [ref=e536]: 查看详情
+            - button "课程报名 · 订单ID 198 CRS202604201621021416035004f858d 19.9 支付 已退款 订单 已退款 2026-04-20 16:21:02 查看详情" [ref=e537] [cursor=pointer]:
+              - generic [ref=e538]:
+                - generic [ref=e539]:
+                  - paragraph [ref=e540]: 课程报名 · 订单ID 198
+                  - strong [ref=e541]: CRS202604201621021416035004f858d
+                - generic [ref=e542]: "19.9"
+              - generic [ref=e543]:
+                - generic [ref=e544]: 支付 已退款
+                - generic [ref=e545]: 订单 已退款
+              - generic [ref=e546]:
+                - generic [ref=e547]: 2026-04-20 16:21:02
+                - generic [ref=e548]: 查看详情
+            - button "课程报名 · 订单ID 196 CRS202604201501133142097008269da 19.9 支付 已退款 订单 已退款 2026-04-20 15:01:13 查看详情" [ref=e549] [cursor=pointer]:
+              - generic [ref=e550]:
+                - generic [ref=e551]:
+                  - paragraph [ref=e552]: 课程报名 · 订单ID 196
+                  - strong [ref=e553]: CRS202604201501133142097008269da
+                - generic [ref=e554]: "19.9"
+              - generic [ref=e555]:
+                - generic [ref=e556]: 支付 已退款
+                - generic [ref=e557]: 订单 已退款
+              - generic [ref=e558]:
+                - generic [ref=e559]: 2026-04-20 15:01:13
+                - generic [ref=e560]: 查看详情
+            - button "教练预约 · 订单ID 195 ORD2026042014271728142540083f451 88 支付 已支付 订单 已支付 2026-04-20 14:27:17 查看详情" [ref=e561] [cursor=pointer]:
+              - generic [ref=e562]:
+                - generic [ref=e563]:
+                  - paragraph [ref=e564]: 教练预约 · 订单ID 195
+                  - strong [ref=e565]: ORD2026042014271728142540083f451
+                - generic [ref=e566]: "88"
+              - generic [ref=e567]:
+                - generic [ref=e568]: 支付 已支付
+                - generic [ref=e569]: 订单 已支付
+              - generic [ref=e570]:
+                - generic [ref=e571]: 2026-04-20 14:27:17
+                - generic [ref=e572]: 查看详情
+            - button "课程报名 · 订单ID 186 CRS202604110820030135202008fb2ff 19.9 支付 已退款 订单 已退款 2026-04-11 08:20:03 查看详情" [ref=e573] [cursor=pointer]:
+              - generic [ref=e574]:
+                - generic [ref=e575]:
+                  - paragraph [ref=e576]: 课程报名 · 订单ID 186
+                  - strong [ref=e577]: CRS202604110820030135202008fb2ff
+                - generic [ref=e578]: "19.9"
+              - generic [ref=e579]:
+                - generic [ref=e580]: 支付 已退款
+                - generic [ref=e581]: 订单 已退款
+              - generic [ref=e582]:
+                - generic [ref=e583]: 2026-04-11 08:20:03
+                - generic [ref=e584]: 查看详情
+            - button "教练预约 · 订单ID 185 ORD20260411081957753339300e3d18c 199 支付 已支付 订单 已支付 2026-04-11 08:19:58 查看详情" [ref=e585] [cursor=pointer]:
+              - generic [ref=e586]:
+                - generic [ref=e587]:
+                  - paragraph [ref=e588]: 教练预约 · 订单ID 185
+                  - strong [ref=e589]: ORD20260411081957753339300e3d18c
+                - generic [ref=e590]: "199"
+              - generic [ref=e591]:
+                - generic [ref=e592]: 支付 已支付
+                - generic [ref=e593]: 订单 已支付
+              - generic [ref=e594]:
+                - generic [ref=e595]: 2026-04-11 08:19:58
+                - generic [ref=e596]: 查看详情
+            - button "课程报名 · 订单ID 184 CRS2026041106591132984060059ddca 19.9 支付 已关闭 订单 已关闭 2026-04-11 06:59:11 查看详情" [ref=e597] [cursor=pointer]:
+              - generic [ref=e598]:
+                - generic [ref=e599]:
+                  - paragraph [ref=e600]: 课程报名 · 订单ID 184
+                  - strong [ref=e601]: CRS2026041106591132984060059ddca
+                - generic [ref=e602]: "19.9"
+              - generic [ref=e603]:
+                - generic [ref=e604]: 支付 已关闭
+                - generic [ref=e605]: 订单 已关闭
+              - generic [ref=e606]:
+                - generic [ref=e607]: 2026-04-11 06:59:11
+                - generic [ref=e608]: 查看详情
+            - button "教练预约 · 订单ID 183 ORD202604110659101631422009e02d3 199 支付 已支付 订单 已支付 2026-04-11 06:59:10 查看详情" [ref=e609] [cursor=pointer]:
+              - generic [ref=e610]:
+                - generic [ref=e611]:
+                  - paragraph [ref=e612]: 教练预约 · 订单ID 183
+                  - strong [ref=e613]: ORD202604110659101631422009e02d3
+                - generic [ref=e614]: "199"
+              - generic [ref=e615]:
+                - generic [ref=e616]: 支付 已支付
+                - generic [ref=e617]: 订单 已支付
+              - generic [ref=e618]:
+                - generic [ref=e619]: 2026-04-11 06:59:10
+                - generic [ref=e620]: 查看详情
+            - button "教练预约 · 订单ID 182 ORD202604110655291042131000d2a73 199 支付 已支付 订单 已支付 2026-04-11 06:55:29 查看详情" [ref=e621] [cursor=pointer]:
+              - generic [ref=e622]:
+                - generic [ref=e623]:
+                  - paragraph [ref=e624]: 教练预约 · 订单ID 182
+                  - strong [ref=e625]: ORD202604110655291042131000d2a73
+                - generic [ref=e626]: "199"
+              - generic [ref=e627]:
+                - generic [ref=e628]: 支付 已支付
+                - generic [ref=e629]: 订单 已支付
+              - generic [ref=e630]:
+                - generic [ref=e631]: 2026-04-11 06:55:29
+                - generic [ref=e632]: 查看详情
+            - button "课程报名 · 订单ID 181 CRS20260411065255261508f85c23 19.9 支付 已关闭 订单 已关闭 2026-04-11 06:52:55 查看详情" [ref=e633] [cursor=pointer]:
+              - generic [ref=e634]:
+                - generic [ref=e635]:
+                  - paragraph [ref=e636]: 课程报名 · 订单ID 181
+                  - strong [ref=e637]: CRS20260411065255261508f85c23
+                - generic [ref=e638]: "19.9"
+              - generic [ref=e639]:
+                - generic [ref=e640]: 支付 已关闭
+                - generic [ref=e641]: 订单 已关闭
+              - generic [ref=e642]:
+                - generic [ref=e643]: 2026-04-11 06:52:55
+                - generic [ref=e644]: 查看详情
+            - button "课程报名 · 订单ID 180 CRS202604110651348664373009b7d90 19.9 支付 已关闭 订单 已关闭 2026-04-11 06:51:35 查看详情" [ref=e645] [cursor=pointer]:
+              - generic [ref=e646]:
+                - generic [ref=e647]:
+                  - paragraph [ref=e648]: 课程报名 · 订单ID 180
+                  - strong [ref=e649]: CRS202604110651348664373009b7d90
+                - generic [ref=e650]: "19.9"
+              - generic [ref=e651]:
+                - generic [ref=e652]: 支付 已关闭
+                - generic [ref=e653]: 订单 已关闭
+              - generic [ref=e654]:
+                - generic [ref=e655]: 2026-04-11 06:51:35
+                - generic [ref=e656]: 查看详情
+            - button "教练预约 · 订单ID 179 ORD20260411065058114098300a84935 199 支付 已支付 订单 已支付 2026-04-11 06:50:58 查看详情" [ref=e657] [cursor=pointer]:
+              - generic [ref=e658]:
+                - generic [ref=e659]:
+                  - paragraph [ref=e660]: 教练预约 · 订单ID 179
+                  - strong [ref=e661]: ORD20260411065058114098300a84935
+                - generic [ref=e662]: "199"
+              - generic [ref=e663]:
+                - generic [ref=e664]: 支付 已支付
+                - generic [ref=e665]: 订单 已支付
+              - generic [ref=e666]:
+                - generic [ref=e667]: 2026-04-11 06:50:58
+                - generic [ref=e668]: 查看详情
+            - button "教练预约 · 订单ID 178 ORD2026041106490788593020068e714 199 支付 已支付 订单 已支付 2026-04-11 06:49:08 查看详情" [ref=e669] [cursor=pointer]:
+              - generic [ref=e670]:
+                - generic [ref=e671]:
+                  - paragraph [ref=e672]: 教练预约 · 订单ID 178
+                  - strong [ref=e673]: ORD2026041106490788593020068e714
+                - generic [ref=e674]: "199"
+              - generic [ref=e675]:
+                - generic [ref=e676]: 支付 已支付
+                - generic [ref=e677]: 订单 已支付
+              - generic [ref=e678]:
+                - generic [ref=e679]: 2026-04-11 06:49:08
+                - generic [ref=e680]: 查看详情
+            - button "课程报名 · 订单ID 177 CRS2026041106360318110970078b875 19.9 支付 已退款 订单 已退款 2026-04-11 06:36:03 查看详情" [ref=e681] [cursor=pointer]:
+              - generic [ref=e682]:
+                - generic [ref=e683]:
+                  - paragraph [ref=e684]: 课程报名 · 订单ID 177
+                  - strong [ref=e685]: CRS2026041106360318110970078b875
+                - generic [ref=e686]: "19.9"
+              - generic [ref=e687]:
+                - generic [ref=e688]: 支付 已退款
+                - generic [ref=e689]: 订单 已退款
+              - generic [ref=e690]:
+                - generic [ref=e691]: 2026-04-11 06:36:03
+                - generic [ref=e692]: 查看详情
+            - button "教练预约 · 订单ID 176 ORD20260411063600561692400cd793e 199 支付 已支付 订单 已支付 2026-04-11 06:36:01 查看详情" [ref=e693] [cursor=pointer]:
+              - generic [ref=e694]:
+                - generic [ref=e695]:
+                  - paragraph [ref=e696]: 教练预约 · 订单ID 176
+                  - strong [ref=e697]: ORD20260411063600561692400cd793e
+                - generic [ref=e698]: "199"
+              - generic [ref=e699]:
+                - generic [ref=e700]: 支付 已支付
+                - generic [ref=e701]: 订单 已支付
+              - generic [ref=e702]:
+                - generic [ref=e703]: 2026-04-11 06:36:01
+                - generic [ref=e704]: 查看详情
+            - button "课程报名 · 订单ID 175 CRS202604110628432775185005e3df2 19.9 支付 已退款 订单 已退款 2026-04-11 06:28:43 查看详情" [ref=e705] [cursor=pointer]:
+              - generic [ref=e706]:
+                - generic [ref=e707]:
+                  - paragraph [ref=e708]: 课程报名 · 订单ID 175
+                  - strong [ref=e709]: CRS202604110628432775185005e3df2
+                - generic [ref=e710]: "19.9"
+              - generic [ref=e711]:
+                - generic [ref=e712]: 支付 已退款
+                - generic [ref=e713]: 订单 已退款
+              - generic [ref=e714]:
+                - generic [ref=e715]: 2026-04-11 06:28:43
+                - generic [ref=e716]: 查看详情
+            - button "教练预约 · 订单ID 174 ORD2026041106283926899850094c8e3 199 支付 已支付 订单 已支付 2026-04-11 06:28:39 查看详情" [ref=e717] [cursor=pointer]:
+              - generic [ref=e718]:
+                - generic [ref=e719]:
+                  - paragraph [ref=e720]: 教练预约 · 订单ID 174
+                  - strong [ref=e721]: ORD2026041106283926899850094c8e3
+                - generic [ref=e722]: "199"
+              - generic [ref=e723]:
+                - generic [ref=e724]: 支付 已支付
+                - generic [ref=e725]: 订单 已支付
+              - generic [ref=e726]:
+                - generic [ref=e727]: 2026-04-11 06:28:39
+                - generic [ref=e728]: 查看详情
+            - button "课程报名 · 订单ID 173 CRS202604110626291516467009b97b9 19.9 支付 已退款 订单 已退款 2026-04-11 06:26:29 查看详情" [ref=e729] [cursor=pointer]:
+              - generic [ref=e730]:
+                - generic [ref=e731]:
+                  - paragraph [ref=e732]: 课程报名 · 订单ID 173
+                  - strong [ref=e733]: CRS202604110626291516467009b97b9
+                - generic [ref=e734]: "19.9"
+              - generic [ref=e735]:
+                - generic [ref=e736]: 支付 已退款
+                - generic [ref=e737]: 订单 已退款
+              - generic [ref=e738]:
+                - generic [ref=e739]: 2026-04-11 06:26:29
+                - generic [ref=e740]: 查看详情
+            - button "教练预约 · 订单ID 172 ORD202604110626265244576002eefdb 199 支付 已支付 订单 已支付 2026-04-11 06:26:27 查看详情" [ref=e741] [cursor=pointer]:
+              - generic [ref=e742]:
+                - generic [ref=e743]:
+                  - paragraph [ref=e744]: 教练预约 · 订单ID 172
+                  - strong [ref=e745]: ORD202604110626265244576002eefdb
+                - generic [ref=e746]: "199"
+              - generic [ref=e747]:
+                - generic [ref=e748]: 支付 已支付
+                - generic [ref=e749]: 订单 已支付
+              - generic [ref=e750]:
+                - generic [ref=e751]: 2026-04-11 06:26:27
+                - generic [ref=e752]: 查看详情
+        - generic [ref=e755]:
+          - generic [ref=e756]:
+            - generic [ref=e757]:
+              - paragraph [ref=e758]: 订单详情
+              - heading "当前订单工作台" [level=2] [ref=e759]
+              - paragraph [ref=e760]: 详情固定显示在右侧，订单切换时不需要反复上下滚动页面。
+            - button "换一张订单" [ref=e761] [cursor=pointer]:
+              - generic [ref=e762]: 换一张订单
+          - generic [ref=e763]:
+            - article [ref=e764]:
+              - generic [ref=e766]:
+                - paragraph [ref=e767]: 来源定位
+                - heading "这就是你刚才点开的那一单" [level=3] [ref=e768]
+              - generic [ref=e769]:
+                - generic [ref=e770]: 来源 教练预约
+                - generic [ref=e771]: 预约ID 108
+                - generic [ref=e772]: 订单ID 201
+              - paragraph [ref=e773]: 档期：2026-04-25 18:00-19:00
+            - article [ref=e774]:
+              - generic [ref=e775]:
+                - paragraph [ref=e776]: 订单ID
+                - paragraph [ref=e777]: "201"
+                - paragraph [ref=e778]: 订单号
+                - paragraph [ref=e779]: ORD20260424234329471657800f09c7b
+              - button "复制订单号" [ref=e781] [cursor=pointer]:
+                - generic [ref=e782]: 复制订单号
+            - generic [ref=e783]:
+              - article [ref=e784]:
+                - paragraph [ref=e785]: 订单ID
+                - paragraph [ref=e786]: "201"
+              - article [ref=e787]:
+                - paragraph [ref=e788]: 预约ID
+                - paragraph [ref=e789]: "108"
+              - article [ref=e790]:
+                - paragraph [ref=e791]: 支付状态
+                - paragraph [ref=e792]: 未支付
+              - article [ref=e793]:
+                - paragraph [ref=e794]: 订单状态
+                - paragraph [ref=e795]: 新建
+              - article [ref=e796]:
+                - paragraph [ref=e797]: 金额
+                - paragraph [ref=e798]: "188"
+              - article [ref=e799]:
+                - paragraph [ref=e800]: 实付
+                - paragraph [ref=e801]: "188"
+              - article [ref=e802]:
+                - paragraph [ref=e803]: 退款
+                - paragraph [ref=e804]: "0"
+              - article [ref=e805]:
+                - paragraph [ref=e806]: 净支付
+                - paragraph [ref=e807]: "188"
+              - article [ref=e808]:
+                - paragraph [ref=e809]: 支付渠道
+                - paragraph [ref=e810]: 微信
+              - article [ref=e811]:
+                - paragraph [ref=e812]: 支付时间
+                - paragraph [ref=e813]: "-"
+              - article [ref=e814]:
+                - paragraph [ref=e815]: 退款状态
+                - paragraph [ref=e816]: "-"
+              - article [ref=e817]:
+                - paragraph [ref=e818]: 退款时间
+                - paragraph [ref=e819]: "-"
+            - article [ref=e820]:
+              - generic [ref=e822]:
+                - paragraph [ref=e823]: 订单明细
+                - heading "费用组成" [level=3] [ref=e824]
+              - generic [ref=e827]:
+                - table [ref=e829]:
+                  - rowgroup [ref=e836]:
+                    - row "名称 类型 数量 单价 金额" [ref=e837]:
+                      - columnheader "名称" [ref=e838]:
+                        - generic [ref=e839]: 名称
+                      - columnheader "类型" [ref=e840]:
+                        - generic [ref=e841]: 类型
+                      - columnheader "数量" [ref=e842]:
+                        - generic [ref=e843]: 数量
+                      - columnheader "单价" [ref=e844]:
+                        - generic [ref=e845]: 单价
+                      - columnheader "金额" [ref=e846]:
+                        - generic [ref=e847]: 金额
+                - table [ref=e852]:
+                  - rowgroup [ref=e859]:
+                    - 'row "Coach booking #13 coach_booking 1 188 188" [ref=e860]':
+                      - 'cell "Coach booking #13" [ref=e861]':
+                        - generic [ref=e862]: "Coach booking #13"
+                      - cell "coach_booking" [ref=e863]:
+                        - generic [ref=e864]: coach_booking
+                      - cell "1" [ref=e865]:
+                        - generic [ref=e866]: "1"
+                      - cell "188" [ref=e867]:
+                        - generic [ref=e868]: "188"
+                      - cell "188" [ref=e869]:
+                        - generic [ref=e870]: "188"
+            - article [ref=e871]:
+              - paragraph [ref=e872]: 资金说明
+              - heading "待支付" [level=3] [ref=e873]
+              - paragraph [ref=e874]: 等待支付
+              - generic [ref=e875]:
+                - generic [ref=e876]:
+                  - generic [ref=e877]: 状态文案
+                  - strong [ref=e878]: 未支付
+                - generic [ref=e879]:
+                  - generic [ref=e880]: 状态提示
+                  - strong [ref=e881]: order_unpaid
+                - generic [ref=e882]:
+                  - generic [ref=e883]: 阶段
+                  - strong [ref=e884]: PAYMENT
+                - generic [ref=e885]:
+                  - generic [ref=e886]: 说明
+                  - strong [ref=e887]: Awaiting payment
+            - article [ref=e888]:
+              - paragraph [ref=e889]: 退款原因
+              - heading "说明" [level=3] [ref=e890]
+              - paragraph [ref=e891]: "-"

@@ -1,0 +1,135 @@
+- generic [ref=e4]:
+  - banner [ref=e5]:
+    - generic [ref=e6]:
+      - paragraph [ref=e7]: Fitness Platform App
+      - heading "把训练、课程、订单与成长放到同一控制台" [level=1] [ref=e8]
+      - paragraph [ref=e9]: 风格、配色和交互语言与 admin 端对齐，优先保证页面流畅度和操作清晰度。
+      - generic [ref=e10]:
+        - generic [ref=e11]: 当前页面 预约大厅
+        - generic [ref=e12]: 当前用户 Test Member
+    - complementary [ref=e13]:
+      - generic [ref=e14]:
+        - generic [ref=e15]: 训练身份
+        - strong [ref=e16]: 学生 · 26岁
+      - generic [ref=e17]:
+        - img [ref=e19]
+        - strong [ref=e20]: Test Member
+      - button "退出登录" [ref=e21] [cursor=pointer]:
+        - generic [ref=e22]: 退出登录
+  - navigation [ref=e23]:
+    - button "HM 首页舞台" [ref=e24] [cursor=pointer]:
+      - generic [ref=e25]: HM
+      - generic [ref=e26]: 首页舞台
+    - button "PL 训练计划" [ref=e27] [cursor=pointer]:
+      - generic [ref=e28]: PL
+      - generic [ref=e29]: 训练计划
+    - button "CR 课程目录" [ref=e30] [cursor=pointer]:
+      - generic [ref=e31]: CR
+      - generic [ref=e32]: 课程目录
+    - button "BK 预约大厅" [ref=e33] [cursor=pointer]:
+      - generic [ref=e34]: BK
+      - generic [ref=e35]: 预约大厅
+    - button "TR 打卡成长" [ref=e36] [cursor=pointer]:
+      - generic [ref=e37]: TR
+      - generic [ref=e38]: 打卡成长
+    - button "OD 订单中心" [ref=e39] [cursor=pointer]:
+      - generic [ref=e40]: OD
+      - generic [ref=e41]: 订单中心
+    - button "CP 教练申请" [ref=e42] [cursor=pointer]:
+      - generic [ref=e43]: CP
+      - generic [ref=e44]: 教练申请
+    - button "ME 个人档案" [ref=e45] [cursor=pointer]:
+      - generic [ref=e46]: ME
+      - generic [ref=e47]: 个人档案
+  - main [ref=e48]:
+    - generic [ref=e601]:
+      - generic [ref=e602]:
+        - generic [ref=e603]:
+          - paragraph [ref=e604]: Coach Booking
+          - heading "预约教练，形成稳定训练节律" [level=1] [ref=e605]
+          - paragraph [ref=e606]: 筛选、选档、支付和评价收进一个工作台，不再一路向下滚。
+        - generic [ref=e607]:
+          - generic [ref=e608]: 当前可约 0
+          - generic [ref=e609]: 未来可预约 0
+          - generic [ref=e610]: 我的预约 11
+        - button "刷新可预约时间" [ref=e611] [cursor=pointer]:
+          - generic [ref=e612]: 刷新可预约时间
+      - generic [ref=e613]:
+        - complementary [ref=e615]:
+          - generic [ref=e616]:
+            - generic [ref=e618]:
+              - heading "当前待办" [level=2] [ref=e619]
+              - paragraph [ref=e620]: 快速处理你手头的预约单。
+            - generic [ref=e621]:
+              - generic [ref=e622]: 当前待处理预约
+              - generic [ref=e623]: 2026-04-25 18:00-19:00
+              - generic [ref=e624]:
+                - generic [ref=e625]: 预约ID 107
+                - generic [ref=e626]: 订单ID 200
+                - generic [ref=e627]: 预约状态 待支付
+                - generic [ref=e628]: 支付状态 未支付
+              - generic [ref=e629]:
+                - generic [ref=e630]: 订单号：ORD202604241656019719778007ec34b
+                - generic [ref=e631]: 金额：188
+                - generic [ref=e632]: 教练：教练档案 1
+              - generic [ref=e633]:
+                - button "模拟支付" [ref=e634] [cursor=pointer]:
+                  - generic [ref=e635]: 模拟支付
+                - button "确认完成" [ref=e636] [cursor=pointer]:
+                  - generic [ref=e637]: 确认完成
+                - button "订单详情" [ref=e638] [cursor=pointer]:
+                  - generic [ref=e639]: 订单详情
+          - generic [ref=e640]:
+            - generic [ref=e642]:
+              - heading "创建预约" [level=2] [ref=e643]
+              - paragraph [ref=e644]: 选中右侧档期后，这里会同步更新。
+            - generic [ref=e645]:
+              - img [ref=e647]
+              - paragraph [ref=e664]: 你有一笔待支付预约，请先处理左侧卡片或在列表中完成支付。
+        - main [ref=e666]:
+          - generic [ref=e667]:
+            - generic [ref=e669]:
+              - heading "可预约时间段筛选" [level=2] [ref=e670]
+              - paragraph [ref=e671]: 按教练与日期筛选当前还能预约的时间段。
+            - generic [ref=e673]:
+              - group "教练" [ref=e674]:
+                - generic [ref=e675]: 教练
+                - button "从教练列表中选择" [ref=e678] [cursor=pointer]
+              - generic [ref=e679]:
+                - generic [ref=e680]: 预约服务日期
+                - generic [ref=e683]:
+                  - img [ref=e686]
+                  - combobox "预约服务日期" [ref=e688]
+              - group "快速操作" [ref=e689]:
+                - generic [ref=e690]: 快速操作
+                - generic [ref=e692]:
+                  - button "全部" [ref=e693] [cursor=pointer]:
+                    - generic [ref=e694]: 全部
+                  - button "选择教练" [ref=e695] [cursor=pointer]:
+                    - generic [ref=e696]: 选择教练
+              - group "操作" [ref=e697]:
+                - generic [ref=e698]: 操作
+                - button "查询" [ref=e700] [cursor=pointer]:
+                  - generic [ref=e701]: 查询
+            - paragraph [ref=e702]: 这里显示的是用户当前真正还能预约的时间段，满员和过期档期不会再混进来。
+            - generic [ref=e703]:
+              - generic [ref=e704]: 可预约教练 0
+              - generic [ref=e705]: 未来时间段 1
+              - generic [ref=e706]: 可预约时间段 0
+              - generic [ref=e707]: 最近一次开放时间 2026-04-25
+            - paragraph [ref=e708]: 下一批未来可预约时间段从 2026-04-25 开始；如果列表还是空，通常是你当前筛选条件过严。
+          - generic [ref=e709]:
+            - tablist [ref=e713]:
+              - tab "可预约档期" [selected] [ref=e714]
+              - tab "我的预约记录" [ref=e715]
+            - tabpanel "可预约档期" [ref=e717]:
+              - generic [ref=e719]:
+                - img [ref=e721]
+                - paragraph [ref=e738]: 暂无可预约时间段
+                - generic [ref=e739]:
+                  - generic [ref=e740]:
+                    - button "重试" [ref=e741] [cursor=pointer]:
+                      - generic [ref=e742]: 重试
+                    - button "去课程报名" [ref=e743] [cursor=pointer]:
+                      - generic [ref=e744]: 去课程报名
+                  - paragraph [ref=e745]: 未来时间段虽然存在，但当前都已满员，或者你已经预约完自己还能选的时间段。

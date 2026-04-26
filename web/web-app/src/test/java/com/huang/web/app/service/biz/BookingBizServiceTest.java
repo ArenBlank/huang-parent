@@ -2,15 +2,18 @@ package com.huang.web.app.service.biz;
 
 import com.huang.common.constant.BizStatusConstant;
 import com.huang.common.redis.RedisGuardSupport;
+import com.huang.model.entity.CoachBooking;
 import com.huang.model.entity.CoachSchedule;
 import com.huang.model.entity.OrderInfo;
 import com.huang.web.app.dto.booking.CreateBookingDTO;
 import com.huang.web.app.mapper.CoachBookingMapper;
+import com.huang.web.app.mapper.CoachProfileMapper;
 import com.huang.web.app.mapper.CoachReviewMapper;
 import com.huang.web.app.mapper.CoachScheduleMapper;
 import com.huang.web.app.mapper.OrderInfoMapper;
 import com.huang.web.app.mapper.OrderItemMapper;
 import com.huang.web.app.mapper.PaymentRecordMapper;
+import com.huang.web.app.service.UserService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -36,6 +39,9 @@ class BookingBizServiceTest {
     private CoachBookingMapper coachBookingMapper;
 
     @Mock
+    private CoachProfileMapper coachProfileMapper;
+
+    @Mock
     private CoachReviewMapper coachReviewMapper;
 
     @Mock
@@ -50,6 +56,9 @@ class BookingBizServiceTest {
     @Mock
     private RedisGuardSupport redisGuardSupport;
 
+    @Mock
+    private UserService userService;
+
     private BookingBizService bookingBizService;
 
     @BeforeEach
@@ -57,11 +66,13 @@ class BookingBizServiceTest {
         bookingBizService = new BookingBizService(
                 coachScheduleMapper,
                 coachBookingMapper,
+                coachProfileMapper,
                 coachReviewMapper,
                 orderInfoMapper,
                 orderItemMapper,
                 paymentRecordMapper,
-                redisGuardSupport
+                redisGuardSupport,
+                userService
         );
     }
 
@@ -86,5 +97,35 @@ class BookingBizServiceTest {
         assertThat(result).isNull();
         verify(orderInfoMapper).insert(any(OrderInfo.class));
         verify(paymentRecordMapper).insert(any());
+    }
+
+    @Test
+    void cancelUnpaid_shouldCloseOrderAndReleaseSlot() {
+        CoachBooking booking = new CoachBooking();
+        booking.setId(9L);
+        booking.setUserId(7L);
+        booking.setScheduleId(5L);
+        booking.setOrderId(11L);
+        booking.setBookingStatus(BizStatusConstant.BookingStatus.WAIT_PAY);
+        booking.setPayStatus(BizStatusConstant.PayStatus.UNPAID);
+
+        OrderInfo orderInfo = new OrderInfo();
+        orderInfo.setId(11L);
+        orderInfo.setUserId(7L);
+        orderInfo.setOrderStatus(BizStatusConstant.OrderStatus.NEW);
+        orderInfo.setPayStatus(BizStatusConstant.PayStatus.UNPAID);
+
+        when(coachBookingMapper.selectById(9L)).thenReturn(booking);
+        when(orderInfoMapper.selectById(11L)).thenReturn(orderInfo);
+
+        boolean result = bookingBizService.cancelUnpaid(9L, 7L);
+
+        assertThat(result).isTrue();
+        assertThat(orderInfo.getOrderStatus()).isEqualTo(BizStatusConstant.OrderStatus.CLOSED);
+        assertThat(orderInfo.getPayStatus()).isEqualTo(BizStatusConstant.PayStatus.CLOSED);
+        verify(orderInfoMapper).updateById(orderInfo);
+        verify(paymentRecordMapper).update(any(), any());
+        verify(coachScheduleMapper).releaseSlot(5L);
+        verify(coachBookingMapper).deleteById(9L);
     }
 }

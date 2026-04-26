@@ -3,19 +3,19 @@
     <section class="hero-panel">
       <div class="order-hero">
         <div>
-          <p class="quest-kicker">Orders Center</p>
+          <p class="quest-kicker">订单中心</p>
           <h1 class="hero-title">订单列表留在左侧，详情固定在右侧</h1>
           <p class="hero-subtitle">切换订单时不再把人带到长页面下方。现在可以边看订单列表，边在旁边查看详情、资金说明和退款原因。</p>
           <div class="hero-badges">
-            <span class="badge-pill is-dark">订单 {{ orders.length }}</span>
-            <span class="badge-pill is-dark">明细 {{ normalized.items.length }}</span>
+            <span class="badge-pill is-dark">订单总数 {{ orders.length }}</span>
+            <span class="badge-pill is-dark">明细行数 {{ normalized.items.length }}</span>
             <span class="badge-pill is-dark">当前状态 {{ formatOrderStatus(normalized.orderStatus) }}</span>
           </div>
         </div>
         <div class="toolbar-actions">
           <el-button v-if="showBackToSource" @click="backToSource">{{ backToSourceLabel }}</el-button>
           <el-button plain @click="scrollToOrders">回到订单列表</el-button>
-          <el-button type="primary" @click="loadOrders" :loading="ordersLoading">刷新订单</el-button>
+          <el-button type="primary" :loading="ordersLoading" @click="loadOrders">刷新订单</el-button>
         </div>
       </div>
     </section>
@@ -38,15 +38,10 @@
 
         <template v-else>
           <div class="orders-controls">
-            <el-input
-              v-model="orderKeyword"
-              class="order-search"
-              clearable
-              placeholder="搜索订单号、类型、状态或金额"
-            />
+            <el-input v-model="orderKeyword" class="order-search" clearable placeholder="搜索订单号、类型、状态或金额" />
             <div class="orders-stats">
-              <span class="badge-pill is-dark">显示 {{ filteredOrders.length }}</span>
-              <span class="badge-pill">总计 {{ orders.length }}</span>
+              <span class="badge-pill is-dark">当前匹配 {{ filteredOrders.length }}</span>
+              <span class="badge-pill">全部订单 {{ orders.length }}</span>
             </div>
           </div>
 
@@ -55,17 +50,14 @@
               <p class="selected-caption">当前选中订单</p>
               <strong>{{ selectedOrder.orderNo }}</strong>
               <p>
-                订单ID {{ selectedOrder.id }}，
-                {{ formatBizType(selectedOrder.bizType) }}，
-                {{ formatOrderStatus(selectedOrder.orderStatus) }}，
-                右侧详情已同步。
+                订单ID {{ selectedOrder.id }}，{{ formatBizType(selectedOrder.bizType) }}，{{ formatOrderStatus(selectedOrder.orderStatus) }}，右侧详情已同步。
               </p>
             </div>
             <div class="orders-selected-chips">
               <span class="tag">订单ID {{ selectedOrder.id }}</span>
               <span class="tag">金额 {{ formatAmount(selectedOrder.totalAmount) }}</span>
-              <span class="tag">支付 {{ formatPayStatus(selectedOrder.payStatus) }}</span>
-              <span class="tag">时间 {{ formatDateTime(selectedOrder.createTime) }}</span>
+              <span class="tag">支付状态 {{ formatPayStatus(selectedOrder.payStatus) }}</span>
+              <span class="tag">创建时间 {{ formatDateTime(selectedOrder.createTime) }}</span>
             </div>
           </div>
 
@@ -115,7 +107,19 @@
                 <h2 class="section-title-sm">当前订单工作台</h2>
                 <p class="section-sub">详情固定显示在右侧，订单切换时不需要反复上下滚动页面。</p>
               </div>
-              <el-button plain size="small" @click="scrollToOrders">换一张订单</el-button>
+              <div class="detail-head__actions">
+                <el-button
+                  v-if="canCancelCurrentBooking"
+                  plain
+                  type="danger"
+                  size="small"
+                  :loading="cancelingBooking"
+                  @click="cancelCurrentBooking"
+                >
+                  取消预约
+                </el-button>
+                <el-button plain size="small" @click="scrollToOrders">换一张订单</el-button>
+              </div>
             </div>
 
             <el-empty v-if="orders.length && !detail && !loading" description="请选择一条订单查看详情" />
@@ -130,18 +134,18 @@
                 </div>
                 <div class="source-card__chips">
                   <span class="tag">来源 {{ sourceContext.sourceLabel }}</span>
-                  <span class="tag">{{ sourceEntityLabel }} {{ sourceContext.enrollmentId || "-" }}</span>
-                  <span class="tag">订单ID {{ sourceContext.orderId || "-" }}</span>
+                  <span class="tag">{{ sourceEntityLabel }} {{ sourceContext.enrollmentId || '-' }}</span>
+                  <span class="tag">订单ID {{ sourceContext.orderId || '-' }}</span>
                 </div>
                 <p class="source-card__summary">
-                  {{ sourceContext.courseTitle ? `${sourceSummaryLabel}：${sourceContext.courseTitle}` : "来源信息已同步到当前订单工作台。" }}
+                  {{ sourceContext.courseTitle ? sourceSummaryLabel + '：' + sourceContext.courseTitle : '来源信息已同步到当前订单工作台。' }}
                 </p>
               </article>
 
               <article class="order-no-card">
                 <div>
                   <p class="metric-label">订单ID</p>
-                  <p class="order-id">{{ normalized.orderId || "-" }}</p>
+                  <p class="order-id">{{ normalized.orderId || '-' }}</p>
                   <p class="metric-label">订单号</p>
                   <p class="order-no">{{ normalized.orderNo }}</p>
                 </div>
@@ -151,54 +155,18 @@
               </article>
 
               <div class="summary-grid">
-                <article class="summary-item">
-                  <p class="metric-label">订单ID</p>
-                  <p class="summary-value">{{ normalized.orderId || "-" }}</p>
-                </article>
-                <article class="summary-item">
-                  <p class="metric-label">{{ sourceEntityLabel }}</p>
-                  <p class="summary-value">{{ sourceContext?.enrollmentId || normalized.bizId || "-" }}</p>
-                </article>
-                <article class="summary-item">
-                  <p class="metric-label">支付状态</p>
-                  <p class="summary-value">{{ formatPayStatus(normalized.payStatus) }}</p>
-                </article>
-                <article class="summary-item">
-                  <p class="metric-label">订单状态</p>
-                  <p class="summary-value">{{ formatOrderStatus(normalized.orderStatus) }}</p>
-                </article>
-                <article class="summary-item">
-                  <p class="metric-label">金额</p>
-                  <p class="summary-value">{{ formatAmount(normalized.totalAmount) }}</p>
-                </article>
-                <article class="summary-item">
-                  <p class="metric-label">实付</p>
-                  <p class="summary-value">{{ formatAmount(normalized.paidAmount) }}</p>
-                </article>
-                <article class="summary-item">
-                  <p class="metric-label">退款</p>
-                  <p class="summary-value">{{ formatAmount(normalized.refundAmount) }}</p>
-                </article>
-                <article class="summary-item">
-                  <p class="metric-label">净支付</p>
-                  <p class="summary-value">{{ formatAmount(normalized.netPaid) }}</p>
-                </article>
-                <article class="summary-item">
-                  <p class="metric-label">支付渠道</p>
-                  <p class="summary-value">{{ formatPayChannel(normalized.payChannel) }}</p>
-                </article>
-                <article class="summary-item">
-                  <p class="metric-label">支付时间</p>
-                  <p class="summary-value">{{ formatDateTime(normalized.payTime) }}</p>
-                </article>
-                <article class="summary-item">
-                  <p class="metric-label">退款状态</p>
-                  <p class="summary-value">{{ formatPayStatus(normalized.refundStatus) }}</p>
-                </article>
-                <article class="summary-item">
-                  <p class="metric-label">退款时间</p>
-                  <p class="summary-value">{{ formatDateTime(normalized.refundTime) }}</p>
-                </article>
+                <article class="summary-item"><p class="metric-label">订单ID</p><p class="summary-value">{{ normalized.orderId || '-' }}</p></article>
+                <article class="summary-item"><p class="metric-label">{{ sourceEntityLabel }}</p><p class="summary-value">{{ sourceContext?.enrollmentId || normalized.bizId || '-' }}</p></article>
+                <article class="summary-item"><p class="metric-label">支付状态</p><p class="summary-value">{{ formatPayStatus(normalized.payStatus) }}</p></article>
+                <article class="summary-item"><p class="metric-label">订单状态</p><p class="summary-value">{{ formatOrderStatus(normalized.orderStatus) }}</p></article>
+                <article class="summary-item"><p class="metric-label">订单金额</p><p class="summary-value">{{ formatAmount(normalized.totalAmount) }}</p></article>
+                <article class="summary-item"><p class="metric-label">已支付</p><p class="summary-value">{{ formatAmount(normalized.paidAmount) }}</p></article>
+                <article class="summary-item"><p class="metric-label">已退款</p><p class="summary-value">{{ formatAmount(normalized.refundAmount) }}</p></article>
+                <article class="summary-item"><p class="metric-label">净支付</p><p class="summary-value">{{ formatAmount(normalized.netPaid) }}</p></article>
+                <article class="summary-item"><p class="metric-label">支付渠道</p><p class="summary-value">{{ formatPayChannel(normalized.payChannel) }}</p></article>
+                <article class="summary-item"><p class="metric-label">支付时间</p><p class="summary-value">{{ formatDateTime(normalized.payTime) }}</p></article>
+                <article class="summary-item"><p class="metric-label">退款状态</p><p class="summary-value">{{ formatPayStatus(normalized.refundStatus) }}</p></article>
+                <article class="summary-item"><p class="metric-label">退款时间</p><p class="summary-value">{{ formatDateTime(normalized.refundTime) }}</p></article>
               </div>
 
               <article class="detail-block">
@@ -210,7 +178,7 @@
                 </div>
                 <div class="data-shell">
                   <el-table :data="normalized.items" style="width: 100%" size="small">
-                    <el-table-column prop="itemName" label="名称" />
+                    <el-table-column prop="itemName" label="项目" />
                     <el-table-column prop="itemType" label="类型" width="120" />
                     <el-table-column prop="quantity" label="数量" width="90" />
                     <el-table-column prop="price" label="单价" width="120" />
@@ -230,14 +198,14 @@
                 <div class="finance-grid">
                   <div class="finance-line"><span>状态文案</span><strong>{{ formatFinanceField(normalized.financeSummary.statusText) }}</strong></div>
                   <div class="finance-line"><span>状态提示</span><strong>{{ formatFinanceField(normalized.financeSummary.statusHint) }}</strong></div>
-                  <div class="finance-line"><span>阶段</span><strong>{{ formatFinanceField(normalized.financeSummary.stage) }}</strong></div>
-                  <div class="finance-line"><span>说明</span><strong>{{ formatFinanceField(normalized.financeSummary.statusExplain) }}</strong></div>
+                  <div class="finance-line"><span>资金阶段</span><strong>{{ formatFinanceField(normalized.financeSummary.stage) }}</strong></div>
+                  <div class="finance-line"><span>状态说明</span><strong>{{ formatFinanceField(normalized.financeSummary.statusExplain) }}</strong></div>
                 </div>
               </article>
 
               <article class="reason-card">
                 <p class="section-eyebrow">退款原因</p>
-                <h3 class="section-title-sm">说明</h3>
+                <h3 class="section-title-sm">本次处理说明</h3>
                 <p>{{ formatValue(normalized.refundReason) }}</p>
               </article>
             </div>
@@ -253,11 +221,12 @@
 <script setup>
 import { computed, nextTick, ref, watch } from "vue"
 import { useRoute, useRouter } from "vue-router"
-import { ElMessage } from "element-plus"
+import { ElMessage, ElMessageBox } from "element-plus"
 import { appClient } from "../api/client"
 
 const route = useRoute()
 const router = useRouter()
+const STORAGE_BOOKING = "fp_last_booking"
 
 const orderId = ref(null)
 const orders = ref([])
@@ -266,12 +235,20 @@ const ordersLoading = ref(false)
 const detail = ref(null)
 const loading = ref(false)
 const ordersRef = ref(null)
+const cancelingBooking = ref(false)
 
 const sourceFrom = computed(() => String(route.query.from || ""))
 const showBackToSource = computed(() => sourceFrom.value === "courses" || sourceFrom.value === "booking")
 const backToSourceLabel = computed(() => (sourceFrom.value === "booking" ? "返回我的预约" : "返回最近报名"))
 const sourceEntityLabel = computed(() => (sourceFrom.value === "booking" ? "预约ID" : "报名ID"))
 const sourceSummaryLabel = computed(() => (sourceFrom.value === "booking" ? "档期" : "课程"))
+const bookingReturnQuery = computed(() => {
+  const query = {}
+  if (route.query.bookingTab) query.bookingTab = String(route.query.bookingTab)
+  if (route.query.coachId) query.coachId = String(route.query.coachId)
+  if (route.query.date) query.date = String(route.query.date)
+  return query
+})
 
 const filteredOrders = computed(() => {
   const keyword = orderKeyword.value.trim().toLowerCase()
@@ -328,7 +305,7 @@ const sourceContext = computed(() => {
     const scheduleDate = route.query.scheduleDate ? String(route.query.scheduleDate) : ""
     const startTime = route.query.startTime ? String(route.query.startTime).slice(0, 5) : ""
     const endTime = route.query.endTime ? String(route.query.endTime).slice(0, 5) : ""
-    const timeText = scheduleDate ? `${scheduleDate} ${startTime || "--:--"}-${endTime || "--:--"}` : ""
+    const timeText = scheduleDate ? scheduleDate + " " + (startTime || "--:--") + "-" + (endTime || "--:--") : ""
     return {
       sourceLabel: "教练预约",
       courseTitle: timeText,
@@ -345,6 +322,20 @@ const sourceContext = computed(() => {
     enrollmentId: Number.isFinite(Number(enrollmentId)) && Number(enrollmentId) > 0 ? Number(enrollmentId) : null,
     orderId: normalized.value.orderId || (route.query.orderId ? Number(route.query.orderId) : null)
   }
+})
+
+const currentBookingId = computed(() => {
+  if (normalized.value.bizType !== "coach_booking") return null
+  const raw = sourceFrom.value === "booking" ? sourceContext.value?.enrollmentId : normalized.value.bizId
+  const parsed = Number(raw)
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : null
+})
+
+const canCancelCurrentBooking = computed(() => {
+  if (!currentBookingId.value) return false
+  if (normalized.value.bizType !== "coach_booking") return false
+  if (normalized.value.payStatus !== "UNPAID") return false
+  return !["CLOSED", "REFUNDED"].includes(normalized.value.orderStatus)
 })
 
 const formatPayStatus = (status) => {
@@ -365,7 +356,7 @@ const formatOrderStatus = (status) => {
 }
 
 const formatPayChannel = (channel) => {
-  const map = { wechat: "微信", alipay: "支付宝", mock: "模拟" }
+  const map = { wechat: "微信支付", alipay: "支付宝", mock: "模拟支付" }
   return map[channel] || channel || "-"
 }
 
@@ -393,7 +384,7 @@ const formatFinanceField = (value) => {
     Paid: "已支付",
     "Paid (awaiting service)": "已支付，待服务完成",
     "Payment received": "订单已完成支付",
-    unpaid: "未支付",
+    unpaid: "待支付",
     Unpaid: "待支付",
     CLOSED: "已关闭",
     closed: "已关闭",
@@ -404,7 +395,7 @@ const formatFinanceField = (value) => {
     "Unknown status": "当前状态暂时无法识别",
     NONE: "无退款",
     PENDING: "处理中",
-    REJECTED: "已拒绝"
+    REJECTED: "已驳回"
   }
   return map[raw] || raw
 }
@@ -448,7 +439,7 @@ const formatDateTime = (value) => {
   const raw = String(value)
   if (raw.includes("T")) {
     const [date, time] = raw.split("T")
-    return `${date} ${time.slice(0, 8)}`
+    return date + " " + time.slice(0, 8)
   }
   if (raw.length >= 16 && raw.includes("-")) return raw.slice(0, 16)
   return raw
@@ -456,7 +447,8 @@ const formatDateTime = (value) => {
 
 const formatAmount = (value) => {
   if (value === null || value === undefined || value === "") return "-"
-  return value
+  const amount = Number(value)
+  return Number.isFinite(amount) ? amount.toFixed(2) : String(value)
 }
 
 const copyOrderNo = async () => {
@@ -467,7 +459,7 @@ const copyOrderNo = async () => {
   try {
     await navigator.clipboard.writeText(String(normalized.value.orderNo))
     ElMessage.success("订单号已复制")
-  } catch (err) {
+  } catch {
     ElMessage.error("复制失败，请手动复制")
   }
 }
@@ -535,12 +527,47 @@ const loadDetail = async () => {
   try {
     loading.value = true
     const { data } = await appClient.get("/app/order/detail", { params: { orderId: orderId.value } })
-    if (data.code !== 200) throw new Error(data.message || "查询详情失败")
+    if (data.code !== 200) throw new Error(data.message || "加载订单失败")
     detail.value = data.data
   } catch (err) {
-    ElMessage.error(err.message || "查询详情失败")
+    ElMessage.error(err.message || "加载订单失败")
   } finally {
     loading.value = false
+  }
+}
+
+const cancelCurrentBooking = async () => {
+  if (!canCancelCurrentBooking.value) {
+    ElMessage.warning("当前订单不支持取消预约")
+    return
+  }
+  try {
+    await ElMessageBox.confirm(
+      "取消后会释放这笔待支付预约占用的名额，确认继续吗？",
+      "取消待支付预约",
+      {
+        confirmButtonText: "确认取消",
+        cancelButtonText: "先不取消",
+        type: "warning"
+      }
+    )
+  } catch {
+    return
+  }
+
+  try {
+    cancelingBooking.value = true
+    const { data } = await appClient.post("/app/booking/cancel-unpaid", null, {
+      params: { bookingId: currentBookingId.value }
+    })
+    if (data.code !== 200) throw new Error(data.message || "加载订单失败")
+    localStorage.removeItem(STORAGE_BOOKING)
+    ElMessage.success("预约已取消，订单已关闭")
+    await loadOrders()
+  } catch (err) {
+    ElMessage.error(err.message || "加载订单失败")
+  } finally {
+    cancelingBooking.value = false
   }
 }
 
@@ -565,7 +592,7 @@ const go = (path) => {
 
 const backToSource = () => {
   if (sourceFrom.value === "booking") {
-    router.push({ path: "/booking" })
+    router.push({ path: "/booking", query: bookingReturnQuery.value })
     return
   }
   router.push({ path: "/courses", hash: "#recent-enrollment" })
@@ -753,6 +780,13 @@ loadOrders()
   justify-content: space-between;
   align-items: flex-start;
   gap: 12px;
+}
+
+.detail-head__actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .detail-stack {

@@ -18,4 +18,13 @@ public interface CoachScheduleMapper extends BaseMapper<CoachSchedule> {
               AND booked_count < capacity
             """)
     int reserveSlot(@Param("scheduleId") Long scheduleId);
+
+    @Update("""
+            UPDATE coach_schedule
+            SET booked_count = booked_count - 1
+            WHERE id = #{scheduleId}
+              AND is_deleted = 0
+              AND booked_count > 0
+            """)
+    int releaseSlot(@Param("scheduleId") Long scheduleId);
 }
