@@ -76,14 +76,14 @@ graph LR
 如果当前 Markdown 渲染器不支持 Mermaid，可参考下面的文字版拓扑：
 
 - App / Admin Client
-  - App 请求先进入 `Nginx`
-  - `Nginx` 轮询转发到 `web-app:8081`
-  - `Nginx` 轮询转发到 `web-app:8082`
+- App 请求先进入 `Nginx`
+- `Nginx` 轮询转发到 `web-app:8081`
+- `Nginx` 轮询转发到 `web-app:8082`
 - Admin 请求直接进入 `web-admin:8080`
 - `web-app:8081`、`web-app:8082`、`web-admin:8080` 共同访问：
-  - `Redis`
-  - `MySQL`
-  - `MinIO`
+- `Redis`
+- `MySQL`
+- `MinIO`
 
 ### 部署形态
 
@@ -127,18 +127,18 @@ graph LR
 ### 3. 多级缓存与近实时失效
 
 - 只对静态低频数据使用本地缓存：
-  - Banner
-  - Notice
-  - SystemConfig
-  - Course List
-  - Plan List
-  - Plan Detail Static
+- Banner
+- Notice
+- SystemConfig
+- Course List
+- Plan List
+- Plan Detail Static
 - 采用 `Caffeine + Redis + Redis Pub/Sub` 实现多级缓存与近实时失效
 - 失效策略固定为：
-  - 事务提交后删除 Redis 共享缓存
-  - 删除当前实例本地 Caffeine
-  - 发布 `cache:evict` 失效消息
-  - 其他实例订阅后仅删除自己的本地缓存
+- 事务提交后删除 Redis 共享缓存
+- 删除当前实例本地 Caffeine
+- 发布 `cache:evict` 失效消息
+- 其他实例订阅后仅删除自己的本地缓存
 - 保留 `TTL jitter`、空值缓存、热点互斥重建作为兜底
 
 明确不进入本地缓存的数据：
@@ -153,15 +153,15 @@ graph LR
 
 - 内置任务中心，支持任务运行记录、汇总查询、手动触发
 - 当前已接入：
-  - `PAYMENT_COMPENSATE`
-  - `BOOKING_TIMEOUT_CLOSE`
+- `PAYMENT_COMPENSATE`
+- `BOOKING_TIMEOUT_CLOSE`
 - 任务执行写入 `task_run_log`
 - 双实例下通过 Redis 任务锁避免重复执行
 
 ### 5. AI 训练计划生成
 
 - 基于 `LangChain4j + DeepSeek API` 接入大模型能力
-- 支持通过 `/app/plan/ai-generate` 根据用户输入生成训练计划
+- 支持根据用户输入生成训练计划
 - 生成结果采用结构化输出约束，并经过字段校验、动作名规范化与计划项映射后落库
 - 将大模型调用能力收敛到真实业务链路，而不是停留在独立 Demo 层
 

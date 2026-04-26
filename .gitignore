@@ -41,6 +41,7 @@ build/
 ### AI / Codex / browser automation ###
 .codex/
 .playwright-cli/
+/RULE.txt
 
 ### Frontend ###
 frontend/node_modules/
@@ -56,6 +57,6 @@ frontend-app/output/
 common/.run/
 .tmp-*.mjs
 start_or_stop.txt
-test.png
+/test.png
 frontend-preview.log
 frontend-app-preview.log
