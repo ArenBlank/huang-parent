@@ -4,6 +4,7 @@ target/
 !**/src/test/**/target/
 
 ### IntelliJ IDEA ###
+.idea/
 .idea/modules.xml
 .idea/jarRepositories.xml
 .idea/compiler.xml
@@ -37,21 +38,24 @@ build/
 ### Mac OS ###
 .DS_Store
 
+### AI / Codex / browser automation ###
+.codex/
+.playwright-cli/
+
 ### Frontend ###
-frontend/node_modules/
-frontend/dist/
-frontend/.vite/
 frontend/node_modules/
 frontend/dist/
 frontend/.vite/
 frontend-app/node_modules/
 frontend-app/dist/
 frontend-app/.vite/
+frontend-app/output/
 
 ### Local run artifacts ###
-.run/*.log
-.run/*.err.log
-.run/*.out.log
-.run/pids.json
+.run/
+common/.run/
+.tmp-*.mjs
+start_or_stop.txt
+test.png
 frontend-preview.log
 frontend-app-preview.log

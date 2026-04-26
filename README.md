@@ -13,7 +13,7 @@
 
 ## 核心业务闭环
 
-- 训练计划：计划列表、计划详情、订阅、计划项绑定视频资源
+- 训练计划：计划列表、计划详情、订阅、计划项绑定视频资源、AI 生成训练计划
 - 训练记录：打卡、历史记录、周统计
 - 课程学习：课程管理、排期、报名、支付、退款、我的报名记录
 - 教练预约：档期查询、预约创建、支付、完成、评价
@@ -26,6 +26,7 @@
 - 数据访问：`MyBatis-Plus`、`MySQL`
 - 缓存与并发控制：`Redis`、`Caffeine`
 - 认证鉴权：`JWT`、`TokenVersion-enhanced stateless auth`
+- AI 集成：`LangChain4j`、`DeepSeek API`
 - 前端框架：`Vue 3`、`Vite`
 - 前端状态与路由：`Pinia`、`Vue Router`
 - 前端请求与组件：`Axios`、`Element Plus`
@@ -48,6 +49,7 @@
 - `Caffeine + Redis + Redis Pub/Sub`：Caffeine + Redis + Redis 发布订阅多级缓存
 - `Cache-Aside + TTL jitter + null-object caching + hotspot rebuild protection`：旁路缓存 + TTL 抖动 + 空对象缓存 + 热点重建保护
 - `@DistributedTaskLock + dynamic task lock TTL`：分布式任务锁 + 动态锁过期时间
+- `LangChain4j + DeepSeek structured generation`：基于 LangChain4j 接入 DeepSeek，实现训练计划结构化生成与业务落库
 - `graceful degradation`：优雅降级
 - `runtime observability`：运行期可观测性
 - `end-to-end regression pipeline`：端到端回归验证流水线
@@ -156,7 +158,14 @@ graph LR
 - 任务执行写入 `task_run_log`
 - 双实例下通过 Redis 任务锁避免重复执行
 
-### 5. 可观测性与审计
+### 5. AI 训练计划生成
+
+- 基于 `LangChain4j + DeepSeek API` 接入大模型能力
+- 支持通过 `/app/plan/ai-generate` 根据用户输入生成训练计划
+- 生成结果采用结构化输出约束，并经过字段校验、动作名规范化与计划项映射后落库
+- 将大模型调用能力收敛到真实业务链路，而不是停留在独立 Demo 层
+
+### 6. 可观测性与审计
 
 - 统一 `traceId + userId + instanceId` 链路日志
 - 关键写操作记录 `operation_log`
@@ -175,6 +184,7 @@ graph LR
 - `Caffeine + Redis + Redis Pub/Sub` 近实时失效验证通过
 - App/Admin 鉴权缓存与失效验证通过
 - 双实例补偿任务互斥实机验收通过
+- AI 训练计划生成链路已接入业务服务并具备测试覆盖
 
 ## 快速开始
 
