@@ -56,7 +56,6 @@ frontend-app/output/
 .run/
 common/.run/
 .tmp-*.mjs
-start_or_stop.txt
 /test.png
 frontend-preview.log
 frontend-app-preview.log
