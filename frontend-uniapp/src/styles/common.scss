@@ -1,0 +1,142 @@
+page {
+  min-height: 100%;
+  background: #fffaf4;
+  color: #24104f;
+  font-family: "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+
+view,
+text,
+button,
+input,
+textarea {
+  box-sizing: border-box;
+}
+
+button {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  line-height: 1.2;
+}
+
+button::after {
+  border: 0;
+}
+
+.sl-card {
+  border: 3rpx solid #34205f;
+  border-radius: 28rpx;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 12rpx 0 rgba(52, 32, 95, 0.08), 0 22rpx 44rpx rgba(139, 99, 255, 0.1);
+}
+
+.sl-section {
+  margin-top: 28rpx;
+}
+
+.sl-section-title {
+  display: block;
+  color: #24104f;
+  font-size: 34rpx;
+  font-weight: 800;
+}
+
+.sl-section-sub {
+  display: block;
+  margin-top: 8rpx;
+  color: #7b6f98;
+  font-size: 24rpx;
+  line-height: 1.5;
+}
+
+.sl-chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12rpx;
+  margin-top: 16rpx;
+}
+
+.sl-chip {
+  display: inline-flex;
+  align-items: center;
+  min-height: 48rpx;
+  padding: 0 18rpx;
+  border: 2rpx solid #34205f;
+  border-radius: 999rpx;
+  background: #fff8ea;
+  color: #24104f;
+  font-size: 22rpx;
+  font-weight: 700;
+}
+
+.sl-list {
+  display: flex;
+  flex-direction: column;
+  gap: 18rpx;
+}
+
+.sl-list-card {
+  padding: 24rpx;
+}
+
+.sl-list-card__title {
+  display: block;
+  color: #24104f;
+  font-size: 30rpx;
+  font-weight: 800;
+  line-height: 1.3;
+}
+
+.sl-list-card__meta {
+  display: block;
+  margin-top: 10rpx;
+  color: #7b6f98;
+  font-size: 24rpx;
+  line-height: 1.5;
+}
+
+.sl-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20rpx;
+}
+
+.sl-input {
+  width: 100%;
+  min-height: 96rpx;
+  padding: 0 28rpx;
+  border: 2rpx solid rgba(52, 32, 95, 0.2);
+  border-radius: 24rpx;
+  background: #fff;
+  color: #24104f;
+  font-size: 28rpx;
+}
+
+.sl-textarea {
+  width: 100%;
+  min-height: 180rpx;
+  padding: 24rpx 28rpx;
+  border: 2rpx solid rgba(52, 32, 95, 0.2);
+  border-radius: 24rpx;
+  background: #fff;
+  color: #24104f;
+  font-size: 28rpx;
+  line-height: 1.5;
+}
+
+.sl-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18rpx;
+}
+
+.sl-muted {
+  color: #7b6f98;
+}
+
+.sl-link {
+  color: #8b63ff;
+  font-weight: 800;
+}

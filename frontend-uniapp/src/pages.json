@@ -1,0 +1,133 @@
+{
+  "pages": [
+    {
+      "path": "pages/login/index",
+      "style": {
+        "navigationBarTitleText": "森练计划",
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/home/index",
+      "style": {
+        "navigationBarTitleText": "首页",
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/plans/index",
+      "style": {
+        "navigationBarTitleText": "训练计划",
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/courses/index",
+      "style": {
+        "navigationBarTitleText": "课程",
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/mine/index",
+      "style": {
+        "navigationBarTitleText": "我的",
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/plan-detail/index",
+      "style": {
+        "navigationBarTitleText": "计划详情",
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/video-player/index",
+      "style": {
+        "navigationBarTitleText": "视频播放",
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/training/index",
+      "style": {
+        "navigationBarTitleText": "打卡成长",
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/booking/index",
+      "style": {
+        "navigationBarTitleText": "预约大厅",
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/orders/index",
+      "style": {
+        "navigationBarTitleText": "订单中心",
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/order-detail/index",
+      "style": {
+        "navigationBarTitleText": "订单详情",
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/coach-apply/index",
+      "style": {
+        "navigationBarTitleText": "教练申请",
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/profile-edit/index",
+      "style": {
+        "navigationBarTitleText": "编辑资料",
+        "navigationStyle": "custom"
+      }
+    },
+    {
+      "path": "pages/security/index",
+      "style": {
+        "navigationBarTitleText": "账户安全",
+        "navigationStyle": "custom"
+      }
+    }
+  ],
+  "tabBar": {
+    "color": "#7b6f98",
+    "selectedColor": "#24104f",
+    "backgroundColor": "#fffaf4",
+    "borderStyle": "white",
+    "list": [
+      {
+        "pagePath": "pages/home/index",
+        "text": "首页"
+      },
+      {
+        "pagePath": "pages/plans/index",
+        "text": "计划"
+      },
+      {
+        "pagePath": "pages/courses/index",
+        "text": "课程"
+      },
+      {
+        "pagePath": "pages/mine/index",
+        "text": "我的"
+      }
+    ]
+  },
+  "globalStyle": {
+    "navigationBarTextStyle": "black",
+    "navigationBarTitleText": "森练计划",
+    "navigationBarBackgroundColor": "#fffaf4",
+    "backgroundColor": "#fffaf4",
+    "backgroundTextStyle": "dark"
+  }
+}

@@ -74,7 +74,7 @@
 
             <div v-else class="plan-list">
               <button
-                v-for="plan in myPlans"
+                v-for="plan in pagedMyPlans"
                 :key="plan.id"
                 type="button"
                 class="plan-card eco-clickable"
@@ -93,6 +93,16 @@
                 </div>
               </button>
             </div>
+            <el-pagination
+              v-if="myPlans.length > planPageSize"
+              v-model:current-page="myPlanPage"
+              class="compact-pagination"
+              small
+              background
+              layout="prev, pager, next"
+              :page-size="planPageSize"
+              :total="myPlans.length"
+            />
           </el-tab-pane>
 
           <el-tab-pane :label="`发现大厅 ${libraryPlans.length}`" name="library">
@@ -100,7 +110,7 @@
 
             <div v-else class="plan-list">
               <button
-                v-for="plan in libraryPlans"
+                v-for="plan in pagedLibraryPlans"
                 :key="plan.id"
                 type="button"
                 class="plan-card eco-clickable"
@@ -118,6 +128,16 @@
                 </div>
               </button>
             </div>
+            <el-pagination
+              v-if="libraryPlans.length > planPageSize"
+              v-model:current-page="libraryPlanPage"
+              class="compact-pagination"
+              small
+              background
+              layout="prev, pager, next"
+              :page-size="planPageSize"
+              :total="libraryPlans.length"
+            />
           </el-tab-pane>
         </el-tabs>
       </article>
@@ -205,7 +225,7 @@
             <p class="section-sub">训练动作按天展开，可快速查看时长、组数和绑定视频。</p>
             <el-empty v-if="!selected.items?.length" description="该计划还没有动作节点" />
             <div v-else class="timeline-list">
-              <article v-for="item in selected.items" :key="item.id" class="timeline-item">
+              <article v-for="item in pagedPlanItems" :key="item.id" class="timeline-item">
                 <div class="timeline-rail" aria-hidden="true">
                   <span class="timeline-dot"></span>
                 </div>
@@ -227,6 +247,16 @@
                 </div>
               </article>
             </div>
+            <el-pagination
+              v-if="planItems.length > itemPageSize"
+              v-model:current-page="itemPage"
+              class="compact-pagination"
+              small
+              background
+              layout="prev, pager, next"
+              :page-size="itemPageSize"
+              :total="planItems.length"
+            />
           </section>
         </div>
       </article>
@@ -297,9 +327,27 @@ const selected = ref(null)
 const selectedMeta = ref(null)
 const startDate = ref(formatDate(new Date()))
 const syncingTab = ref(false)
+const planPageSize = 3
+const itemPageSize = 2
+const myPlanPage = ref(1)
+const libraryPlanPage = ref(1)
+const itemPage = ref(1)
 
 const myPlans = computed(() => overview.value.myPlans || [])
 const libraryPlans = computed(() => overview.value.libraryPlans || [])
+const pagedMyPlans = computed(() => {
+  const start = (myPlanPage.value - 1) * planPageSize
+  return myPlans.value.slice(start, start + planPageSize)
+})
+const pagedLibraryPlans = computed(() => {
+  const start = (libraryPlanPage.value - 1) * planPageSize
+  return libraryPlans.value.slice(start, start + planPageSize)
+})
+const planItems = computed(() => selected.value?.items || [])
+const pagedPlanItems = computed(() => {
+  const start = (itemPage.value - 1) * itemPageSize
+  return planItems.value.slice(start, start + itemPageSize)
+})
 
 const itemProgress = computed(() => {
   const total = selected.value?.items?.length || 0
@@ -344,6 +392,8 @@ async function loadOverview(options = {}) {
       libraryPlans: data.data?.libraryPlans || [],
       currentPlanId: data.data?.currentPlanId || null
     }
+    myPlanPage.value = Math.min(myPlanPage.value, Math.max(1, Math.ceil(myPlans.value.length / planPageSize)))
+    libraryPlanPage.value = Math.min(libraryPlanPage.value, Math.max(1, Math.ceil(libraryPlans.value.length / planPageSize)))
 
     let nextTab = preferredTab || (myPlans.value.length ? 'mine' : 'library')
     if (nextTab === 'mine' && !myPlans.value.length) {
@@ -355,6 +405,9 @@ async function loadOverview(options = {}) {
 
     syncingTab.value = true
     activeTab.value = nextTab
+    if (nextTab === 'mine') myPlanPage.value = 1
+    if (nextTab === 'library') libraryPlanPage.value = 1
+    itemPage.value = 1
     const targetId = preferredId || overview.value.currentPlanId
     await syncSelectedPlan(targetId, nextTab)
   } catch (err) {
@@ -391,6 +444,7 @@ async function selectPlan(row) {
     }
     selectedMeta.value = row
     selected.value = data.data
+    itemPage.value = 1
     if (selected.value?.subscription?.startDate) {
       startDate.value = selected.value.subscription.startDate
     } else {
@@ -543,6 +597,9 @@ function openVideo(item) {
 }
 
 watch(activeTab, async (tab) => {
+  if (tab === 'mine') myPlanPage.value = 1
+  if (tab === 'library') libraryPlanPage.value = 1
+  itemPage.value = 1
   if (syncingTab.value) {
     return
   }
@@ -632,6 +689,11 @@ onMounted(() => {
   display: flex;
   flex-direction: column;
   gap: 10px;
+}
+
+.compact-pagination {
+  margin-top: 12px;
+  justify-content: center;
 }
 
 .plan-card {

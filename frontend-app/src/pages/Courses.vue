@@ -88,7 +88,7 @@
           <div v-else class="catalog-scroller catalog-scroller--mine" v-loading="mySchedulesLoading">
             <div class="itinerary-grid">
               <article
-                v-for="schedule in mySchedules"
+                v-for="schedule in pagedMySchedules"
                 :key="schedule.enrollmentId"
                 class="itinerary-card"
               >
@@ -126,6 +126,16 @@
               </article>
             </div>
           </div>
+          <el-pagination
+            v-if="mySchedules.length > mySchedulePageSize"
+            v-model:current-page="mySchedulePage"
+            class="compact-pagination"
+            small
+            background
+            layout="prev, pager, next"
+            :page-size="mySchedulePageSize"
+            :total="mySchedules.length"
+          />
         </template>
 
         <template v-else>
@@ -221,7 +231,7 @@
               </div>
 
               <el-empty v-if="!enrollments.length && !enrollmentsLoading" description="暂无报名记录" />
-              <el-table v-else :data="enrollments" v-loading="enrollmentsLoading" class="history-table" style="width: 100%">
+              <el-table v-else :data="pagedEnrollments" v-loading="enrollmentsLoading" class="history-table" style="width: 100%">
                 <el-table-column prop="id" label="报名ID" width="90" />
                 <el-table-column label="课程" min-width="220">
                   <template #default="{ row }">
@@ -249,6 +259,16 @@
                   <template #default="{ row }">{{ formatDateTime(row.createTime || row.enrollTime) }}</template>
                 </el-table-column>
               </el-table>
+              <el-pagination
+                v-if="enrollments.length > enrollmentPageSize"
+                v-model:current-page="enrollmentPage"
+                class="compact-pagination"
+                small
+                background
+                layout="prev, pager, next"
+                :page-size="enrollmentPageSize"
+                :total="enrollments.length"
+              />
             </section>
           </template>
 
@@ -556,6 +576,10 @@ const mySchedulesLoading = ref(false)
 const courseView = ref(localStorage.getItem(STORAGE_COURSE_VIEW) || "mine")
 const checkInDialogVisible = ref(false)
 const activeCheckInSchedule = ref(null)
+const mySchedulePageSize = 3
+const enrollmentPageSize = 6
+const mySchedulePage = ref(1)
+const enrollmentPage = ref(1)
 
 const lastEnrollment = ref(null)
 const recentEnrollmentRef = ref(null)
@@ -623,6 +647,14 @@ const selectedUnavailable = computed(() => {
 })
 
 const availableSchedules = computed(() => schedules.value.filter((row) => isScheduleAvailable(row)).length)
+const pagedMySchedules = computed(() => {
+  const start = (mySchedulePage.value - 1) * mySchedulePageSize
+  return mySchedules.value.slice(start, start + mySchedulePageSize)
+})
+const pagedEnrollments = computed(() => {
+  const start = (enrollmentPage.value - 1) * enrollmentPageSize
+  return enrollments.value.slice(start, start + enrollmentPageSize)
+})
 const currentEnrollmentStatus = computed(() => Number(lastEnrollment.value?.status ?? -1))
 const canMockPayEnrollment = computed(() => currentEnrollmentStatus.value === 1)
 const canCancelEnrollment = computed(() => currentEnrollmentStatus.value === 1)
@@ -678,6 +710,8 @@ const parseCourseId = (value) => {
 
 const switchCourseView = async (view) => {
   courseView.value = view
+  mySchedulePage.value = 1
+  enrollmentPage.value = 1
   localStorage.setItem(STORAGE_COURSE_VIEW, view)
   await nextTick()
   catalogRef.value?.scrollIntoView?.({ behavior: "smooth", block: "start" })
@@ -867,6 +901,7 @@ const loadEnrollments = async () => {
       ...item,
       createTime: item.createTime || item.enrollTime || ""
     }))
+    enrollmentPage.value = Math.min(enrollmentPage.value, Math.max(1, Math.ceil(enrollments.value.length / enrollmentPageSize)))
     syncLastEnrollment(enrollments.value)
   } catch (err) {
     ElMessage.error(err.message || "加载报名失败")
@@ -881,6 +916,7 @@ const loadMySchedules = async () => {
     const { data } = await fetchMyCourseSchedules()
     if (data.code !== 200) throw new Error(data.message || "加载我的课程失败")
     mySchedules.value = data.data || []
+    mySchedulePage.value = Math.min(mySchedulePage.value, Math.max(1, Math.ceil(mySchedules.value.length / mySchedulePageSize)))
   } catch (err) {
     ElMessage.error(err.message || "加载我的课程失败")
   } finally {
@@ -1197,6 +1233,11 @@ loadLastEnrollment()
   max-height: min(74vh, 960px);
   overflow: auto;
   padding-right: 6px;
+}
+
+.compact-pagination {
+  margin-top: 12px;
+  justify-content: center;
 }
 
 .catalog-scroller--mine {

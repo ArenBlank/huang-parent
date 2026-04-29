@@ -51,6 +51,9 @@ frontend-app/node_modules/
 frontend-app/dist/
 frontend-app/.vite/
 frontend-app/output/
+frontend-uniapp/node_modules/
+frontend-uniapp/dist/
+frontend-uniapp/.vite/
 
 ### Local run artifacts ###
 .run/
