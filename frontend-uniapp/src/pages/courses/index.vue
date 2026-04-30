@@ -1795,15 +1795,21 @@ button::after {
 }
 
 .page-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-width: 132rpx;
-  min-height: 54rpx;
+  height: 54rpx;
+  padding: 0 24rpx;
   border: 2rpx solid rgba(52, 32, 95, 0.24);
   border-radius: 999rpx;
   background: #ffffff;
   color: #24104f;
   font-size: 22rpx;
   font-weight: 900;
+  line-height: 1;
   box-shadow: 0 6rpx 0 rgba(52, 32, 95, 0.06);
+  box-sizing: border-box;
 }
 
 .page-button[disabled] {
@@ -1812,10 +1818,15 @@ button::after {
 }
 
 .page-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-width: 92rpx;
+  height: 54rpx;
   color: #6b4eea;
   font-size: 23rpx;
   font-weight: 900;
+  line-height: 1;
   text-align: center;
 }
 

@@ -184,7 +184,7 @@
             <div v-else class="catalog-scroller">
               <div class="course-grid">
                 <button
-                  v-for="course in filteredCourses"
+                  v-for="course in pagedFilteredCourses"
                   :key="course.id"
                   type="button"
                   class="course-card eco-clickable"
@@ -213,6 +213,16 @@
                 </button>
               </div>
             </div>
+            <el-pagination
+              v-if="filteredCourses.length > discoverCoursePageSize"
+              v-model:current-page="coursePage"
+              class="compact-pagination"
+              small
+              background
+              layout="prev, pager, next"
+              :page-size="discoverCoursePageSize"
+              :total="filteredCourses.length"
+            />
           </template>
         </template>
       </section>
@@ -576,9 +586,11 @@ const mySchedulesLoading = ref(false)
 const courseView = ref(localStorage.getItem(STORAGE_COURSE_VIEW) || "mine")
 const checkInDialogVisible = ref(false)
 const activeCheckInSchedule = ref(null)
-const mySchedulePageSize = 3
+const mySchedulePageSize = 1
+const discoverCoursePageSize = 3
 const enrollmentPageSize = 6
 const mySchedulePage = ref(1)
+const coursePage = ref(1)
 const enrollmentPage = ref(1)
 
 const lastEnrollment = ref(null)
@@ -628,6 +640,11 @@ const filteredCourses = computed(() => {
     ].filter(Boolean).join(" ").toLowerCase()
     return haystack.includes(keyword)
   })
+})
+
+const pagedFilteredCourses = computed(() => {
+  const start = (coursePage.value - 1) * discoverCoursePageSize
+  return filteredCourses.value.slice(start, start + discoverCoursePageSize)
 })
 
 const courseMap = computed(() => {
@@ -711,6 +728,7 @@ const parseCourseId = (value) => {
 const switchCourseView = async (view) => {
   courseView.value = view
   mySchedulePage.value = 1
+  coursePage.value = 1
   enrollmentPage.value = 1
   localStorage.setItem(STORAGE_COURSE_VIEW, view)
   await nextTick()
@@ -727,6 +745,7 @@ const loadCourses = async () => {
     const { data } = await appClient.get("/app/course/list")
     if (data.code !== 200) throw new Error(data.message || "加载课程失败")
     courses.value = data.data || []
+    coursePage.value = Math.min(coursePage.value, Math.max(1, Math.ceil(filteredCourses.value.length / discoverCoursePageSize)))
     if (courses.value.length) {
       const cached = parseCourseId(localStorage.getItem(STORAGE_COURSE_ID))
       const preferred = (cached !== null && courses.value.find((item) => Number(item.id) === cached)) || courses.value[0]
@@ -984,6 +1003,10 @@ watch(
   },
   { immediate: true }
 )
+
+watch(courseKeyword, () => {
+  coursePage.value = 1
+})
 
 const remainingSlots = (row) => {
   const capacity = Number(row?.capacity ?? 0)

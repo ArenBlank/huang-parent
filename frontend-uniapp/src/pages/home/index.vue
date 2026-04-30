@@ -88,33 +88,63 @@
         </view>
       </view>
 
-      <view class="promo-card" @click="goSmart('/pages/courses/index')">
-        <view class="promo-copy">
-          <text class="promo-title">春日燃脂计划 <text class="promo-fire">🔥</text></text>
-          <text class="promo-sub">专属课程低至 <text>7</text> 折</text>
-          <view class="promo-button">
-            <text>立即参与</text>
-            <image class="promo-arrow" :src="icons.chevronRight" mode="aspectFit" />
+      <view class="promo-section">
+        <view class="promo-head">
+          <text>活动推荐</text>
+          <text>来自 /app/banner/list</text>
+        </view>
+        <swiper
+          v-if="hasBanners"
+          class="promo-swiper"
+          circular
+          autoplay
+          :interval="4200"
+          :duration="420"
+          @change="onBannerChange"
+        >
+          <swiper-item v-for="banner in bannerCards" :key="banner.key">
+            <view class="promo-card" @click="openBanner(banner)">
+              <view class="promo-copy">
+                <text class="promo-kicker">运营 Banner</text>
+                <text class="promo-title">{{ banner.title }}</text>
+                <text class="promo-sub">{{ banner.subtitle }}</text>
+                <view class="promo-button" :class="{ disabled: !banner.targetUrl }">
+                  <text>{{ banner.linkText }}</text>
+                  <image class="promo-arrow" :src="icons.chevronRight" mode="aspectFit" />
+                </view>
+              </view>
+              <image
+                v-if="banner.image && !failedBannerImages[banner.key]"
+                class="promo-image"
+                :src="banner.image"
+                mode="aspectFill"
+                @error="markBannerImageFailed(banner.key)"
+              />
+              <view v-else class="promo-image-fallback">
+                <image :src="icons.bullhorn" mode="aspectFit" />
+                <text>活动</text>
+              </view>
+              <view class="promo-mountain promo-mountain--one"></view>
+              <view class="promo-mountain promo-mountain--two"></view>
+            </view>
+          </swiper-item>
+        </swiper>
+        <view v-else class="promo-empty" @click="loadHome">
+          <view class="promo-empty-icon">
+            <image :src="icons.bullhorn" mode="aspectFit" />
+          </view>
+          <view class="promo-empty-copy">
+            <text>暂无活动推荐</text>
+            <text>后台启用 Banner 后这里会自动展示，不再使用假轮播。</text>
           </view>
         </view>
-        <view class="runner">
-          <view class="runner-head"></view>
-          <view class="runner-hair"></view>
-          <view class="runner-body"></view>
-          <view class="runner-arm runner-arm--back"></view>
-          <view class="runner-arm runner-arm--front"></view>
-          <view class="runner-leg runner-leg--front"></view>
-          <view class="runner-leg runner-leg--back"></view>
-          <view class="runner-foot runner-foot--front"></view>
-          <view class="runner-foot runner-foot--back"></view>
-        </view>
-        <view class="promo-mountain promo-mountain--one"></view>
-        <view class="promo-mountain promo-mountain--two"></view>
-        <view class="dots">
-          <view class="dot active"></view>
-          <view class="dot"></view>
-          <view class="dot"></view>
-          <view class="dot"></view>
+        <view class="dots" v-if="bannerCards.length > 1">
+          <view
+            v-for="(_, index) in bannerCards"
+            :key="index"
+            class="dot"
+            :class="{ active: bannerIndex === index }"
+          ></view>
         </view>
       </view>
 
@@ -171,12 +201,12 @@ import {
   faUser,
   faVolumeHigh
 } from '@fortawesome/free-solid-svg-icons'
-import { computed, reactive } from 'vue'
+import { computed, reactive, ref } from 'vue'
 import { onShow } from '@dcloudio/uni-app'
 import { listBanners, listNotices } from '../../api/modules/content'
-import { listCourses } from '../../api/modules/course'
+import { listMyCourseSchedules, listMyEnrollments } from '../../api/modules/course'
 import { listOrders } from '../../api/modules/order'
-import { listPlans } from '../../api/modules/plan'
+import { fetchPlanOverview } from '../../api/modules/plan'
 import { getWeeklyStat } from '../../api/modules/record'
 import { useAppAuthStore } from '../../stores/auth'
 import { ensureLogin } from '../../utils/authGuard'
@@ -212,13 +242,16 @@ const icons = {
 }
 
 const metrics = reactive({
-  planCount: 3,
-  courseCount: 12,
-  orderCount: 5,
-  checkinCount: 28
+  planCount: 0,
+  courseCount: 0,
+  orderCount: 0,
+  checkinCount: 0
 })
 
 const notices = reactive([])
+const banners = reactive([])
+const failedBannerImages = reactive({})
+const bannerIndex = ref(0)
 
 const appBase = (import.meta.env.VITE_APP_BASE_URL || '').replace(/\/app\/?$/, '').replace(/\/$/, '')
 
@@ -304,6 +337,18 @@ const fallbackNotices = [
 ]
 
 const noticeList = computed(() => (notices.length ? notices : fallbackNotices))
+const hasBanners = computed(() => banners.length > 0)
+const bannerCards = computed(() => {
+  return banners.slice(0, 4).map((item, index) => ({
+    key: `banner-${item.id || index}`,
+    title: item.title || `活动 ${item.id || index + 1}`,
+    subtitle: item.linkUrl ? '点击进入后台配置的活动入口' : '当前活动仅展示，未配置跳转链接',
+    image: resolveAssetUrl(item.imageUrl),
+    linkUrl: item.linkUrl || '',
+    targetUrl: resolveBannerTarget(item.linkUrl),
+    linkText: resolveBannerTarget(item.linkUrl) ? '查看详情' : '仅展示'
+  }))
+})
 
 const normalizeList = (payload) => {
   const data = payload?.data
@@ -311,6 +356,21 @@ const normalizeList = (payload) => {
   if (Array.isArray(data?.list)) return data.list
   if (Array.isArray(data?.records)) return data.records
   return []
+}
+
+const countPurchasedCourses = (enrollments = [], schedules = []) => {
+  const paidRows = enrollments.filter((row) => Number(row?.status) === 2)
+  const ids = new Set(
+    paidRows
+      .map((row) => row.courseId || row.courseTitle || row.id)
+      .filter((value) => value !== undefined && value !== null && value !== '')
+  )
+  if (ids.size) return ids.size
+  return new Set(
+    schedules
+      .map((row) => row.courseId || row.courseTitle || row.enrollmentId)
+      .filter((value) => value !== undefined && value !== null && value !== '')
+  ).size
 }
 
 const goSmart = (url) => {
@@ -334,27 +394,82 @@ const toastLater = () => {
   uni.showToast({ title: '功能完善中', icon: 'none' })
 }
 
+const resolveAssetUrl = (value) => {
+  const raw = String(value || '').trim()
+  if (!raw) return ''
+  if (/^https?:\/\//.test(raw)) return raw
+  return appBase ? `${appBase}${raw.startsWith('/') ? raw : `/${raw}`}` : raw
+}
+
+const onBannerChange = ({ detail }) => {
+  bannerIndex.value = Number(detail?.current || 0)
+}
+
+const markBannerImageFailed = (key) => {
+  failedBannerImages[key] = true
+}
+
+const resolveBannerTarget = (value) => {
+  const raw = String(value || '').trim()
+  if (!raw) return ''
+  const planMatch = raw.match(/^\/app\/plan\/(\d+)$/)
+  if (planMatch) return `/pages/plan-detail/index?id=${planMatch[1]}`
+  if (/^\/app\/course/.test(raw)) return '/pages/courses/index'
+  if (/^\/app\/booking/.test(raw)) return '/pages/booking/index'
+  if (/^\/app\/order/.test(raw)) return '/pages/orders/index'
+  if (/^\/app\/record|^\/app\/training/.test(raw)) return '/pages/training/index'
+  if (raw.startsWith('/pages/')) return raw
+  return raw
+}
+
+const openBanner = (banner) => {
+  const url = String(banner?.targetUrl || '').trim()
+  if (!url) {
+    uni.showToast({ title: '该活动暂未配置跳转', icon: 'none' })
+    return
+  }
+  if (url.startsWith('/pages/')) {
+    goSmart(url)
+    return
+  }
+  if (/^https?:\/\//.test(url)) {
+    // #ifdef H5
+    window.location.href = url
+    // #endif
+    // #ifndef H5
+    uni.setClipboardData({
+      data: url,
+      success: () => uni.showToast({ title: '链接已复制', icon: 'success' })
+    })
+    // #endif
+    return
+  }
+  uni.showToast({ title: '暂不支持该跳转地址', icon: 'none' })
+}
+
 const loadHome = async () => {
   try {
     await store.fetchProfile()
-    const [plans, courses, weekly, orders, banners, noticePayload] = await Promise.all([
-      listPlans(),
-      listCourses(),
+    const [planOverview, enrollmentsPayload, schedulesPayload, weekly, orders, bannerPayload, noticePayload] = await Promise.all([
+      fetchPlanOverview(),
+      listMyEnrollments(),
+      listMyCourseSchedules(),
       getWeeklyStat(),
-      listOrders({ limit: 20 }),
+      listOrders({ limit: 50 }),
       listBanners(),
       listNotices({ limit: 5 })
     ])
 
-    const planList = normalizeList(plans)
-    const courseList = normalizeList(courses)
+    const myPlans = Array.isArray(planOverview?.data?.myPlans) ? planOverview.data.myPlans : []
+    const enrollmentList = normalizeList(enrollmentsPayload)
+    const scheduleList = normalizeList(schedulesPayload)
     const orderList = normalizeList(orders)
     const noticeRows = normalizeList(noticePayload)
 
-    metrics.planCount = planList.length || metrics.planCount
-    metrics.courseCount = courseList.length || metrics.courseCount
-    metrics.orderCount = orderList.length || metrics.orderCount
-    metrics.checkinCount = weekly?.data?.checkinCount ?? weekly?.data?.totalCount ?? metrics.checkinCount
+    metrics.planCount = myPlans.length
+    metrics.courseCount = countPurchasedCourses(enrollmentList, scheduleList)
+    metrics.orderCount = orderList.length
+    metrics.checkinCount = weekly?.data?.checkinCount ?? weekly?.data?.totalCount ?? 0
 
     const nextNotices = noticeRows.slice(0, 3).map((item, index) => ({
       key: `notice-${item.id || index}`,
@@ -365,10 +480,12 @@ const loadHome = async () => {
     }))
     notices.splice(0, notices.length, ...nextNotices)
 
-    const bannerList = normalizeList(banners)
-    if (bannerList[0]?.title) {
-      // Keep the hero stable while allowing the API to confirm content is available.
-    }
+    const bannerRows = normalizeList(bannerPayload)
+    banners.splice(0, banners.length, ...bannerRows)
+    Object.keys(failedBannerImages).forEach((key) => {
+      delete failedBannerImages[key]
+    })
+    bannerIndex.value = 0
   } catch (_) {
     // request layer has shown the toast; mock values keep the UI usable.
   }
@@ -953,10 +1070,38 @@ onShow(() => {
   height: 18rpx;
 }
 
+.promo-section {
+  margin-top: 28rpx;
+}
+
+.promo-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0 4rpx 14rpx;
+}
+
+.promo-head text:first-child {
+  color: #24104f;
+  font-size: 31rpx;
+  font-weight: 900;
+}
+
+.promo-head text:last-child {
+  color: #8d7fa8;
+  font-size: 21rpx;
+  font-weight: 800;
+}
+
+.promo-swiper {
+  height: 214rpx;
+  overflow: hidden;
+  border-radius: 30rpx;
+}
+
 .promo-card {
   position: relative;
-  min-height: 214rpx;
-  margin-top: 28rpx;
+  height: 214rpx;
   overflow: hidden;
   border: 7rpx solid #ffffff;
   border-radius: 30rpx;
@@ -969,14 +1114,32 @@ onShow(() => {
 .promo-copy {
   position: relative;
   z-index: 4;
-  padding: 33rpx 0 0 80rpx;
+  padding: 33rpx 220rpx 0 80rpx;
+}
+
+.promo-kicker {
+  display: inline-flex;
+  align-items: center;
+  align-self: flex-start;
+  min-height: 34rpx;
+  padding: 0 14rpx;
+  border-radius: 999rpx;
+  background: rgba(255, 255, 255, 0.58);
+  color: #5f4a85;
+  font-size: 19rpx;
+  font-weight: 900;
 }
 
 .promo-title {
   display: block;
+  margin-top: 8rpx;
+  overflow: hidden;
   color: #24104f;
-  font-size: 41rpx;
+  font-size: 35rpx;
   font-weight: 900;
+  line-height: 1.15;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .promo-fire {
@@ -986,9 +1149,12 @@ onShow(() => {
 .promo-sub {
   display: block;
   margin-top: 16rpx;
+  overflow: hidden;
   color: #24104f;
   font-size: 29rpx;
   font-weight: 800;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .promo-sub text {
@@ -1004,7 +1170,7 @@ onShow(() => {
   gap: 9rpx;
   width: 152rpx;
   height: 48rpx;
-  margin-top: 20rpx;
+  margin-top: 16rpx;
   border: 3rpx solid #24104f;
   border-radius: 999rpx;
   background: #fff9d8;
@@ -1013,9 +1179,49 @@ onShow(() => {
   font-weight: 900;
 }
 
+.promo-button.disabled {
+  opacity: 0.58;
+}
+
 .promo-arrow {
   width: 18rpx;
   height: 18rpx;
+}
+
+.promo-image {
+  position: absolute;
+  top: 0;
+  right: 0;
+  z-index: 3;
+  width: 238rpx;
+  height: 100%;
+  opacity: 0.9;
+}
+
+.promo-image-fallback {
+  position: absolute;
+  top: 34rpx;
+  right: 52rpx;
+  z-index: 3;
+  display: grid;
+  width: 128rpx;
+  height: 128rpx;
+  place-items: center;
+  border: 5rpx solid rgba(36, 16, 79, 0.16);
+  border-radius: 34rpx;
+  background: rgba(255, 255, 255, 0.34);
+  transform: rotate(5deg);
+}
+
+.promo-image-fallback image {
+  width: 50rpx;
+  height: 50rpx;
+}
+
+.promo-image-fallback text {
+  color: #24104f;
+  font-size: 24rpx;
+  font-weight: 900;
 }
 
 .promo-mountain {
@@ -1144,13 +1350,13 @@ onShow(() => {
 }
 
 .dots {
-  position: absolute;
-  left: 50%;
-  bottom: 18rpx;
-  z-index: 5;
+  position: relative;
+  z-index: 12;
   display: flex;
+  justify-content: center;
   gap: 10rpx;
-  transform: translateX(-50%);
+  margin-top: -30rpx;
+  pointer-events: none;
 }
 
 .dot {
@@ -1163,6 +1369,51 @@ onShow(() => {
 .dot.active {
   width: 35rpx;
   background: #5e3cad;
+}
+
+.promo-empty {
+  display: grid;
+  grid-template-columns: 76rpx minmax(0, 1fr);
+  gap: 18rpx;
+  align-items: center;
+  min-height: 154rpx;
+  padding: 24rpx;
+  border: 3rpx solid rgba(120, 86, 170, 0.22);
+  border-radius: 30rpx;
+  background: rgba(255, 255, 255, 0.88);
+  box-shadow: 0 8rpx 0 rgba(52, 32, 95, 0.05), 0 18rpx 38rpx rgba(52, 32, 95, 0.08);
+}
+
+.promo-empty-icon {
+  display: grid;
+  width: 68rpx;
+  height: 68rpx;
+  place-items: center;
+  border-radius: 22rpx;
+  background: #eee6ff;
+}
+
+.promo-empty-icon image {
+  width: 38rpx;
+  height: 38rpx;
+}
+
+.promo-empty-copy text {
+  display: block;
+}
+
+.promo-empty-copy text:first-child {
+  color: #24104f;
+  font-size: 28rpx;
+  font-weight: 900;
+}
+
+.promo-empty-copy text:last-child {
+  margin-top: 8rpx;
+  color: #7b6f98;
+  font-size: 22rpx;
+  font-weight: 800;
+  line-height: 1.45;
 }
 
 .notice-head {

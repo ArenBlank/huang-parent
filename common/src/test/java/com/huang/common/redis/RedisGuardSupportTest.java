@@ -5,11 +5,17 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.redis.connection.RedisConnection;
+import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
+import org.springframework.data.redis.serializer.StringRedisSerializer;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import java.nio.charset.StandardCharsets;
+import java.util.List;
+
 import static org.mockito.ArgumentMatchers.any;
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -22,6 +28,9 @@ class RedisGuardSupportTest {
 
     @Mock
     private ValueOperations<String, String> valueOperations;
+
+    @Mock
+    private RedisConnection redisConnection;
 
     private RedisGuardSupport redisGuardSupport;
 
@@ -82,14 +91,22 @@ class RedisGuardSupportTest {
     @Test
     void tryAcquireLock_andRelease_shouldUseTokenValue() {
         when(valueOperations.setIfAbsent(eq("lock:key"), any(), any())).thenReturn(Boolean.TRUE);
-        when(valueOperations.get("lock:key")).thenAnswer(invocation -> currentLockToken);
+        when(stringRedisTemplate.getStringSerializer()).thenReturn(StringRedisSerializer.UTF_8);
+        when(stringRedisTemplate.execute(org.mockito.ArgumentMatchers.<RedisCallback<Boolean>>any()))
+                .thenAnswer(invocation -> {
+                    RedisCallback<Boolean> callback = invocation.getArgument(0);
+                    return callback.doInRedis(redisConnection);
+                });
 
         String token = redisGuardSupport.tryAcquireLock("lock:key", 5);
         currentLockToken = token;
+        when(redisConnection.get(any(byte[].class))).thenAnswer(invocation -> currentLockToken.getBytes(StandardCharsets.UTF_8));
+        when(redisConnection.exec()).thenReturn(List.of(1L));
         redisGuardSupport.releaseLock("lock:key", token);
 
         assertThat(token).isNotBlank();
-        verify(stringRedisTemplate).delete("lock:key");
+        verify(redisConnection).multi();
+        verify(redisConnection).exec();
     }
 
     private String currentLockToken;

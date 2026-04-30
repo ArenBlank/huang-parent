@@ -1,11 +1,13 @@
 package com.huang.common.redis;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
 import java.time.Duration;
-import java.util.Objects;
+import java.util.Arrays;
+import java.util.List;
 import java.util.UUID;
 
 @Slf4j
@@ -87,12 +89,30 @@ public class RedisGuardSupport {
             return;
         }
         try {
-            String current = stringRedisTemplate.opsForValue().get(key);
-            if (Objects.equals(current, token)) {
-                stringRedisTemplate.delete(key);
-            }
+            compareAndDelete(key, token);
         } catch (Exception e) {
             log.warn("redis lock release failed, key={}", key, e);
         }
+    }
+
+    private boolean compareAndDelete(String key, String token) {
+        byte[] rawKey = stringRedisTemplate.getStringSerializer().serialize(key);
+        byte[] rawToken = stringRedisTemplate.getStringSerializer().serialize(token);
+        if (rawKey == null || rawToken == null) {
+            return false;
+        }
+        Boolean deleted = stringRedisTemplate.execute((RedisCallback<Boolean>) connection -> {
+            connection.watch(rawKey);
+            byte[] current = connection.get(rawKey);
+            if (!Arrays.equals(current, rawToken)) {
+                connection.unwatch();
+                return false;
+            }
+            connection.multi();
+            connection.del(rawKey);
+            List<Object> exec = connection.exec();
+            return exec != null && !exec.isEmpty();
+        });
+        return Boolean.TRUE.equals(deleted);
     }
 }

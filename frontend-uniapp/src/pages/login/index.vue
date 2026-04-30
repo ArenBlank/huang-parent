@@ -633,10 +633,11 @@ const handleCaptchaSuccess = async (captchaVerification) => {
 .metric-card {
   flex: 1;
   min-width: 0;
-  min-height: 156rpx;
+  min-height: 170rpx;
   justify-content: center;
-  gap: 8rpx;
-  padding: 16rpx 10rpx;
+  flex-direction: column;
+  gap: 10rpx;
+  padding: 20rpx 10rpx 18rpx;
   border: 2rpx solid rgba(52, 32, 95, 0.14);
   border-radius: 30rpx;
   background: rgba(255, 255, 255, 0.94);
@@ -671,7 +672,11 @@ const handleCaptchaSuccess = async (captchaVerification) => {
 }
 
 .metric-copy {
+  display: flex;
+  align-items: center;
+  flex-direction: column;
   min-width: 0;
+  width: 100%;
 }
 
 .metric-label,
@@ -680,16 +685,20 @@ const handleCaptchaSuccess = async (captchaVerification) => {
   color: #4b3a72;
   font-size: 18rpx;
   font-weight: 800;
+  line-height: 1.2;
+  text-align: center;
   white-space: nowrap;
 }
 
 .metric-value {
   display: block;
-  margin: 6rpx 0 4rpx;
+  width: 100%;
+  margin: 5rpx 0 4rpx;
   color: #ff806f;
   font-size: 32rpx;
   font-weight: 900;
   line-height: 1;
+  text-align: center;
 }
 
 .auth-card {
