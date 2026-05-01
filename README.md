@@ -3,7 +3,7 @@
 ![CI](https://github.com/ArenBlank/smart-fitness-platform/actions/workflows/ci.yml/badge.svg?branch=V3)
 ![Integration](https://github.com/ArenBlank/smart-fitness-platform/actions/workflows/integration.yml/badge.svg?branch=V3)
 
-这是一个以前后端联动为目标、以后端治理能力为核心的智训健身平台。后端基于 `Spring Boot 3 + MySQL + Redis + Caffeine + Nginx + MinIO`，采用“`web-admin` 单实例 + `web-app` 可双实例”的工程型单体架构；前端基于 `Vue 3 + Vite + Pinia + Vue Router + Axios + Element Plus`，提供管理端与用户端两套界面。项目围绕训练计划、课程报名、教练预约、支付回调、退款审计、RBAC 权限与运维回归展开，重点解决多实例部署下的缓存一致性、重复提交、回调幂等、限流与可观测性问题。
+这是一个以前后端联动为目标、以后端治理能力为核心的智训健身平台。后端基于 `Spring Boot 3 + MySQL + Redis + Caffeine + Nginx + MinIO`，采用“`web-admin` 单实例 + `web-app` 可双实例”的工程型单体架构；前端基于 `Vue 3 + Vite + Pinia + Vue Router + Axios + Element Plus`，并补充了 `uni-app` 用户端 H5 / 移动端页面，提供管理端、Web 用户端与移动端三套界面。项目围绕训练计划、课程报名、教练预约、支付回调、退款审计、RBAC 权限与运维回归展开，重点解决多实例部署下的缓存一致性、重复提交、回调幂等、限流与可观测性问题。
 
 ## 项目定位
 
@@ -30,6 +30,7 @@
 - 前端框架：`Vue 3`、`Vite`
 - 前端状态与路由：`Pinia`、`Vue Router`
 - 前端请求与组件：`Axios`、`Element Plus`
+- 移动端 / H5：`uni-app`
 - 对象存储：`MinIO`
 - 网关与部署：`Nginx upstream`、`Docker Compose`
 - 接口文档：`Knife4j / OpenAPI 3`
@@ -46,10 +47,12 @@
 - `short-lived idempotency key`：短生命周期幂等键
 - `fail-open / fail-close graceful degradation`：Fail-Open / Fail-Close 双策略优雅降级
 - `callback idempotency`：支付回调幂等控制
+- `SET NX EX + Lua compare-and-delete lightweight redis lock`：轻量 Redis 锁增强版，加锁原子化、释放锁安全删除、显式降级语义
 - `Caffeine + Redis + Redis Pub/Sub`：Caffeine + Redis + Redis 发布订阅多级缓存
 - `Cache-Aside + TTL jitter + null-object caching + hotspot rebuild protection`：旁路缓存 + TTL 抖动 + 空对象缓存 + 热点重建保护
 - `@DistributedTaskLock + dynamic task lock TTL`：分布式任务锁 + 动态锁过期时间
 - `LangChain4j + DeepSeek structured generation`：基于 LangChain4j 接入 DeepSeek，实现训练计划结构化生成与业务落库
+- `uni-app mobile pages`：用户端订单详情、教练申请、账户安全等页面补齐
 - `graceful degradation`：优雅降级
 - `runtime observability`：运行期可观测性
 - `end-to-end regression pipeline`：端到端回归验证流水线
@@ -99,7 +102,8 @@ graph LR
 - `web/web-admin`：后台管理端接口、任务中心、权限与审计
 - `web/web-app`：用户端接口、训练/课程/预约/支付业务
 - `frontend`：管理端前端工程
-- `frontend-app`：用户端前端工程
+- `frontend-app`：用户端 Web 前端工程
+- `frontend-uniapp`：用户端 H5 / 移动端前端工程
 - `tests`：Postman 集合、并发脚本、双实例验证脚本
 - `deploy` / `docker`：Nginx、Compose、环境变量样例
 
@@ -186,6 +190,13 @@ graph LR
 - 双实例补偿任务互斥实机验收通过
 - AI 训练计划生成链路已接入业务服务并具备测试覆盖
 
+## 当前增量更新（v3.0.0）
+
+- 轻量 Redis 锁增强：加锁继续使用 `SET NX EX`，释放锁统一改为 Lua compare-and-delete，锁结果改为显式 `ACQUIRED / BUSY / DEGRADED`
+- 缓存击穿保护增强：计划详情缓存改为有上界的随机退避重读，支付回调收敛为“Redis 削峰 + 数据库条件更新幂等兜底”
+- H5 / 移动端页面补充：新增并完善订单详情、教练申请、账户安全等用户端页面
+- UniApp H5 兼容性修复：收口 `showTabBar / hideTabBar` 调用，避免非 tabBar 页面控制台报错
+
 ## 快速开始
 
 ### 1. 启动依赖与服务
@@ -225,12 +236,15 @@ powershell -ExecutionPolicy Bypass -File tests/invoke-concurrent-requests.ps1
 
 - 项目总览与亮点：[doc/工程技术亮点汇总.md](./doc/工程技术亮点汇总.md)
 - 双实例与 Redis 并发治理：[doc/单体双实例与Redis并发落地说明.md](./doc/单体双实例与Redis并发落地说明.md)
+- 轻量 Redis 锁设计说明：[doc/redis-lock-design.md](./doc/redis-lock-design.md)
 - 简历项目亮点：[doc/简历项目亮点（真实增强版）.md](./doc/简历项目亮点（真实增强版）.md)
 - 并发方案对比：[doc/并发方案样板场景对比.md](./doc/并发方案样板场景对比.md)
 - 中间件与版本清单：[doc/中间件与版本清单.md](./doc/中间件与版本清单.md)
 - 部署与环境配置：[doc/部署与环境配置.md](./doc/部署与环境配置.md)
 - API 接口清单：[doc/API接口清单与示例.md](./doc/API接口清单与示例.md)
+- 请求参数目录：[doc/请求参数目录.md](./doc/请求参数目录.md)
 - 权限模型说明：[doc/权限模型说明.md](./doc/权限模型说明.md)
+- 服务分层约定：[doc/服务分层约定.md](./doc/服务分层约定.md)
 - 常见追问回答：[doc/常见追问回答清单.md](./doc/常见追问回答清单.md)
 - 开发参考文档：[doc/开发参考文档.md](./doc/开发参考文档.md)
 
