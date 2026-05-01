@@ -27,6 +27,7 @@ import java.math.BigDecimal;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.atLeast;
 import static org.mockito.Mockito.doThrow;
@@ -129,12 +130,13 @@ class CourseLearningBizServiceTest {
         when(courseEnrollmentMapper.selectById(5L)).thenReturn(enrollment, enrollment);
         when(orderInfoMapper.selectById(44L)).thenReturn(orderInfo);
         when(paymentRecordMapper.selectOne(any())).thenReturn(paymentRecord);
+        when(paymentRecordMapper.markPaidIfUnpaid(eq(77L), eq("COURSE_CALLBACK_CPAY001"), any())).thenReturn(1);
 
         boolean ok = courseLearningBizService.markPaySuccess(5L, 9L);
 
         assertThat(ok).isTrue();
         verify(orderInfoMapper).updateById(orderInfo);
-        verify(paymentRecordMapper).updateById(paymentRecord);
+        verify(paymentRecordMapper).markPaidIfUnpaid(eq(77L), eq("COURSE_CALLBACK_CPAY001"), any());
 
         ArgumentCaptor<CourseEnrollment> captor = ArgumentCaptor.forClass(CourseEnrollment.class);
         verify(courseEnrollmentMapper, atLeast(2)).updateById(captor.capture());
@@ -146,6 +148,43 @@ class CourseLearningBizServiceTest {
                         && Integer.valueOf(BizStatusConstant.AttendStatus.WAIT_CLASS).equals(item.getAttendStatus())
                         && item.getCheckInCode() != null
                         && item.getCheckInCode().length() == 6);
+    }
+
+    @Test
+    void markPaySuccess_shouldTreatPaidRecordAsIdempotentAndOnlySyncEnrollment() {
+        CourseEnrollment enrollment = new CourseEnrollment();
+        enrollment.setId(6L);
+        enrollment.setUserId(9L);
+        enrollment.setOrderId(45L);
+        enrollment.setStatus(BizStatusConstant.EnrollmentStatus.UNPAID);
+        enrollment.setAttendStatus(BizStatusConstant.AttendStatus.INVALID);
+
+        OrderInfo orderInfo = new OrderInfo();
+        orderInfo.setId(45L);
+        orderInfo.setPayStatus(BizStatusConstant.PayStatus.PAID);
+        orderInfo.setOrderStatus(BizStatusConstant.OrderStatus.PAID);
+
+        PaymentRecord paymentRecord = new PaymentRecord();
+        paymentRecord.setId(78L);
+        paymentRecord.setOrderId(45L);
+        paymentRecord.setPayNo("CPAY002");
+
+        PaymentRecord latest = new PaymentRecord();
+        latest.setId(78L);
+        latest.setPayStatus(BizStatusConstant.PayStatus.PAID);
+
+        when(courseEnrollmentMapper.selectById(6L)).thenReturn(enrollment, enrollment);
+        when(orderInfoMapper.selectById(45L)).thenReturn(orderInfo);
+        when(paymentRecordMapper.selectOne(any())).thenReturn(paymentRecord);
+        when(paymentRecordMapper.markPaidIfUnpaid(eq(78L), eq("COURSE_CALLBACK_CPAY002"), any())).thenReturn(0);
+        when(paymentRecordMapper.selectById(78L)).thenReturn(latest);
+
+        boolean ok = courseLearningBizService.markPaySuccess(6L, 9L);
+
+        assertThat(ok).isTrue();
+        verify(orderInfoMapper, never()).updateById(orderInfo);
+        verify(paymentRecordMapper).markPaidIfUnpaid(eq(78L), eq("COURSE_CALLBACK_CPAY002"), any());
+        verify(courseEnrollmentMapper, atLeast(2)).updateById(any(CourseEnrollment.class));
     }
 
     @Test

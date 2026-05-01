@@ -3,6 +3,7 @@ package com.huang.web.app.service.biz;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.huang.common.constant.BizStatusConstant;
 import com.huang.common.constant.RedisConstant;
+import com.huang.common.redis.LockAcquireResult;
 import com.huang.common.redis.RedisGuardSupport;
 import com.huang.model.entity.OrderInfo;
 import com.huang.model.entity.PaymentCallbackLog;
@@ -24,6 +25,8 @@ import java.math.BigDecimal;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -74,15 +77,15 @@ class PaymentCallbackBizServiceTest {
 
         when(paymentSignVerifier.verify(dto)).thenReturn(true);
         when(paymentRecordMapper.selectOne(any(LambdaQueryWrapper.class))).thenReturn(paymentRecord);
-        when(redisGuardSupport.tryAcquireLock(
+        when(redisGuardSupport.acquireLock(
                 RedisConstant.appPayCallbackPayNoGuardKey("PAY001"),
                 RedisConstant.PAY_CALLBACK_GUARD_TTL_SEC
-        )).thenReturn(null);
+        )).thenReturn(LockAcquireResult.busy());
 
         String result = paymentCallbackBizService.handleCallback(dto, "{\"payNo\":\"PAY001\"}");
 
         assertThat(result).isEqualTo("success");
-        verify(paymentRecordMapper, never()).updateById(any());
+        verify(paymentRecordMapper, never()).markPaidIfUnpaid(anyLong(), any(), any());
         ArgumentCaptor<PaymentCallbackLog> captor = ArgumentCaptor.forClass(PaymentCallbackLog.class);
         verify(paymentCallbackLogMapper).insert(captor.capture());
         assertThat(captor.getValue().getProcessResult()).isEqualTo("IN_FLIGHT");
@@ -99,17 +102,18 @@ class PaymentCallbackBizServiceTest {
 
         when(paymentSignVerifier.verify(dto)).thenReturn(true);
         when(paymentRecordMapper.selectOne(any(LambdaQueryWrapper.class))).thenReturn(paymentRecord);
-        when(redisGuardSupport.tryAcquireLock(
+        when(redisGuardSupport.acquireLock(
                 RedisConstant.appPayCallbackPayNoGuardKey("PAY001"),
                 RedisConstant.PAY_CALLBACK_GUARD_TTL_SEC
-        )).thenReturn("lock-token");
+        )).thenReturn(LockAcquireResult.acquired("lock-token"));
+        when(paymentRecordMapper.markPaidIfUnpaid(eq(1L), eq("CALLBACK_ASYNC_TRADE001"), any())).thenReturn(1);
         when(orderInfoMapper.selectById(10L)).thenReturn(orderInfo);
         when(courseLearningBizService.syncEnrollmentPaid(88L)).thenReturn(true);
 
         String result = paymentCallbackBizService.handleCallback(dto, "{\"payNo\":\"PAY001\"}");
 
         assertThat(result).isEqualTo("success");
-        verify(paymentRecordMapper).updateById(any(PaymentRecord.class));
+        verify(paymentRecordMapper).markPaidIfUnpaid(eq(1L), eq("CALLBACK_ASYNC_TRADE001"), any());
         verify(orderInfoMapper).updateById(any(OrderInfo.class));
         verify(courseLearningBizService).syncEnrollmentPaid(88L);
         verify(paymentCallbackLogMapper).insert(any(PaymentCallbackLog.class));
@@ -117,6 +121,31 @@ class PaymentCallbackBizServiceTest {
                 RedisConstant.appPayCallbackPayNoGuardKey("PAY001"),
                 "lock-token"
         );
+    }
+
+    @Test
+    void handleCallback_shouldReturnIdempotentWhenLockDegradedAndPaymentAlreadyPaid() {
+        PayCallbackDTO dto = buildCallback();
+        PaymentRecord paymentRecord = buildPaymentRecord();
+        PaymentRecord latest = buildPaymentRecord();
+        latest.setPayStatus(BizStatusConstant.PayStatus.PAID);
+
+        when(paymentSignVerifier.verify(dto)).thenReturn(true);
+        when(paymentRecordMapper.selectOne(any(LambdaQueryWrapper.class))).thenReturn(paymentRecord);
+        when(redisGuardSupport.acquireLock(
+                RedisConstant.appPayCallbackPayNoGuardKey("PAY001"),
+                RedisConstant.PAY_CALLBACK_GUARD_TTL_SEC
+        )).thenReturn(LockAcquireResult.degraded());
+        when(paymentRecordMapper.markPaidIfUnpaid(eq(1L), eq("CALLBACK_ASYNC_TRADE001"), any())).thenReturn(0);
+        when(paymentRecordMapper.selectById(1L)).thenReturn(latest);
+
+        String result = paymentCallbackBizService.handleCallback(dto, "{\"payNo\":\"PAY001\"}");
+
+        assertThat(result).isEqualTo("success");
+        ArgumentCaptor<PaymentCallbackLog> captor = ArgumentCaptor.forClass(PaymentCallbackLog.class);
+        verify(paymentCallbackLogMapper).insert(captor.capture());
+        assertThat(captor.getValue().getProcessResult()).isEqualTo("IDEMPOTENT");
+        verify(paymentRecordMapper).markPaidIfUnpaid(eq(1L), eq("CALLBACK_ASYNC_TRADE001"), any());
     }
 
     private PayCallbackDTO buildCallback() {

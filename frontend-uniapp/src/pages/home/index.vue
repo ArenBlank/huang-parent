@@ -210,6 +210,7 @@ import { fetchPlanOverview } from '../../api/modules/plan'
 import { getWeeklyStat } from '../../api/modules/record'
 import { useAppAuthStore } from '../../stores/auth'
 import { ensureLogin } from '../../utils/authGuard'
+import { hideTabBarSafely, showTabBarSafely } from '../../utils/navigation'
 
 const store = useAppAuthStore()
 
@@ -377,7 +378,7 @@ const goSmart = (url) => {
   if (!url) return
   const tabUrls = ['/pages/home/index', '/pages/plans/index', '/pages/courses/index', '/pages/mine/index']
   if (tabUrls.includes(url)) {
-    uni.showTabBar()
+    showTabBarSafely()
     uni.switchTab({ url })
     return
   }
@@ -386,7 +387,7 @@ const goSmart = (url) => {
 
 const goTab = (tab) => {
   if (tab.active) return
-  uni.showTabBar()
+  showTabBarSafely()
   uni.switchTab({ url: tab.url })
 }
 
@@ -492,7 +493,7 @@ const loadHome = async () => {
 }
 
 onShow(() => {
-  uni.hideTabBar()
+  hideTabBarSafely()
   if (ensureLogin()) {
     loadHome()
   }

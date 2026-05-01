@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.huang.common.constant.RedisConstant;
 import com.huang.common.constant.TaskRunConstant;
+import com.huang.common.redis.LockAcquireResult;
 import com.huang.common.redis.RedisGuardSupport;
 import com.huang.model.entity.TaskRunLog;
 import com.huang.web.admin.mapper.TaskRunLogMapper;
@@ -119,9 +120,12 @@ public class AdminTaskRunBizService {
                                    String triggerMode,
                                    TaskRunner taskRunner) {
         String lockKey = RedisConstant.taskLockKey(taskCode);
-        String lockToken = redisGuardSupport.tryAcquireLock(lockKey, TaskRunConstant.lockTtlSec(taskCode));
-        if (lockToken == null) {
+        LockAcquireResult lockResult = redisGuardSupport.acquireLock(lockKey, TaskRunConstant.lockTtlSec(taskCode));
+        if (lockResult.isBusy()) {
             return recordSkip(taskCode, taskName, triggerMode, "task lock already held");
+        }
+        if (lockResult.isDegraded()) {
+            return recordSkip(taskCode, taskName, triggerMode, "task lock unavailable");
         }
 
         TaskRunLog logRow = new TaskRunLog();
@@ -142,7 +146,7 @@ public class AdminTaskRunBizService {
             finish(logRow, TaskRunConstant.STATUS_FAILED, 0, trim(ex.getMessage()), startedAt);
             throw ex;
         } finally {
-            redisGuardSupport.releaseLock(lockKey, lockToken);
+            redisGuardSupport.releaseLock(lockKey, lockResult.token());
         }
     }
 

@@ -455,6 +455,7 @@ import {
   refundCourse
 } from '../../api/modules/course'
 import { ensureLogin } from '../../utils/authGuard'
+import { hideTabBarSafely, showTabBarSafely } from '../../utils/navigation'
 
 const STORAGE_COURSE_ID = 'fp_last_course_id'
 const STORAGE_COURSE_VIEW = 'fp_course_workspace_view'
@@ -993,7 +994,7 @@ const formatScheduleTime = (row) => {
 }
 
 onShow(() => {
-  uni.hideTabBar()
+  hideTabBarSafely()
   if (ensureLogin()) {
     loadLastEnrollment()
     refreshWorkspace()
@@ -1001,7 +1002,7 @@ onShow(() => {
 })
 
 onHide(() => {
-  uni.showTabBar()
+  showTabBarSafely()
 })
 </script>
 
@@ -1374,6 +1375,9 @@ button::after {
 }
 
 .ghost-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   flex-shrink: 0;
   min-width: 142rpx;
   min-height: 58rpx;
@@ -1384,7 +1388,9 @@ button::after {
   color: #24104f;
   font-size: 23rpx;
   font-weight: 900;
+  line-height: 1;
   box-shadow: 0 6rpx 0 rgba(52, 32, 95, 0.08);
+  box-sizing: border-box;
 }
 
 .selected-course {
@@ -1583,7 +1589,9 @@ button::after {
   color: #ffffff;
   font-size: 30rpx;
   font-weight: 950;
+  line-height: 1;
   box-shadow: 0 10rpx 0 rgba(52, 32, 95, 0.12);
+  box-sizing: border-box;
 }
 
 .primary-button[disabled],
@@ -1684,6 +1692,8 @@ button::after {
   border-radius: 999rpx;
   font-size: 23rpx;
   font-weight: 950;
+  line-height: 1;
+  box-sizing: border-box;
 }
 
 .small-solid {
@@ -1868,6 +1878,9 @@ button::after {
 }
 
 .empty-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-width: 180rpx;
   min-height: 62rpx;
   margin-top: 8rpx;
@@ -1876,6 +1889,8 @@ button::after {
   color: #ffffff;
   font-size: 24rpx;
   font-weight: 900;
+  line-height: 1;
+  box-sizing: border-box;
 }
 
 .custom-tabbar {

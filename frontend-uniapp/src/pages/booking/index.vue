@@ -372,6 +372,7 @@ import {
   reviewBooking
 } from '../../api/modules/booking'
 import { ensureLogin } from '../../utils/authGuard'
+import { hideTabBarSafely, showTabBarSafely } from '../../utils/navigation'
 
 const STORAGE_BOOKING = 'fp_last_booking'
 const STORAGE_COACH_ID = 'fp_last_coach_id'
@@ -913,7 +914,7 @@ watch([coachId, date], () => {
 })
 
 onShow(() => {
-  uni.hideTabBar()
+  hideTabBarSafely()
   const cachedCoachId = parseCoachId(uni.getStorageSync(STORAGE_COACH_ID))
   if (cachedCoachId !== null) coachId.value = cachedCoachId
   if (ensureLogin()) {
@@ -923,7 +924,7 @@ onShow(() => {
 })
 
 onHide(() => {
-  uni.showTabBar()
+  showTabBarSafely()
 })
 </script>
 

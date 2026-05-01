@@ -1,6 +1,8 @@
 <template>
   <view class="sl-topbar">
-    <button v-if="showBack" class="sl-topbar__back" @click="handleBack">‹</button>
+    <button v-if="showBack" class="sl-topbar__back" hover-class="none" @click="handleBack">
+      <image class="sl-topbar__back-icon" :src="backIcon" mode="aspectFit" />
+    </button>
     <view class="sl-topbar__copy">
       <text class="sl-topbar__eyebrow" v-if="eyebrow">{{ eyebrow }}</text>
       <text class="sl-topbar__title">{{ title }}</text>
@@ -11,7 +13,19 @@
 </template>
 
 <script setup>
+import { faChevronLeft } from '@fortawesome/free-solid-svg-icons'
 import { goBack } from '../utils/navigation'
+
+const faIcon = (definition, color = '#24104f') => {
+  const [width, height, , , pathData] = definition.icon
+  const paths = Array.isArray(pathData)
+    ? pathData.map((path) => `<path fill="${color}" d="${path}"/>`).join('')
+    : `<path fill="${color}" d="${pathData}"/>`
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}">${paths}</svg>`
+  return `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`
+}
+
+const backIcon = faIcon(faChevronLeft)
 
 defineProps({
   title: {
@@ -57,6 +71,11 @@ const handleBack = () => {
   font-size: 52rpx;
   font-weight: 700;
   box-shadow: 0 8rpx 0 rgba(52, 32, 95, 0.08);
+}
+
+.sl-topbar__back-icon {
+  width: 30rpx;
+  height: 30rpx;
 }
 
 .sl-topbar__copy {

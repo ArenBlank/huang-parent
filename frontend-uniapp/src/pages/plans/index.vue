@@ -366,6 +366,7 @@ import {
   unsubscribePlan
 } from '../../api/modules/plan'
 import { ensureLogin } from '../../utils/authGuard'
+import { hideTabBarSafely, showTabBarSafely } from '../../utils/navigation'
 import { createVideoPlaylist, saveVideoPlaylist } from '../../utils/videoPlaylist'
 
 const faIcon = (definition, color = '#24104f') => {
@@ -777,25 +778,25 @@ const goBackHome = () => {
     uni.navigateBack()
     return
   }
-  uni.showTabBar()
+  showTabBarSafely()
   uni.switchTab({ url: '/pages/home/index' })
 }
 
 const goTab = (tab) => {
   if (tab.active) return
-  uni.showTabBar()
+  showTabBarSafely()
   uni.switchTab({ url: tab.url })
 }
 
 onShow(() => {
-  uni.hideTabBar()
+  hideTabBarSafely()
   if (ensureLogin()) {
     loadOverview()
   }
 })
 
 onHide(() => {
-  uni.showTabBar()
+  showTabBarSafely()
 })
 </script>
 
@@ -1300,6 +1301,9 @@ button::after {
 }
 
 .empty-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-width: 190rpx;
   height: 56rpx;
   margin-top: 20rpx;
@@ -1308,6 +1312,8 @@ button::after {
   color: #fff;
   font-size: 24rpx;
   font-weight: 900;
+  line-height: 1;
+  box-sizing: border-box;
 }
 
 .plan-list {
@@ -1625,6 +1631,7 @@ button::after {
   font-weight: 900;
   line-height: 1;
   text-align: center;
+  box-sizing: border-box;
 }
 
 .outline-danger {
@@ -1743,6 +1750,7 @@ button::after {
 .video-button {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8rpx;
   min-width: 138rpx;
   height: 54rpx;
@@ -1752,6 +1760,8 @@ button::after {
   color: #fff;
   font-size: 22rpx;
   font-weight: 900;
+  line-height: 1;
+  box-sizing: border-box;
 }
 
 .video-button[disabled] {
@@ -1895,6 +1905,9 @@ button::after {
 }
 
 .quick-date {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-height: 58rpx;
   border: 2rpx solid rgba(139, 99, 255, 0.22);
   border-radius: 999rpx;
@@ -1902,6 +1915,8 @@ button::after {
   color: #6b4eea;
   font-size: 23rpx;
   font-weight: 900;
+  line-height: 1;
+  box-sizing: border-box;
 }
 
 .calendar-card {
@@ -2090,10 +2105,15 @@ button::after {
 
 .dialog-secondary,
 .dialog-primary {
+  display: flex;
+  align-items: center;
+  justify-content: center;
   min-height: 68rpx;
   border-radius: 999rpx;
   font-size: 25rpx;
   font-weight: 900;
+  line-height: 1;
+  box-sizing: border-box;
 }
 
 .dialog-secondary {

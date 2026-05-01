@@ -1020,6 +1020,9 @@ button::after {
 }
 
 .sample-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   gap: 10rpx;
   min-width: 146rpx;
   height: 56rpx;
@@ -1029,6 +1032,8 @@ button::after {
   color: #ffffff;
   font-size: 22rpx;
   font-weight: 950;
+  line-height: 1;
+  box-sizing: border-box;
 }
 
 .sample-button image {
@@ -1037,6 +1042,9 @@ button::after {
 }
 
 .refresh-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 58rpx;
   height: 58rpx;
   border: 2rpx solid rgba(52, 32, 95, 0.2);
@@ -1139,12 +1147,17 @@ button::after {
 }
 
 .manual-field button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   height: 46rpx;
   border-radius: 999rpx;
   background: #f4efff;
   color: #8b63ff;
   font-size: 22rpx;
   font-weight: 900;
+  line-height: 1;
+  box-sizing: border-box;
 }
 
 .field-grid {
@@ -1164,6 +1177,9 @@ button::after {
 }
 
 .number-stepper button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   width: 66rpx;
   height: 66rpx;
 }
@@ -1435,6 +1451,9 @@ button::after {
 
 .submit-button {
   position: fixed;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   left: 28rpx;
   right: 28rpx;
   bottom: calc(24rpx + env(safe-area-inset-bottom));
@@ -1447,6 +1466,7 @@ button::after {
   font-weight: 950;
   line-height: 1;
   box-shadow: 0 10rpx 0 rgba(52, 32, 95, 0.1);
+  box-sizing: border-box;
 }
 
 .submit-button[disabled],

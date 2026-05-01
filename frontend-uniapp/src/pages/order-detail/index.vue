@@ -1058,6 +1058,9 @@ button::after {
 }
 
 .retry-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-width: 170rpx;
   min-height: 62rpx;
   border-radius: 999rpx;
@@ -1065,6 +1068,8 @@ button::after {
   color: #fff;
   font-size: 24rpx;
   font-weight: 900;
+  line-height: 1;
+  box-sizing: border-box;
 }
 
 .bottom-actions {
@@ -1092,6 +1097,8 @@ button::after {
   border-radius: 999rpx;
   font-size: 28rpx;
   font-weight: 950;
+  line-height: 1;
+  box-sizing: border-box;
 }
 
 .service-button {

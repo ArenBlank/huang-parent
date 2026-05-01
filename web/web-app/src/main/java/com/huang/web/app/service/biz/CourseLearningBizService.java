@@ -2,6 +2,7 @@ package com.huang.web.app.service.biz;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.huang.common.constant.BizStatusConstant;
 import com.huang.common.constant.RedisConstant;
@@ -259,20 +260,15 @@ public class CourseLearningBizService {
             }
 
             String idempotencyKey = "COURSE_CALLBACK_" + paymentRecord.getPayNo();
-            if (idempotencyKey.equals(paymentRecord.getCallbackIdempotencyKey())
-                    || BizStatusConstant.PayStatus.PAID.equals(paymentRecord.getPayStatus())) {
-                success = syncEnrollmentPaid(enrollment.getId());
-                return success;
+            int updated = paymentRecordMapper.markPaidIfUnpaid(paymentRecord.getId(), idempotencyKey, LocalDateTime.now());
+            if (updated == 0) {
+                PaymentRecord latest = paymentRecordMapper.selectById(paymentRecord.getId());
+                if (latest == null || !BizStatusConstant.PayStatus.PAID.equals(latest.getPayStatus())) {
+                    return false;
+                }
             }
 
-            orderInfo.setPayStatus(BizStatusConstant.PayStatus.PAID);
-            orderInfo.setOrderStatus(BizStatusConstant.OrderStatus.PAID);
-            orderInfoMapper.updateById(orderInfo);
-
-            paymentRecord.setPayStatus(BizStatusConstant.PayStatus.PAID);
-            paymentRecord.setPayTime(LocalDateTime.now());
-            paymentRecord.setCallbackIdempotencyKey(idempotencyKey);
-            paymentRecordMapper.updateById(paymentRecord);
+            markOrderPaid(orderInfo);
             success = syncEnrollmentPaid(enrollment.getId());
             return success;
         } finally {
@@ -280,6 +276,16 @@ public class CourseLearningBizService {
             log.info("COURSE_PAY_SUCCESS userId={} enrollmentId={} success={} costMs={}",
                     userId, enrollmentId, success, costMs);
         }
+    }
+
+    private void markOrderPaid(OrderInfo orderInfo) {
+        if (BizStatusConstant.PayStatus.PAID.equals(orderInfo.getPayStatus())
+                && BizStatusConstant.OrderStatus.PAID.equals(orderInfo.getOrderStatus())) {
+            return;
+        }
+        orderInfo.setPayStatus(BizStatusConstant.PayStatus.PAID);
+        orderInfo.setOrderStatus(BizStatusConstant.OrderStatus.PAID);
+        orderInfoMapper.updateById(orderInfo);
     }
 
     public boolean syncEnrollmentPaid(Long enrollmentId) {
@@ -330,9 +336,9 @@ public class CourseLearningBizService {
 
         paymentRecordMapper.update(
                 null,
-                new LambdaUpdateWrapper<PaymentRecord>()
-                        .eq(PaymentRecord::getOrderId, orderInfo.getId())
-                        .set(PaymentRecord::getPayStatus, BizStatusConstant.PayStatus.CLOSED)
+                new UpdateWrapper<PaymentRecord>()
+                        .eq("order_id", orderInfo.getId())
+                        .set("pay_status", BizStatusConstant.PayStatus.CLOSED)
         );
 
         courseScheduleMapper.update(

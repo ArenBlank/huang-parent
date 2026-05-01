@@ -5,20 +5,19 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.redis.connection.RedisConnection;
-import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
-import org.springframework.data.redis.serializer.StringRedisSerializer;
 
-import java.nio.charset.StandardCharsets;
-import java.util.List;
+import static org.mockito.ArgumentMatchers.anyList;
+import org.springframework.data.redis.core.script.RedisScript;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.doReturn;
 
 @ExtendWith(MockitoExtension.class)
 class RedisGuardSupportTest {
@@ -29,14 +28,11 @@ class RedisGuardSupportTest {
     @Mock
     private ValueOperations<String, String> valueOperations;
 
-    @Mock
-    private RedisConnection redisConnection;
-
     private RedisGuardSupport redisGuardSupport;
 
     @BeforeEach
     void setUp() {
-        when(stringRedisTemplate.opsForValue()).thenReturn(valueOperations);
+        lenient().when(stringRedisTemplate.opsForValue()).thenReturn(valueOperations);
         redisGuardSupport = new RedisGuardSupport(stringRedisTemplate);
     }
 
@@ -89,25 +85,54 @@ class RedisGuardSupportTest {
     }
 
     @Test
-    void tryAcquireLock_andRelease_shouldUseTokenValue() {
+    void acquireLock_shouldReturnAcquiredDecisionWhenRedisSucceeds() {
         when(valueOperations.setIfAbsent(eq("lock:key"), any(), any())).thenReturn(Boolean.TRUE);
-        when(stringRedisTemplate.getStringSerializer()).thenReturn(StringRedisSerializer.UTF_8);
-        when(stringRedisTemplate.execute(org.mockito.ArgumentMatchers.<RedisCallback<Boolean>>any()))
-                .thenAnswer(invocation -> {
-                    RedisCallback<Boolean> callback = invocation.getArgument(0);
-                    return callback.doInRedis(redisConnection);
-                });
 
-        String token = redisGuardSupport.tryAcquireLock("lock:key", 5);
-        currentLockToken = token;
-        when(redisConnection.get(any(byte[].class))).thenAnswer(invocation -> currentLockToken.getBytes(StandardCharsets.UTF_8));
-        when(redisConnection.exec()).thenReturn(List.of(1L));
-        redisGuardSupport.releaseLock("lock:key", token);
+        LockAcquireResult result = redisGuardSupport.acquireLock("lock:key", 5);
 
-        assertThat(token).isNotBlank();
-        verify(redisConnection).multi();
-        verify(redisConnection).exec();
+        assertThat(result.isAcquired()).isTrue();
+        assertThat(result.token()).isNotBlank();
     }
 
-    private String currentLockToken;
+    @Test
+    void acquireLock_shouldReturnBusyDecisionWhenRedisLockIsHeld() {
+        when(valueOperations.setIfAbsent(eq("lock:key"), any(), any())).thenReturn(Boolean.FALSE);
+
+        LockAcquireResult result = redisGuardSupport.acquireLock("lock:key", 5);
+
+        assertThat(result.isBusy()).isTrue();
+        assertThat(result.token()).isNull();
+    }
+
+    @Test
+    void acquireLock_shouldReturnDegradedDecisionWhenRedisThrows() {
+        when(valueOperations.setIfAbsent(eq("lock:key"), any(), any())).thenThrow(new RuntimeException("redis down"));
+
+        LockAcquireResult result = redisGuardSupport.acquireLock("lock:key", 5);
+
+        assertThat(result.isDegraded()).isTrue();
+        assertThat(result.token()).isEqualTo(RedisGuardSupport.NOOP_LOCK_TOKEN);
+    }
+
+    @Test
+    void releaseLock_shouldUseLuaCompareAndDelete() {
+        doReturn(1L).when(stringRedisTemplate)
+                .execute(org.mockito.ArgumentMatchers.<RedisScript<Long>>any(), anyList(), any());
+
+        redisGuardSupport.releaseLock("lock:key", "token-1");
+
+        verify(stringRedisTemplate)
+                .execute(org.mockito.ArgumentMatchers.<RedisScript<Long>>any(), eq(java.util.List.of("lock:key")), eq("token-1"));
+    }
+
+    @Test
+    void releaseLock_shouldNotDeleteWhenTokenDoesNotMatch() {
+        doReturn(0L).when(stringRedisTemplate)
+                .execute(org.mockito.ArgumentMatchers.<RedisScript<Long>>any(), anyList(), any());
+
+        redisGuardSupport.releaseLock("lock:key", "token-2");
+
+        verify(stringRedisTemplate)
+                .execute(org.mockito.ArgumentMatchers.<RedisScript<Long>>any(), eq(java.util.List.of("lock:key")), eq("token-2"));
+    }
 }

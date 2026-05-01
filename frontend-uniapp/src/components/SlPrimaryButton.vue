@@ -46,6 +46,12 @@ const emitClick = () => {
   color: #fff;
   font-size: 32rpx;
   font-weight: 900;
+  line-height: 1;
+  box-sizing: border-box;
+}
+
+.sl-primary-button text {
+  line-height: 1;
 }
 
 .sl-primary-button.is-disabled {

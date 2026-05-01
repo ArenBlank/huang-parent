@@ -40,6 +40,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -50,6 +51,9 @@ public class PlanBizService {
     private static final int TRAINING_PLAN_TITLE_MAX_LEN = 100;
     private static final int TRAINING_PLAN_GOAL_MAX_LEN = 50;
     private static final int TRAINING_PLAN_ITEM_ACTION_MAX_LEN = 100;
+    private static final int STATIC_PLAN_CACHE_WAIT_RETRY_TIMES = 4;
+    private static final long STATIC_PLAN_CACHE_WAIT_BASE_MS = 40L;
+    private static final long STATIC_PLAN_CACHE_WAIT_JITTER_MS = 80L;
 
     private static final String AI_BUSY_MESSAGE = "AI 教练正在思考中，请稍后再试";
     private static final String PLAN_TYPE_PUBLIC = "PUBLIC";
@@ -366,9 +370,9 @@ public class PlanBizService {
     }
 
     private PlanDetailStaticCache waitForStaticPlanCache(String cacheKey) {
-        for (int i = 0; i < 3; i++) {
+        for (int i = 0; i < STATIC_PLAN_CACHE_WAIT_RETRY_TIMES; i++) {
             try {
-                Thread.sleep(60L);
+                TimeUnit.MILLISECONDS.sleep(nextStaticPlanCacheWaitMs());
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 break;
@@ -383,6 +387,11 @@ public class PlanBizService {
             return cached.nullValue() ? null : cached.value();
         }
         return null;
+    }
+
+    private long nextStaticPlanCacheWaitMs() {
+        return STATIC_PLAN_CACHE_WAIT_BASE_MS
+                + ThreadLocalRandom.current().nextLong(STATIC_PLAN_CACHE_WAIT_JITTER_MS + 1);
     }
 
     private PlanDetailStaticCache loadStaticPlanDetailFromDb(Long planId) {

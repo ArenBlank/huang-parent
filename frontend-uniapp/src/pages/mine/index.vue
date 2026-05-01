@@ -164,6 +164,7 @@ import { onHide, onShow } from '@dcloudio/uni-app'
 import { getMyCoachApplication } from '../../api/modules/coach'
 import { getProfile } from '../../api/modules/profile'
 import { ensureLogin } from '../../utils/authGuard'
+import { hideTabBarSafely, showTabBarSafely } from '../../utils/navigation'
 import { useAppAuthStore } from '../../stores/auth'
 
 const store = useAppAuthStore()
@@ -346,7 +347,7 @@ const goPage = (url) => {
 
 const goTab = (tab) => {
   if (tab.active) return
-  uni.showTabBar()
+  showTabBarSafely()
   uni.switchTab({ url: tab.url })
 }
 
@@ -369,14 +370,14 @@ const logout = () => {
 }
 
 onShow(() => {
-  uni.hideTabBar()
+  hideTabBarSafely()
   if (ensureLogin()) {
     loadMine()
   }
 })
 
 onHide(() => {
-  uni.showTabBar()
+  showTabBarSafely()
 })
 </script>
 

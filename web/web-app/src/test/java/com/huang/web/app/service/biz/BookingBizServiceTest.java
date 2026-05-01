@@ -1,10 +1,10 @@
 package com.huang.web.app.service.biz;
 
 import com.huang.common.constant.BizStatusConstant;
-import com.huang.common.redis.RedisGuardSupport;
 import com.huang.model.entity.CoachBooking;
 import com.huang.model.entity.CoachSchedule;
 import com.huang.model.entity.OrderInfo;
+import com.huang.model.entity.PaymentRecord;
 import com.huang.web.app.dto.booking.CreateBookingDTO;
 import com.huang.web.app.mapper.CoachBookingMapper;
 import com.huang.web.app.mapper.CoachProfileMapper;
@@ -22,9 +22,12 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DuplicateKeyException;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.LocalTime;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -54,9 +57,6 @@ class BookingBizServiceTest {
     private PaymentRecordMapper paymentRecordMapper;
 
     @Mock
-    private RedisGuardSupport redisGuardSupport;
-
-    @Mock
     private UserService userService;
 
     private BookingBizService bookingBizService;
@@ -71,7 +71,6 @@ class BookingBizServiceTest {
                 orderInfoMapper,
                 orderItemMapper,
                 paymentRecordMapper,
-                redisGuardSupport,
                 userService
         );
     }
@@ -86,6 +85,9 @@ class BookingBizServiceTest {
         schedule.setCoachId(9L);
         schedule.setStatus(1);
         schedule.setPrice(new BigDecimal("199.00"));
+        schedule.setScheduleDate(LocalDate.now().plusDays(1));
+        schedule.setStartTime(LocalTime.of(10, 0));
+        schedule.setEndTime(LocalTime.of(11, 0));
 
         when(coachScheduleMapper.selectById(5L)).thenReturn(schedule);
         when(coachBookingMapper.countAnyByUserAndSchedule(7L, 5L)).thenReturn(0L);
@@ -127,5 +129,42 @@ class BookingBizServiceTest {
         verify(paymentRecordMapper).update(any(), any());
         verify(coachScheduleMapper).releaseSlot(5L);
         verify(coachBookingMapper).deleteById(9L);
+    }
+
+    @Test
+    void markPaySuccess_shouldTreatPaidRecordAsIdempotentAndSyncOrderAndBooking() {
+        CoachBooking booking = new CoachBooking();
+        booking.setId(12L);
+        booking.setUserId(7L);
+        booking.setOrderId(33L);
+        booking.setPayStatus(BizStatusConstant.PayStatus.UNPAID);
+        booking.setBookingStatus(BizStatusConstant.BookingStatus.WAIT_PAY);
+
+        OrderInfo orderInfo = new OrderInfo();
+        orderInfo.setId(33L);
+        orderInfo.setPayStatus(BizStatusConstant.PayStatus.UNPAID);
+        orderInfo.setOrderStatus(BizStatusConstant.OrderStatus.NEW);
+
+        PaymentRecord paymentRecord = new PaymentRecord();
+        paymentRecord.setId(77L);
+        paymentRecord.setOrderId(33L);
+        paymentRecord.setPayNo("BPAY001");
+
+        PaymentRecord latest = new PaymentRecord();
+        latest.setId(77L);
+        latest.setPayStatus(BizStatusConstant.PayStatus.PAID);
+
+        when(coachBookingMapper.selectById(12L)).thenReturn(booking);
+        when(orderInfoMapper.selectById(33L)).thenReturn(orderInfo);
+        when(paymentRecordMapper.selectOne(any())).thenReturn(paymentRecord);
+        when(paymentRecordMapper.markPaidIfUnpaid(eq(77L), eq("CALLBACK_BPAY001"), any())).thenReturn(0);
+        when(paymentRecordMapper.selectById(77L)).thenReturn(latest);
+
+        boolean ok = bookingBizService.markPaySuccess(12L, 7L);
+
+        assertThat(ok).isTrue();
+        verify(paymentRecordMapper).markPaidIfUnpaid(eq(77L), eq("CALLBACK_BPAY001"), any());
+        verify(coachBookingMapper).updateById(booking);
+        verify(orderInfoMapper).updateById(orderInfo);
     }
 }

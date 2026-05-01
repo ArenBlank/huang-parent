@@ -3,6 +3,7 @@ package com.huang.web.app.service.biz;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.huang.common.constant.BizStatusConstant;
 import com.huang.common.constant.RedisConstant;
+import com.huang.common.redis.LockAcquireResult;
 import com.huang.common.redis.RedisGuardSupport;
 import com.huang.model.entity.CoachBooking;
 import com.huang.model.entity.OrderInfo;
@@ -85,14 +86,6 @@ public class PaymentCallbackBizService {
             }
 
             log.setOrderId(paymentRecord.getOrderId());
-            callbackGuardKey = RedisConstant.appPayCallbackPayNoGuardKey(paymentRecord.getPayNo());
-            callbackLockToken = redisGuardSupport.tryAcquireLock(callbackGuardKey, RedisConstant.PAY_CALLBACK_GUARD_TTL_SEC);
-            if (callbackLockToken == null) {
-                log.setProcessResult("IN_FLIGHT");
-                paymentCallbackLogMapper.insert(log);
-                result = "success";
-                return result;
-            }
             if (!"SUCCESS".equalsIgnoreCase(dto.getStatus())) {
                 log.setProcessResult("IGNORED");
                 log.setErrorMessage("STATUS_NOT_SUCCESS");
@@ -111,31 +104,37 @@ public class PaymentCallbackBizService {
                 }
             }
 
-            if (BizStatusConstant.PayStatus.PAID.equals(paymentRecord.getPayStatus())) {
-                log.setProcessResult("IDEMPOTENT");
-                paymentCallbackLogMapper.insert(log);
-                result = "success";
-                return result;
-            }
-
             String idempotencyKey = "CALLBACK_ASYNC_" + dto.getTradeNo();
-            if (idempotencyKey.equals(paymentRecord.getCallbackIdempotencyKey())) {
-                log.setProcessResult("IDEMPOTENT");
+            callbackGuardKey = RedisConstant.appPayCallbackPayNoGuardKey(paymentRecord.getPayNo());
+            LockAcquireResult lockResult = redisGuardSupport.acquireLock(callbackGuardKey, RedisConstant.PAY_CALLBACK_GUARD_TTL_SEC);
+            callbackLockToken = lockResult.token();
+            if (lockResult.isBusy()) {
+                log.setProcessResult("IN_FLIGHT");
                 paymentCallbackLogMapper.insert(log);
                 result = "success";
                 return result;
             }
 
-            paymentRecord.setPayStatus(BizStatusConstant.PayStatus.PAID);
-            paymentRecord.setPayTime(LocalDateTime.now());
-            paymentRecord.setCallbackIdempotencyKey(idempotencyKey);
-            paymentRecordMapper.updateById(paymentRecord);
+            LocalDateTime paidAt = LocalDateTime.now();
+            int updated = paymentRecordMapper.markPaidIfUnpaid(paymentRecord.getId(), idempotencyKey, paidAt);
+            if (updated == 0) {
+                PaymentRecord latest = paymentRecordMapper.selectById(paymentRecord.getId());
+                if (latest != null && BizStatusConstant.PayStatus.PAID.equals(latest.getPayStatus())) {
+                    log.setProcessResult("IDEMPOTENT");
+                    paymentCallbackLogMapper.insert(log);
+                    result = "success";
+                    return result;
+                }
+                log.setProcessResult("REJECTED");
+                log.setErrorMessage("PAY_STATE_CONFLICT");
+                paymentCallbackLogMapper.insert(log);
+                result = "fail";
+                return result;
+            }
 
             OrderInfo orderInfo = orderInfoMapper.selectById(paymentRecord.getOrderId());
             if (orderInfo != null) {
-                orderInfo.setPayStatus(BizStatusConstant.PayStatus.PAID);
-                orderInfo.setOrderStatus(BizStatusConstant.OrderStatus.PAID);
-                orderInfoMapper.updateById(orderInfo);
+                markOrderPaid(orderInfo);
                 updateBizStatus(orderInfo);
             }
 
@@ -153,6 +152,16 @@ public class PaymentCallbackBizService {
                     costMs);
             redisGuardSupport.releaseLock(callbackGuardKey, callbackLockToken);
         }
+    }
+
+    private void markOrderPaid(OrderInfo orderInfo) {
+        if (BizStatusConstant.PayStatus.PAID.equals(orderInfo.getPayStatus())
+                && BizStatusConstant.OrderStatus.PAID.equals(orderInfo.getOrderStatus())) {
+            return;
+        }
+        orderInfo.setPayStatus(BizStatusConstant.PayStatus.PAID);
+        orderInfo.setOrderStatus(BizStatusConstant.OrderStatus.PAID);
+        orderInfoMapper.updateById(orderInfo);
     }
 
     public PayCallbackDTO buildMockCallback(String payNo, String tradeNo) {

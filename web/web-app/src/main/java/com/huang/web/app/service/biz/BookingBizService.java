@@ -1,10 +1,8 @@
 package com.huang.web.app.service.biz;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
-import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.huang.common.constant.BizStatusConstant;
-import com.huang.common.constant.RedisConstant;
-import com.huang.common.redis.RedisGuardSupport;
 import com.huang.model.entity.CoachBooking;
 import com.huang.model.entity.CoachProfile;
 import com.huang.model.entity.CoachReview;
@@ -61,7 +59,6 @@ public class BookingBizService {
     private final OrderInfoMapper orderInfoMapper;
     private final OrderItemMapper orderItemMapper;
     private final PaymentRecordMapper paymentRecordMapper;
-    private final RedisGuardSupport redisGuardSupport;
     private final UserService userService;
 
     public BookingBizService(CoachScheduleMapper coachScheduleMapper,
@@ -71,7 +68,6 @@ public class BookingBizService {
                              OrderInfoMapper orderInfoMapper,
                              OrderItemMapper orderItemMapper,
                              PaymentRecordMapper paymentRecordMapper,
-                             RedisGuardSupport redisGuardSupport,
                              UserService userService) {
         this.coachScheduleMapper = coachScheduleMapper;
         this.coachBookingMapper = coachBookingMapper;
@@ -80,7 +76,6 @@ public class BookingBizService {
         this.orderInfoMapper = orderInfoMapper;
         this.orderItemMapper = orderItemMapper;
         this.paymentRecordMapper = paymentRecordMapper;
-        this.redisGuardSupport = redisGuardSupport;
         this.userService = userService;
     }
 
@@ -329,19 +324,13 @@ public class BookingBizService {
     public boolean markPaySuccess(Long bookingId, Long userId) {
         long start = System.currentTimeMillis();
         boolean success = false;
-        String callbackKey = RedisConstant.appPayCallbackBookingGuardKey(bookingId);
         try {
-            try {
-                if (!redisGuardSupport.tryAcquireIdempotent(callbackKey, RedisConstant.PAY_CALLBACK_GUARD_TTL_SEC)) {
-                    success = true;
-                    return true;
-                }
-            } catch (Exception ignore) {
-                // Redis unavailable: fallback to DB idempotency key only.
-            }
-
             CoachBooking booking = coachBookingMapper.selectById(bookingId);
-            if (booking == null || !booking.getUserId().equals(userId)) {
+            if (booking == null || !Objects.equals(booking.getUserId(), userId)) {
+                return false;
+            }
+            OrderInfo orderInfo = orderInfoMapper.selectById(booking.getOrderId());
+            if (orderInfo == null) {
                 return false;
             }
             PaymentRecord paymentRecord = paymentRecordMapper.selectOne(
@@ -354,34 +343,36 @@ public class BookingBizService {
             }
 
             String idempotencyKey = "CALLBACK_" + paymentRecord.getPayNo();
-            if (idempotencyKey.equals(paymentRecord.getCallbackIdempotencyKey())
-                    || BizStatusConstant.PayStatus.PAID.equals(paymentRecord.getPayStatus())) {
-                success = true;
-                return true;
+            int updated = paymentRecordMapper.markPaidIfUnpaid(paymentRecord.getId(), idempotencyKey, LocalDateTime.now());
+            if (updated == 0) {
+                PaymentRecord latest = paymentRecordMapper.selectById(paymentRecord.getId());
+                if (latest == null || !BizStatusConstant.PayStatus.PAID.equals(latest.getPayStatus())) {
+                    return false;
+                }
             }
-
-            booking.setPayStatus(BizStatusConstant.PayStatus.PAID);
-            booking.setBookingStatus(BizStatusConstant.BookingStatus.PAID);
-            coachBookingMapper.updateById(booking);
-
-            OrderInfo orderInfo = orderInfoMapper.selectById(booking.getOrderId());
-            if (orderInfo != null) {
-                orderInfo.setPayStatus(BizStatusConstant.PayStatus.PAID);
-                orderInfo.setOrderStatus(BizStatusConstant.OrderStatus.PAID);
-                orderInfoMapper.updateById(orderInfo);
-            }
-
-            paymentRecord.setPayStatus(BizStatusConstant.PayStatus.PAID);
-            paymentRecord.setPayTime(LocalDateTime.now());
-            paymentRecord.setCallbackIdempotencyKey(idempotencyKey);
-            paymentRecordMapper.updateById(paymentRecord);
-            success = true;
-            return true;
+            success = syncBookingPaid(booking, orderInfo);
+            return success;
         } finally {
             long costMs = System.currentTimeMillis() - start;
             log.info("BOOKING_PAY_SUCCESS userId={} bookingId={} success={} costMs={}",
                     userId, bookingId, success, costMs);
         }
+    }
+
+    private boolean syncBookingPaid(CoachBooking booking, OrderInfo orderInfo) {
+        if (!BizStatusConstant.PayStatus.PAID.equals(booking.getPayStatus())
+                || !BizStatusConstant.BookingStatus.PAID.equals(booking.getBookingStatus())) {
+            booking.setPayStatus(BizStatusConstant.PayStatus.PAID);
+            booking.setBookingStatus(BizStatusConstant.BookingStatus.PAID);
+            coachBookingMapper.updateById(booking);
+        }
+        if (!BizStatusConstant.PayStatus.PAID.equals(orderInfo.getPayStatus())
+                || !BizStatusConstant.OrderStatus.PAID.equals(orderInfo.getOrderStatus())) {
+            orderInfo.setPayStatus(BizStatusConstant.PayStatus.PAID);
+            orderInfo.setOrderStatus(BizStatusConstant.OrderStatus.PAID);
+            orderInfoMapper.updateById(orderInfo);
+        }
+        return true;
     }
 
     @Transactional(rollbackFor = Exception.class)
@@ -423,9 +414,9 @@ public class BookingBizService {
 
         paymentRecordMapper.update(
                 null,
-                new LambdaUpdateWrapper<PaymentRecord>()
-                        .eq(PaymentRecord::getOrderId, orderInfo.getId())
-                        .set(PaymentRecord::getPayStatus, BizStatusConstant.PayStatus.CLOSED)
+                new UpdateWrapper<PaymentRecord>()
+                        .eq("order_id", orderInfo.getId())
+                        .set("pay_status", BizStatusConstant.PayStatus.CLOSED)
         );
 
         coachScheduleMapper.releaseSlot(booking.getScheduleId());

@@ -2,6 +2,7 @@ package com.huang.web.app.service.biz;
 
 import com.huang.common.constant.RedisConstant;
 import com.huang.common.constant.TaskRunConstant;
+import com.huang.common.redis.LockAcquireResult;
 import com.huang.common.redis.RedisGuardSupport;
 import com.huang.model.entity.TaskRunLog;
 import com.huang.web.app.mapper.TaskRunLogMapper;
@@ -32,9 +33,13 @@ public class AppTaskRunBizService {
 
     public int executeTask(String taskCode, String taskName, String triggerMode, TaskRunner runner) {
         String lockKey = RedisConstant.taskLockKey(taskCode);
-        String lockToken = redisGuardSupport.tryAcquireLock(lockKey, TaskRunConstant.lockTtlSec(taskCode));
-        if (lockToken == null) {
+        LockAcquireResult lockResult = redisGuardSupport.acquireLock(lockKey, TaskRunConstant.lockTtlSec(taskCode));
+        if (lockResult.isBusy()) {
             recordSkip(taskCode, taskName, triggerMode, "task lock already held");
+            return 0;
+        }
+        if (lockResult.isDegraded()) {
+            recordSkip(taskCode, taskName, triggerMode, "task lock unavailable");
             return 0;
         }
 
@@ -57,7 +62,7 @@ public class AppTaskRunBizService {
             log.warn("task run failed, taskCode={}, triggerMode={}", taskCode, triggerMode, ex);
             throw ex;
         } finally {
-            redisGuardSupport.releaseLock(lockKey, lockToken);
+            redisGuardSupport.releaseLock(lockKey, lockResult.token());
         }
     }
 

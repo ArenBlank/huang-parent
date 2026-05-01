@@ -8,15 +8,18 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.script.RedisScript;
 
 import java.util.LinkedHashSet;
 import java.util.Set;
 
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.mockito.Mockito.doReturn;
 
 @ExtendWith(MockitoExtension.class)
 class RedisCacheSupportTest {
@@ -54,5 +57,16 @@ class RedisCacheSupportTest {
         verify(stringRedisTemplate).execute(org.mockito.ArgumentMatchers.<RedisCallback<Set<String>>>any());
         verify(stringRedisTemplate, never()).delete(any(java.util.Collection.class));
         verify(stringRedisTemplate, never()).keys(any());
+    }
+
+    @Test
+    void unlock_shouldUseLuaCompareAndDelete() {
+        doReturn(1L).when(stringRedisTemplate)
+                .execute(org.mockito.ArgumentMatchers.<RedisScript<Long>>any(), anyList(), any());
+
+        redisCacheSupport.unlock("cache:lock:key", "token-1");
+
+        verify(stringRedisTemplate)
+                .execute(org.mockito.ArgumentMatchers.<RedisScript<Long>>any(), eq(java.util.List.of("cache:lock:key")), eq("token-1"));
     }
 }

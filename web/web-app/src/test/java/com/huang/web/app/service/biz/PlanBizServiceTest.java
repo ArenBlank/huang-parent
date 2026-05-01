@@ -209,6 +209,35 @@ class PlanBizServiceTest {
     }
 
     @Test
+    void getPlanDetail_shouldWaitForCacheRebuildWhenLockIsHeldByAnotherRequest() throws Exception {
+        Object cachedStatic = createStaticDetailCache();
+        TrainingPlanSubscribe subscribe = new TrainingPlanSubscribe();
+        subscribe.setPlanId(4L);
+        subscribe.setUserId(303L);
+        subscribe.setStatus(1);
+        subscribe.setStartDate(LocalDate.of(2026, 4, 10));
+
+        String cacheKey = RedisConstant.appPlanDetailStaticKey(4L);
+        when(multiLevelCacheSupport.getJson(eq(cacheKey), any(com.fasterxml.jackson.core.type.TypeReference.class)))
+                .thenReturn(RedisCacheSupport.CacheValue.miss(), RedisCacheSupport.CacheValue.hit(cachedStatic));
+        when(multiLevelCacheSupport.newLockToken()).thenReturn("lock-token");
+        when(multiLevelCacheSupport.tryLock(RedisConstant.appPlanDetailLockKey(4L), "lock-token", RedisConstant.CACHE_LOCK_TTL_SEC))
+                .thenReturn(false);
+        when(trainingPlanSubscribeMapper.selectOne(any())).thenReturn(subscribe);
+        when(minioClient.getPresignedObjectUrl(any(GetPresignedObjectUrlArgs.class))).thenReturn("https://signed/waited");
+
+        Map<String, Object> detail = planBizService.getPlanDetail(4L, 303L);
+
+        assertThat(detail).isNotNull();
+        assertThat(((TrainingPlan) detail.get("plan")).getTitle()).isEqualTo("Cached Plan");
+        verify(trainingPlanMapper, never()).selectById(anyLong());
+        verify(trainingPlanItemMapper, never()).selectList(any());
+        verify(videoAssetMapper, never()).selectBatchIds(any());
+        verify(multiLevelCacheSupport, never()).setJson(eq(cacheKey), any(), anyLong());
+        verify(multiLevelCacheSupport, never()).unlock(any(), any());
+    }
+
+    @Test
     void generateAndSavePlanByAi_shouldInsertPlanItemsAndEvictCaches() {
         LoginUserHolder.setLoginUser(new LoginUser(88L, "root_member"));
         AtomicReference<TrainingPlan> insertedPlanRef = new AtomicReference<>();

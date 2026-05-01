@@ -14,7 +14,6 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.CollectionUtils;
 
 import java.time.Duration;
-import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.LinkedHashSet;
@@ -154,11 +153,11 @@ public class RedisCacheSupport {
     }
 
     public void unlock(String key, String token) {
-        if (key == null || token == null) {
+        if (key == null || key.isBlank() || token == null || token.isBlank()) {
             return;
         }
         try {
-            compareAndDelete(key, token);
+            RedisLockLuaSupport.compareAndDelete(stringRedisTemplate, key, token);
         } catch (Exception e) {
             log.warn("redis unlock failed, key={}", key, e);
         }
@@ -182,27 +181,6 @@ public class RedisCacheSupport {
 
     private Set<String> scanKeysByPrefix(String prefix) {
         return stringRedisTemplate.execute((RedisCallback<Set<String>>) connection -> doScan(connection, prefix));
-    }
-
-    private boolean compareAndDelete(String key, String token) {
-        byte[] rawKey = stringRedisTemplate.getStringSerializer().serialize(key);
-        byte[] rawToken = stringRedisTemplate.getStringSerializer().serialize(token);
-        if (rawKey == null || rawToken == null) {
-            return false;
-        }
-        Boolean deleted = stringRedisTemplate.execute((RedisCallback<Boolean>) connection -> {
-            connection.watch(rawKey);
-            byte[] current = connection.get(rawKey);
-            if (!Arrays.equals(current, rawToken)) {
-                connection.unwatch();
-                return false;
-            }
-            connection.multi();
-            connection.del(rawKey);
-            List<Object> exec = connection.exec();
-            return exec != null && !exec.isEmpty();
-        });
-        return Boolean.TRUE.equals(deleted);
     }
 
     private Set<String> doScan(RedisConnection connection, String prefix) {

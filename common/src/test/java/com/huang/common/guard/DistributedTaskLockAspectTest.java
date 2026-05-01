@@ -1,6 +1,7 @@
 package com.huang.common.guard;
 
 import com.huang.common.constant.RedisConstant;
+import com.huang.common.redis.LockAcquireResult;
 import com.huang.common.redis.RedisGuardSupport;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.reflect.MethodSignature;
@@ -13,6 +14,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.lang.reflect.Method;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -44,8 +46,8 @@ class DistributedTaskLockAspectTest {
         when(joinPoint.getSignature()).thenReturn(methodSignature);
         when(methodSignature.getMethod()).thenReturn(method);
         when(joinPoint.proceed()).thenReturn(null);
-        when(redisGuardSupport.tryAcquireLock(RedisConstant.taskScheduleLockKey("PAYMENT_COMPENSATE"), 300L))
-                .thenReturn("lock-token");
+        when(redisGuardSupport.acquireLock(RedisConstant.taskScheduleLockKey("PAYMENT_COMPENSATE"), 300L))
+                .thenReturn(LockAcquireResult.acquired("lock-token"));
 
         Object result = aspect.withTaskLock(joinPoint, annotation);
 
@@ -61,14 +63,31 @@ class DistributedTaskLockAspectTest {
 
         when(joinPoint.getSignature()).thenReturn(methodSignature);
         when(methodSignature.getMethod()).thenReturn(method);
-        when(redisGuardSupport.tryAcquireLock(RedisConstant.taskScheduleLockKey("PAYMENT_COMPENSATE"), 300L))
-                .thenReturn(null);
+        when(redisGuardSupport.acquireLock(RedisConstant.taskScheduleLockKey("PAYMENT_COMPENSATE"), 300L))
+                .thenReturn(LockAcquireResult.busy());
 
         Object result = aspect.withTaskLock(joinPoint, annotation);
 
         assertThat(result).isNull();
         verify(joinPoint, never()).proceed();
-        verify(redisGuardSupport, never()).releaseLock(RedisConstant.taskScheduleLockKey("PAYMENT_COMPENSATE"), "lock-token");
+        verify(redisGuardSupport, never()).releaseLock(any(), any());
+    }
+
+    @Test
+    void withTaskLock_shouldFailCloseWhenRedisUnavailableByDefault() throws Throwable {
+        Method method = DemoTask.class.getDeclaredMethod("run");
+        DistributedTaskLock annotation = method.getAnnotation(DistributedTaskLock.class);
+
+        when(joinPoint.getSignature()).thenReturn(methodSignature);
+        when(methodSignature.getMethod()).thenReturn(method);
+        when(redisGuardSupport.acquireLock(RedisConstant.taskScheduleLockKey("PAYMENT_COMPENSATE"), 300L))
+                .thenReturn(LockAcquireResult.degraded());
+
+        Object result = aspect.withTaskLock(joinPoint, annotation);
+
+        assertThat(result).isNull();
+        verify(joinPoint, never()).proceed();
+        verify(redisGuardSupport, never()).releaseLock(any(), any());
     }
 
     @Test
@@ -79,8 +98,8 @@ class DistributedTaskLockAspectTest {
         when(joinPoint.getSignature()).thenReturn(methodSignature);
         when(methodSignature.getMethod()).thenReturn(method);
         when(joinPoint.proceed()).thenReturn(7);
-        when(redisGuardSupport.tryAcquireLock(RedisConstant.taskScheduleLockKey("BOOKING_TIMEOUT_CLOSE"), 180L))
-                .thenReturn(RedisGuardSupport.NOOP_LOCK_TOKEN);
+        when(redisGuardSupport.acquireLock(RedisConstant.taskScheduleLockKey("BOOKING_TIMEOUT_CLOSE"), 180L))
+                .thenReturn(LockAcquireResult.degraded());
 
         Object result = aspect.withTaskLock(joinPoint, annotation);
 
