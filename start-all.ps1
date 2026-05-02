@@ -122,7 +122,6 @@ function Ensure-CoreContainersRunning {
         "mysql-container-huang",
         "redis-container-huang",
         "minio-container-huang",
-        "rabbitmq-container-huang",
         "nginx-container-huang"
     )
 
@@ -133,7 +132,6 @@ function Ensure-CoreContainersRunning {
                 "mysql-container-huang" { Invoke-DockerCompose -Arguments @("up", "-d", "mysql") }
                 "redis-container-huang" { Invoke-DockerCompose -Arguments @("up", "-d", "redis") }
                 "minio-container-huang" { Invoke-DockerCompose -Arguments @("up", "-d", "minio") }
-                "rabbitmq-container-huang" { Invoke-DockerCompose -Arguments @("up", "-d", "rabbitmq") }
                 "nginx-container-huang" { Invoke-DockerCompose -Arguments @("up", "-d", "nginx") }
             }
         }

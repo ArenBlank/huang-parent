@@ -40,20 +40,6 @@ services:
     volumes:
       - minio_data:/data
 
-  rabbitmq:
-    image: rabbitmq:3.13-management-alpine
-    container_name: rabbitmq-container-huang
-    restart: unless-stopped
-    environment:
-      RABBITMQ_DEFAULT_USER: ${RABBITMQ_DEFAULT_USER:-root}
-      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_DEFAULT_PASS:-root}
-      TZ: ${TZ:-Asia/Shanghai}
-    ports:
-      - ${RABBITMQ_AMQP_PORT:-5672}:5672
-      - ${RABBITMQ_MANAGEMENT_PORT:-15672}:15672
-    volumes:
-      - rabbitmq_data:/var/lib/rabbitmq
-
   nginx:
     image: nginx:1.28.2-alpine
     container_name: nginx-container-huang
@@ -87,7 +73,4 @@ volumes:
     external: true
   minio_data:
     name: minio_data
-    external: true
-  rabbitmq_data:
-    name: rabbitmq_data
     external: true

@@ -1,11 +1,11 @@
 ﻿# 启动外部中间件容器
 # 如果你的 Docker Desktop 容器名不同，请自行替换
-docker start mysql-container-huang redis-container-huang minio-container-huang nginx-container-huang rabbitmq-container-huang
+docker start mysql-container-huang redis-container-huang minio-container-huang nginx-container-huang
 
 docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
 
 # 停止外部中间件容器
-docker stop mysql-container-huang redis-container-huang minio-container-huang nginx-container-huang rabbitmq-container-huang
+docker stop mysql-container-huang redis-container-huang minio-container-huang nginx-container-huang
 
 # 先构建公共模块（当 model/common 有改动时执行）
 mvn -pl common,model -am -DskipTests install
