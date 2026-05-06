@@ -62,3 +62,4 @@ common/.run/
 /test.png
 frontend-preview.log
 frontend-app-preview.log
+*.log
