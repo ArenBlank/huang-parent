@@ -34,7 +34,7 @@
 - 对象存储：`MinIO`
 - 网关与部署：`Nginx upstream`、`Docker Compose`
 - 接口文档：`Knife4j / OpenAPI 3`
-- 自动化验证：`Postman/Newman`、`GitHub Actions`
+- 自动化验证：`Postman/Newman`、`GitHub Actions`、`k6`
 
 ## 当前技术亮点
 
@@ -190,12 +190,27 @@ graph LR
 - 双实例补偿任务互斥实机验收通过
 - AI 训练计划生成链路已接入业务服务并具备测试覆盖
 
-## 当前增量更新（v3.0.0）
+## k6 全链路压测（2026-05-07）
+
+基于 k6 v1.7.1 在单实例（HikariCP=12）上完成三轮压测：
+
+| 轮次 | 场景 | VU | QPS | P50 | P95 | 失败率 | 结论 |
+|:---|:---|:---:|:---:|:---:|:---:|:---:|:---|
+| 1 | 缓存读 | 500 | 2,231 | 42ms | 212ms | 0% | Caffeine 扛住 2K+ QPS |
+| 2 | 报名并发 | 100 | 850 | 25ms | 62ms | 0% | 20/20 精确售出，**零超卖** |
+| 3 | 混合负载 | 80 | 530 | 10ms | 27ms | 0% | 100s 持续，100% 成功 |
+
+**三层治理拦截统计**（第 2 轮）：`@RateLimit` 拦 99.4%、`@IdempotentSubmit` 拦 0.5%、DB 条件更新拦 0.05%
+
+> 详情：[k6 压测报告](./doc/performance/k6压测报告-智训健身平台-20260507.md) · [脚本说明](./scripts/load-test/README.md)
+
+## 当前增量更新（v3.1.0）
 
 - 轻量 Redis 锁增强：加锁继续使用 `SET NX EX`，释放锁统一改为 Lua compare-and-delete，锁结果改为显式 `ACQUIRED / BUSY / DEGRADED`
 - 缓存击穿保护增强：计划详情缓存改为有上界的随机退避重读，支付回调收敛为“Redis 削峰 + 数据库条件更新幂等兜底”
 - H5 / 移动端页面补充：新增并完善订单详情、教练申请、账户安全等用户端页面
 - UniApp H5 兼容性修复：收口 `showTabBar / hideTabBar` 调用，避免非 tabBar 页面控制台报错
+- k6 全链路压测：新增 3 轮 k6 压测脚本与实测报告，验证缓存吞吐（2,231 QPS）、三层并发治理（零超卖）、混合负载稳定性（530 QPS / 100% 成功）
 
 ## 快速开始
 
@@ -247,6 +262,7 @@ powershell -ExecutionPolicy Bypass -File tests/invoke-concurrent-requests.ps1
 - 服务分层约定：[doc/服务分层约定.md](./doc/服务分层约定.md)
 - 常见追问回答：[doc/常见追问回答清单.md](./doc/常见追问回答清单.md)
 - 开发参考文档：[doc/开发参考文档.md](./doc/开发参考文档.md)
+- k6 压测报告：[doc/performance/k6压测报告-智训健身平台-20260507.md](./doc/performance/k6压测报告-智训健身平台-20260507.md)
 
 ## 仓库说明
 
