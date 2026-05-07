@@ -190,27 +190,35 @@ graph LR
 - 双实例补偿任务互斥实机验收通过
 - AI 训练计划生成链路已接入业务服务并具备测试覆盖
 
-## k6 全链路压测（2026-05-07）
+## k6 全链路压测
 
-基于 k6 v1.7.1 在单实例（HikariCP=12）上完成三轮压测：
+### 单实例直连
 
-| 轮次 | 场景 | VU | QPS | P50 | P95 | 失败率 | 结论 |
-|:---|:---|:---:|:---:|:---:|:---:|:---:|:---|
-| 1 | 缓存读 | 500 | 2,231 | 42ms | 212ms | 0% | Caffeine 扛住 2K+ QPS |
-| 2 | 报名并发 | 100 | 850 | 25ms | 62ms | 0% | 20/20 精确售出，**零超卖** |
-| 3 | 混合负载 | 80 | 530 | 10ms | 27ms | 0% | 100s 持续，100% 成功 |
+| 轮次 | VU | QPS | P95 | 结论 |
+|:---|:---:|:---:|:---:|:---|
+| 缓存读 | 500 | 2,231 | 212ms | Caffeine 扛 2K+ QPS，0% 失败 |
+| 报名并发 | 100 | 850 | 62ms | 20/20 **零超卖**，三层拦截精准 |
+| 混合负载 | 80 | 530 | 27ms | 100s 持续 100% 成功 |
 
-**三层治理拦截统计**（第 2 轮）：`@RateLimit` 拦 99.4%、`@IdempotentSubmit` 拦 0.5%、DB 条件更新拦 0.05%
+三层拦截：`@RateLimit` 99.4% | `@IdempotentSubmit` 0.5% | DB 条件更新 0.05%
 
-> 详情：[k6 压测报告](./doc/performance/k6压测报告-智训健身平台-20260507.md) · [脚本说明](./scripts/load-test/README.md)
+### 双实例 + Nginx 代理
 
-## 当前增量更新（v3.1.0）
+| 轮次 | VU | QPS | P95 | 结论 |
+|:---|:---:|:---:|:---:|:---|
+| Nginx路由+限流 | 100 | 274 | 217ms | 双实例 50:50 分发，Redis 限流共享 |
+| 防超卖 | 100 | 226 | 118ms | 30/30 **零超卖**，双实例一致性验证 |
+| 混合负载 | 200 | 138 | 28ms(成功) | 200VU 过载，转折点 ~120VU |
 
+**架构对比**：双实例 DB 连接池翻倍(24)，限流/幂等在实例间完全共享；Nginx 代理引入一跳延迟（~1-3ms），单机资源争抢限制了吞吐翻倍。
+
+> 报告：[单实例](./doc/performance/k6-loadtest-single-instance-20260507.md) · [双实例+Nginx](./doc/performance/k6-loadtest-dual-instance-nginx-20260507.md) · [脚本](./scripts/load-test/README.md)
+
+## 当前增量更新（v3.2.0）
+
+- 双实例 + Nginx 全链路压测：新增 3 轮 k6 脚本与实测报告，验证 Nginx 轮询分发（50:50）、Redis 分布式限流/幂等双实例共享、30/30 零超卖、混合负载 200VU 极限探测
+- 压测文档整合：单实例直连 + 双实例 Nginx 代理两份报告精简合并，去除冗余
 - 轻量 Redis 锁增强：加锁继续使用 `SET NX EX`，释放锁统一改为 Lua compare-and-delete，锁结果改为显式 `ACQUIRED / BUSY / DEGRADED`
-- 缓存击穿保护增强：计划详情缓存改为有上界的随机退避重读，支付回调收敛为“Redis 削峰 + 数据库条件更新幂等兜底”
-- H5 / 移动端页面补充：新增并完善订单详情、教练申请、账户安全等用户端页面
-- UniApp H5 兼容性修复：收口 `showTabBar / hideTabBar` 调用，避免非 tabBar 页面控制台报错
-- k6 全链路压测：新增 3 轮 k6 压测脚本与实测报告，验证缓存吞吐（2,231 QPS）、三层并发治理（零超卖）、混合负载稳定性（530 QPS / 100% 成功）
 
 ## 快速开始
 
@@ -262,7 +270,8 @@ powershell -ExecutionPolicy Bypass -File tests/invoke-concurrent-requests.ps1
 - 服务分层约定：[doc/服务分层约定.md](./doc/服务分层约定.md)
 - 常见追问回答：[doc/常见追问回答清单.md](./doc/常见追问回答清单.md)
 - 开发参考文档：[doc/开发参考文档.md](./doc/开发参考文档.md)
-- k6 压测报告：[doc/performance/k6压测报告-智训健身平台-20260507.md](./doc/performance/k6压测报告-智训健身平台-20260507.md)
+- k6 压测报告（单实例）：[doc/performance/k6-loadtest-single-instance-20260507.md](./doc/performance/k6-loadtest-single-instance-20260507.md)
+- k6 压测报告（双实例+Nginx）：[doc/performance/k6-loadtest-dual-instance-nginx-20260507.md](./doc/performance/k6-loadtest-dual-instance-nginx-20260507.md)
 
 ## 仓库说明
 

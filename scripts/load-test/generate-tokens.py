@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
-"""Generate test tokens in batches to avoid login rate limit (10/min per IP)."""
+"""Generate test tokens via Nginx in batches to avoid login rate limit (10/60s per IP+account)."""
 import requests, json, time, sys, os
 
-COUNT = int(sys.argv[1]) if len(sys.argv) > 1 else 30
+COUNT = int(sys.argv[1]) if len(sys.argv) > 1 else 50
 BATCH = 10
 WAIT = 65  # seconds between batches (rate limit window = 60s)
-BASE = "http://localhost:8081/app/auth/login"
+BASE = "http://localhost/app/auth/login"
 OUTPUT = os.path.join(os.path.dirname(__file__), "data", "test-tokens.json")
 
 os.makedirs(os.path.dirname(OUTPUT), exist_ok=True)
@@ -13,7 +13,7 @@ os.makedirs(os.path.dirname(OUTPUT), exist_ok=True)
 usernames = ["root", "root_member", "case_member"]
 for i in range(1, COUNT + 1):
     usernames.append(f"lt_u{i:02d}")
-usernames = usernames[:COUNT + 3]  # exact count
+usernames = usernames[:COUNT]
 
 tokens = []
 for i, username in enumerate(usernames):
@@ -24,8 +24,8 @@ for i, username in enumerate(usernames):
     try:
         resp = requests.post(BASE, json={
             "account": username, "password": "root",
-            "loginType": "password", "captchaVerification": "skip"
-        }, timeout=10)
+            "loginType": "password", "captchaVerification": "bypass"
+        }, headers={"Host": "app.localhost"}, timeout=15)
 
         if resp.status_code == 200:
             data = resp.json()
