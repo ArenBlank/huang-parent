@@ -1557,7 +1557,7 @@ loadMyBookings()
 .coach-card__photo :deep(img) {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
 }
 
 .coach-card__fallback {

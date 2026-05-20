@@ -1,7 +1,7 @@
 param(
-    [string]$AppBaseUrl1 = "http://localhost:8081",
-    [string]$AppBaseUrl2 = "http://localhost:8082",
-    [string]$AdminBaseUrl = "http://localhost:8080",
+    [string]$AppBaseUrl1 = "http://localhost:8093",
+    [string]$AppBaseUrl2 = "http://localhost:8094",
+    [string]$AdminBaseUrl = "http://localhost:8092",
     [string]$MemberAccount = "root_member",
     [string]$MemberPassword = "root",
     [string]$AdminAccount = "root_admin",

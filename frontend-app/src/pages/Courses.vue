@@ -93,7 +93,7 @@
                 class="itinerary-card"
               >
                 <div class="itinerary-card__cover-wrap">
-                  <el-image :src="resolveCourseCover(schedule.coverUrl)" fit="cover" class="itinerary-card__cover">
+                  <el-image :src="resolveCourseCover(schedule.coverUrl)" fit="contain" class="itinerary-card__cover">
                     <template #error>
                       <img :src="defaultCoverUrl" class="image-fallback" alt="课程封面兜底图" />
                     </template>
@@ -193,7 +193,7 @@
                 >
                   <span v-if="selectedCourse?.id === course.id" class="course-card__flag">已选中</span>
                   <div class="course-cover-wrap">
-                    <el-image :src="resolveCourseCover(course.coverUrl)" fit="cover" class="course-cover">
+                    <el-image :src="resolveCourseCover(course.coverUrl)" fit="contain" class="course-cover">
                       <template #error>
                         <img :src="defaultCoverUrl" class="image-fallback" alt="课程封面兜底图" />
                       </template>
@@ -297,7 +297,7 @@
 
               <div v-else class="selected-course-card">
                 <div class="selected-course-cover-wrap">
-                  <el-image :src="resolveCourseCover(selectedCourse.coverUrl)" fit="cover" class="course-cover">
+                  <el-image :src="resolveCourseCover(selectedCourse.coverUrl)" fit="contain" class="course-cover">
                     <template #error>
                       <img :src="defaultCoverUrl" class="image-fallback" alt="课程封面兜底图" />
                     </template>
@@ -542,7 +542,7 @@ const STORAGE_COURSE_ID = "fp_last_course_id"
 const STORAGE_COURSE_VIEW = "fp_course_workspace_view"
 
 const defaultCoverUrl = import.meta.env.VITE_FALLBACK_IMAGE || "/test.png"
-const staleCoverKeywords = (import.meta.env.VITE_STALE_COVER_KEYWORDS || "127.0.0.1:9000,localhost:9000")
+const staleCoverKeywords = (import.meta.env.VITE_STALE_COVER_KEYWORDS || "127.0.0.1:9000,localhost:9000,127.0.0.1:9010,localhost:9010")
   .split(",")
   .map((item) => item.trim())
   .filter(Boolean)

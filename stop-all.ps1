@@ -28,7 +28,7 @@ if (Test-Path $pidFile) {
     Write-Host "No pid file found, trying port-based stop..."
 }
 
-Get-NetTCPConnection -LocalPort 8080,8081,8082 -State Listen -ErrorAction SilentlyContinue |
+Get-NetTCPConnection -LocalPort 8092,8093,8094 -State Listen -ErrorAction SilentlyContinue |
 Select-Object -ExpandProperty OwningProcess -Unique |
 ForEach-Object { Stop-Process -Id $_ -Force -ErrorAction SilentlyContinue }
 

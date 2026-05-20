@@ -104,8 +104,8 @@ Get-Content ..\\fitness_platform.sql | docker exec -i mysql-container-huang mysq
 
 你现在最适合的方式仍然是：
 
-- `web-admin` 跑在宿主机 `8080`
-- `web-app` 跑在宿主机 `8081`
+- `web-admin` 跑在宿主机 `8092`
+- `web-app` 跑在宿主机 `8093`
 
 Nginx 容器已经通过 `host.docker.internal` 反代到这两个端口。
 
@@ -137,7 +137,7 @@ powershell -ExecutionPolicy Bypass -File start-all.ps1
 
 `files.localhost` 这一层很重要，因为视频和头像的签名 URL 需要一个浏览器可访问的公共域名入口，不能直接写服务器内网地址。
 
-当前模板默认通过 `host.docker.internal:9000` 反代宿主机上的 MinIO 端口。
+当前模板默认通过 `host.docker.internal:9010` 反代宿主机上的 MinIO 端口。
 这样即使你暂时没有把 MySQL / Redis / MinIO 全部纳入 `docker compose` 管理，Nginx 这层也能先稳定跑起来。
 
 ## 对应的后端环境变量

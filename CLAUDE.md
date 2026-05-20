@@ -17,14 +17,14 @@ mvn -B -ntp -pl web/web-admin,web/web-app -am -DskipTests package
 # 安装 common/model 到本地仓库
 mvn -B -ntp -pl common,model -am -DskipTests install
 
-# 启动 web-admin（端口 8080）
+# 启动 web-admin（端口 8092）
 mvn -f web/web-admin/pom.xml -DskipTests spring-boot:run
 
-# 启动 web-app 实例一（端口 8081）
+# 启动 web-app 实例一（端口 8093）
 mvn -f web/web-app/pom.xml -DskipTests spring-boot:run
 
-# 启动 web-app 实例二（端口 8082）
-mvn -f web/web-app/pom.xml -DskipTests spring-boot:run -Dspring-boot.run.arguments="--server.port=8082"
+# 启动 web-app 实例二（端口 8094）
+mvn -f web/web-app/pom.xml -DskipTests spring-boot:run -Dspring-boot.run.arguments="--server.port=8094"
 
 # 指定 profile
 mvn -f web/web-admin/pom.xml -DskipTests spring-boot:run -Dspring-boot.run.arguments="--spring.profiles.active=prod"
@@ -142,13 +142,13 @@ mapper            → 数据访问层，不写业务判断
 
 | 服务 | 地址 |
 |------|------|
-| 管理端后端 | `http://localhost:8080` |
-| 用户端后端实例一 | `http://localhost:8081` |
-| 用户端后端实例二 | `http://localhost:8082` |
+| 管理端后端 | `http://localhost:8092` |
+| 用户端后端实例一 | `http://localhost:8093` |
+| 用户端后端实例二 | `http://localhost:8094` |
 | 管理端前端 | `http://localhost:5173` |
 | 用户端前端 | `http://localhost:5174` |
 | uni-app H5 | `http://localhost:5175` |
-| Nginx 代理 | `http://localhost` |
-| Knife4j Admin | `http://localhost:8080/doc.html` |
-| Knife4j App | `http://localhost:8081/doc.html` |
-| MinIO Console | `http://localhost:9001` |
+| Nginx 代理 | `http://localhost:81` |
+| Knife4j Admin | `http://localhost:8092/doc.html` |
+| Knife4j App | `http://localhost:8093/doc.html` |
+| MinIO Console | `http://localhost:9011` |

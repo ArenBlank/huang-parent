@@ -4,7 +4,7 @@
 
 - k6 v1.7+（`k6 version`）
 - Python 3 + `requests` 模块（`pip install requests`）
-- 项目服务已启动（admin:8080 + app:8081），验证码已禁用
+- 项目服务已启动（admin:8092 + app:8093），验证码已禁用
 
 ## 文件说明
 

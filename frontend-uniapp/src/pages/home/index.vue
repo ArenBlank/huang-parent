@@ -113,19 +113,19 @@
                   <image class="promo-arrow" :src="icons.chevronRight" mode="aspectFit" />
                 </view>
               </view>
-              <image
-                v-if="banner.image && !failedBannerImages[banner.key]"
-                class="promo-image"
-                :src="banner.image"
-                mode="aspectFill"
-                @error="markBannerImageFailed(banner.key)"
-              />
-              <view v-else class="promo-image-fallback">
-                <image :src="icons.bullhorn" mode="aspectFit" />
-                <text>活动</text>
+              <view class="promo-visual">
+                <image
+                  v-if="banner.image && !failedBannerImages[banner.key]"
+                  class="promo-image"
+                  :src="banner.image"
+                  mode="aspectFit"
+                  @error="markBannerImageFailed(banner.key)"
+                />
+                <view v-else class="promo-image-fallback">
+                  <image :src="icons.bullhorn" mode="aspectFit" />
+                  <text>活动</text>
+                </view>
               </view>
-              <view class="promo-mountain promo-mountain--one"></view>
-              <view class="promo-mountain promo-mountain--two"></view>
             </view>
           </swiper-item>
         </swiper>
@@ -414,7 +414,7 @@ const resolveBannerTarget = (value) => {
   const raw = String(value || '').trim()
   if (!raw) return ''
   const planMatch = raw.match(/^\/app\/plan\/(\d+)$/)
-  if (planMatch) return `/pages/plan-detail/index?id=${planMatch[1]}`
+  if (planMatch) return '/pages/plans/index'
   if (/^\/app\/course/.test(raw)) return '/pages/courses/index'
   if (/^\/app\/booking/.test(raw)) return '/pages/booking/index'
   if (/^\/app\/order/.test(raw)) return '/pages/orders/index'
@@ -1095,14 +1095,16 @@ onShow(() => {
 }
 
 .promo-swiper {
-  height: 214rpx;
+  height: 230rpx;
   overflow: hidden;
   border-radius: 30rpx;
 }
 
 .promo-card {
   position: relative;
-  height: 214rpx;
+  display: grid;
+  grid-template-columns: 1fr 200rpx;
+  height: 230rpx;
   overflow: hidden;
   border: 7rpx solid #ffffff;
   border-radius: 30rpx;
@@ -1114,8 +1116,12 @@ onShow(() => {
 
 .promo-copy {
   position: relative;
-  z-index: 4;
-  padding: 33rpx 220rpx 0 80rpx;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 24rpx 8rpx 24rpx 34rpx;
+  min-width: 0;
 }
 
 .promo-kicker {
@@ -1136,7 +1142,7 @@ onShow(() => {
   margin-top: 8rpx;
   overflow: hidden;
   color: #24104f;
-  font-size: 35rpx;
+  font-size: 32rpx;
   font-weight: 900;
   line-height: 1.15;
   text-overflow: ellipsis;
@@ -1149,10 +1155,10 @@ onShow(() => {
 
 .promo-sub {
   display: block;
-  margin-top: 16rpx;
+  margin-top: 10rpx;
   overflow: hidden;
   color: #24104f;
-  font-size: 29rpx;
+  font-size: 23rpx;
   font-weight: 800;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1171,7 +1177,7 @@ onShow(() => {
   gap: 9rpx;
   width: 152rpx;
   height: 48rpx;
-  margin-top: 16rpx;
+  margin-top: 12rpx;
   border: 3rpx solid #24104f;
   border-radius: 999rpx;
   background: #fff9d8;
@@ -1189,21 +1195,20 @@ onShow(() => {
   height: 18rpx;
 }
 
+.promo-visual {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18rpx 16rpx 18rpx 0;
+}
+
 .promo-image {
-  position: absolute;
-  top: 0;
-  right: 0;
-  z-index: 3;
-  width: 238rpx;
+  width: 100%;
   height: 100%;
-  opacity: 0.9;
+  border-radius: 20rpx;
 }
 
 .promo-image-fallback {
-  position: absolute;
-  top: 34rpx;
-  right: 52rpx;
-  z-index: 3;
   display: grid;
   width: 128rpx;
   height: 128rpx;
@@ -1223,27 +1228,6 @@ onShow(() => {
   color: #24104f;
   font-size: 24rpx;
   font-weight: 900;
-}
-
-.promo-mountain {
-  position: absolute;
-  z-index: 1;
-  right: 12rpx;
-  bottom: -8rpx;
-  border-radius: 50% 50% 0 0;
-  background: rgba(125, 92, 222, 0.28);
-}
-
-.promo-mountain--one {
-  width: 265rpx;
-  height: 90rpx;
-}
-
-.promo-mountain--two {
-  right: 170rpx;
-  width: 150rpx;
-  height: 58rpx;
-  background: rgba(255, 225, 216, 0.32);
 }
 
 .runner {

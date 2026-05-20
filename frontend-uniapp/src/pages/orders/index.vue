@@ -906,6 +906,9 @@ button::after {
 }
 
 .pay-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   min-width: 146rpx;
   min-height: 58rpx;
   border-radius: 999rpx;

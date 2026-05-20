@@ -18,7 +18,8 @@ powershell -ExecutionPolicy Bypass -File .\stop-all.ps1
 powershell -ExecutionPolicy Bypass -File .\start-all.ps1
 
 # 查看 / 关闭 admin/app（先整段执行一次，后面直接用 shw / khw）
-$HuangWebPorts = 8080,8081,8083,8084
+cd D:\DevelopmentLOOK\Idea\idea_project_workspace\huang-parent
+$HuangWebPorts = 8092,8093,8094
 $HuangWebPatterns = @(
   'com\.huang\.web\.app\.AppWebApplication',
   'com\.huang\.web\.admin\.AdminWebApplication',

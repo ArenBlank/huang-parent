@@ -1,7 +1,7 @@
 import { defineConfig } from 'vite'
 import uni from '@dcloudio/vite-plugin-uni'
 
-const appProxyTarget = process.env.VITE_DEV_APP_PROXY || 'http://127.0.0.1:8081'
+const appProxyTarget = process.env.VITE_DEV_APP_PROXY || 'http://127.0.0.1:8093'
 
 export default defineConfig({
   plugins: [uni()],
@@ -11,6 +11,15 @@ export default defineConfig({
     proxy: {
       '/app': appProxyTarget,
       '/minio': appProxyTarget
+    }
+  },
+  build: {
+    target: 'es2015',
+    cssTarget: 'chrome61',
+    rollupOptions: {
+      output: {
+        manualChunks: undefined
+      }
     }
   }
 })

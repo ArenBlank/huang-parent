@@ -99,7 +99,7 @@
       </view>
       <view class="todo-main">
         <view class="coach-avatar">
-          <image v-if="resolveCoachPhoto(lastBooking)" :src="resolveCoachPhoto(lastBooking)" mode="aspectFill" />
+          <image v-if="resolveCoachPhoto(lastBooking)" :src="resolveCoachPhoto(lastBooking)" mode="aspectFit" />
           <text v-else>{{ coachInitial(lastBooking.coachId) }}</text>
         </view>
         <view class="todo-info">
@@ -158,7 +158,7 @@
           @click="selectSchedule(row)"
         >
           <view class="coach-avatar small">
-            <image v-if="resolveCoachPhoto(row)" :src="resolveCoachPhoto(row)" mode="aspectFill" />
+            <image v-if="resolveCoachPhoto(row)" :src="resolveCoachPhoto(row)" mode="aspectFit" />
             <text v-else>{{ coachInitial(row.coachId) }}</text>
           </view>
           <view class="schedule-info">

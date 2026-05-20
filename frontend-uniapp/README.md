@@ -9,7 +9,7 @@ npm install
 npm run dev:h5
 ```
 
-默认 H5 地址：`http://localhost:5175`。开发代理：`/app -> http://127.0.0.1:8081`。
+默认 H5 地址：`http://localhost:5175`。开发代理：`/app -> http://127.0.0.1:8093`。
 
 ## 构建
 

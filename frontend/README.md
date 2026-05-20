@@ -12,9 +12,9 @@
    ```
 
 默认访问地址：`http://localhost:5173/`  
-代理转发：`/admin -> http://localhost:8080`，`/app -> http://localhost:8081`
+代理转发：`/admin -> http://localhost:8092`，`/app -> http://localhost:8093`
 
-> 如提示 `无法连接后端`，请确认 `web-admin` 已启动在 8080。
+> 如提示 `无法连接后端`，请确认 `web-admin` 已启动在 8092。
 
 ## 登录
 建议账号：`root_admin`  

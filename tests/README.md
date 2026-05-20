@@ -2,10 +2,10 @@
 
 ## 1. 准备
 - 确保中间件与服务已启动：
-  - admin: `http://localhost:8080`
-  - app-1: `http://localhost:8081`
-  - app-2: `http://localhost:8082`
-  - nginx app entry: `http://app.localhost`
+  - admin: `http://localhost:8092`
+  - app-1: `http://localhost:8093`
+  - app-2: `http://localhost:8094`
+  - nginx app entry: `http://app.localhost:81`
 - 如果本机还没配置 `app.localhost` / `admin.localhost` 到 `127.0.0.1`：
   - 辅助脚本可直接走 `http://localhost`，再带 `Host` 头模拟域名转发
   - 也可以在系统 `hosts` 中添加

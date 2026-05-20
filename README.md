@@ -62,9 +62,9 @@
 ```mermaid
 graph LR
     Client[App Client / Admin Client] --> Nginx[Nginx]
-    Client --> Admin[web-admin 8080]
-    Nginx --> App1[web-app 8081]
-    Nginx --> App2[web-app 8082]
+    Client --> Admin[web-admin 8092]
+    Nginx --> App1[web-app 8093]
+    Nginx --> App2[web-app 8094]
     App1 --> Redis[Redis]
     App2 --> Redis
     Admin --> Redis
@@ -80,18 +80,18 @@ graph LR
 
 - App / Admin Client
 - App 请求先进入 `Nginx`
-- `Nginx` 轮询转发到 `web-app:8081`
-- `Nginx` 轮询转发到 `web-app:8082`
-- Admin 请求直接进入 `web-admin:8080`
-- `web-app:8081`、`web-app:8082`、`web-admin:8080` 共同访问：
+- `Nginx` 轮询转发到 `web-app:8093`
+- `Nginx` 轮询转发到 `web-app:8094`
+- Admin 请求直接进入 `web-admin:8092`
+- `web-app:8093`、`web-app:8094`、`web-admin:8092` 共同访问：
 - `Redis`
 - `MySQL`
 - `MinIO`
 
 ### 部署形态
 
-- `web-admin`：单实例，默认端口 `8080`
-- `web-app`：支持双实例，默认端口 `8081` / `8082`
+- `web-admin`：单实例，默认端口 `8092`
+- `web-app`：支持双实例，默认端口 `8093` / `8094`
 - `Nginx`：通过 `upstream` 轮询转发到两个 `web-app` 实例
 - 认证方式：JWT 无状态认证，不依赖会话粘滞
 
@@ -236,12 +236,12 @@ powershell -ExecutionPolicy Bypass -File tests/reset-test-data.ps1
 
 ### 3. 常用本地地址
 
-- 管理端 后端：`http://localhost:8080`
-- 用户端 后端实例一：`http://localhost:8081`
-- 用户端 后端实例二：`http://localhost:8082`
+- 管理端 后端：`http://localhost:8092`
+- 用户端 后端实例一：`http://localhost:8093`
+- 用户端 后端实例二：`http://localhost:8094`
 - 管理端 前端：`http://localhost:5173`
 - 用户端 前端：`http://localhost:5174`
-- Nginx：`http://localhost`
+- Nginx：`http://localhost:81`
 
 ### 4. 双实例验证
 

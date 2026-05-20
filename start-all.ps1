@@ -172,9 +172,9 @@ function Resolve-EnvValue {
 }
 
 Write-Host "[0/4] Cleaning stale local listeners..." -ForegroundColor Cyan
-Stop-ListeningProcess -Port 8080
-Stop-ListeningProcess -Port 8081
-Stop-ListeningProcess -Port 8082
+Stop-ListeningProcess -Port 8092
+Stop-ListeningProcess -Port 8093
+Stop-ListeningProcess -Port 8094
 
 $llmApiKey = Resolve-EnvValue -Name "LLM_API_KEY"
 $llmBaseUrl = Resolve-EnvValue -Name "LLM_BASE_URL" -DefaultValue "https://api.deepseek.com"
@@ -196,18 +196,25 @@ Write-Host "[2/4] Building shared modules..." -ForegroundColor Cyan
 mvn -pl common,model -am -DskipTests install
 mvn -pl web/web-admin,web/web-app -am -DskipTests compile
 
-Write-Host "[3/4] Starting web-admin (8080)..." -ForegroundColor Cyan
-$adminProc = Start-Process powershell -ArgumentList "-NoExit", "-Command", "`$env:ADMIN_PORT='8080'; Set-Location '$root'; mvn -f web/web-admin/pom.xml -DskipTests spring-boot:run" -PassThru
+$DB_URL = "jdbc:mysql://127.0.0.1:3307/fitness_platform?useUnicode=true&characterEncoding=utf-8&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=GMT%2b8"
+$REDIS_PORT = "6380"
+$MINIO_ENDPOINT = "http://127.0.0.1:9010"
 
-Write-Host "[4/4] Starting web-app instance-1 (8081)..." -ForegroundColor Cyan
-$appProc1 = Start-Process powershell -ArgumentList "-NoExit", "-Command", "`$env:APP_PORT='8081'; Set-Location '$root'; mvn -f web/web-app/pom.xml -DskipTests spring-boot:run" -PassThru
+Write-Host "[3/4] Starting web-admin (8092)..." -ForegroundColor Cyan
+$adminProc = Start-Process powershell -ArgumentList "-NoExit", "-Command",
+  "`$env:DB_URL='$DB_URL'; `$env:REDIS_PORT='$REDIS_PORT'; `$env:MINIO_ENDPOINT='$MINIO_ENDPOINT'; `$env:ADMIN_PORT='8092'; Set-Location '$root'; mvn -f web/web-admin/pom.xml -DskipTests spring-boot:run" -PassThru
 
-Write-Host "[4/4] Starting web-app instance-2 (8082)..." -ForegroundColor Cyan
-$appProc2 = Start-Process powershell -ArgumentList "-NoExit", "-Command", "`$env:APP_PORT='8082'; Set-Location '$root'; mvn -f web/web-app/pom.xml -DskipTests spring-boot:run" -PassThru
+Write-Host "[4/4] Starting web-app instance-1 (8093)..." -ForegroundColor Cyan
+$appProc1 = Start-Process powershell -ArgumentList "-NoExit", "-Command",
+  "`$env:DB_URL='$DB_URL'; `$env:REDIS_PORT='$REDIS_PORT'; `$env:MINIO_ENDPOINT='$MINIO_ENDPOINT'; `$env:APP_PORT='8093'; Set-Location '$root'; mvn -f web/web-app/pom.xml -DskipTests spring-boot:run" -PassThru
 
-$adminJavaPid = Wait-PortReady -Port 8080 -Label "web-admin"
-$appJavaPid1 = Wait-PortReady -Port 8081 -Label "web-app instance-1"
-$appJavaPid2 = Wait-PortReady -Port 8082 -Label "web-app instance-2"
+Write-Host "[4/4] Starting web-app instance-2 (8094)..." -ForegroundColor Cyan
+$appProc2 = Start-Process powershell -ArgumentList "-NoExit", "-Command",
+  "`$env:DB_URL='$DB_URL'; `$env:REDIS_PORT='$REDIS_PORT'; `$env:MINIO_ENDPOINT='$MINIO_ENDPOINT'; `$env:APP_PORT='8094'; Set-Location '$root'; mvn -f web/web-app/pom.xml -DskipTests spring-boot:run" -PassThru
+
+$adminJavaPid = Wait-PortReady -Port 8092 -Label "web-admin"
+$appJavaPid1 = Wait-PortReady -Port 8093 -Label "web-app instance-1"
+$appJavaPid2 = Wait-PortReady -Port 8094 -Label "web-app instance-2"
 
 $pidFile = Join-Path $runDir "pids.json"
 @{
@@ -221,6 +228,7 @@ $pidFile = Join-Path $runDir "pids.json"
 } | ConvertTo-Json | Set-Content -Encoding UTF8 $pidFile
 
 Write-Host "Done." -ForegroundColor Green
-Write-Host "web-admin: http://localhost:8080"
-Write-Host "web-app-1: http://localhost:8081"
-Write-Host "web-app-2: http://localhost:8082"
+Write-Host "web-admin: http://localhost:8092"
+Write-Host "web-app-1: http://localhost:8093"
+Write-Host "web-app-2: http://localhost:8094"
+Write-Host "Nginx:    http://localhost:81"

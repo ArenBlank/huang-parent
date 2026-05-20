@@ -100,7 +100,7 @@
         </view>
 
         <view v-if="selectedCourse" class="selected-course">
-          <image class="selected-cover" :src="resolveCourseCover(selectedCourse.coverUrl)" mode="aspectFill" />
+          <image class="selected-cover" :src="resolveCourseCover(selectedCourse.coverUrl)" mode="aspectFit" />
           <view class="selected-main">
             <text class="selected-title">{{ selectedCourse.title || `课程 ${selectedCourse.id}` }}</text>
             <text class="selected-summary">{{ selectedCourse.summary || '暂无课程简介，可继续查看下方排期。' }}</text>
@@ -214,13 +214,13 @@
 
         <view v-else class="course-list">
           <button
-            v-for="course in filteredCourses"
+            v-for="course in pagedCourses"
             :key="course.id"
             class="course-card"
             :class="{ active: selectedCourse?.id === course.id }"
             @click="selectCourse(course)"
           >
-            <image class="course-cover" :src="resolveCourseCover(course.coverUrl)" mode="aspectFill" />
+            <image class="course-cover" :src="resolveCourseCover(course.coverUrl)" mode="aspectFit" />
             <view class="course-main">
               <view class="course-top">
                 <text class="course-title">{{ course.title || `课程 ${course.id}` }}</text>
@@ -236,6 +236,11 @@
             </view>
             <image class="card-chevron" :src="icons.right" mode="aspectFit" />
           </button>
+        </view>
+        <view v-if="filteredCourses.length > coursePageSize" class="pagination-bar">
+          <button class="page-button" :disabled="safeCoursePage <= 1" @click="prevCoursePage">上一页</button>
+          <text class="page-count">{{ safeCoursePage }} / {{ courseTotalPages }}</text>
+          <button class="page-button" :disabled="safeCoursePage >= courseTotalPages" @click="nextCoursePage">下一页</button>
         </view>
       </view>
 
@@ -310,7 +315,7 @@
         <view v-else class="itinerary-list">
           <view v-for="item in pagedMySchedules" :key="item.enrollmentId || item.id" class="itinerary-card">
             <view class="itinerary-left">
-              <image class="itinerary-cover" :src="resolveCourseCover(item.coverUrl)" mode="aspectFill" />
+              <image class="itinerary-cover" :src="resolveCourseCover(item.coverUrl)" mode="aspectFit" />
               <view class="itinerary-label">
                 <image class="itinerary-label-icon" :src="icons.qrcode" mode="aspectFit" />
                 <text>我的待上课</text>
@@ -442,7 +447,7 @@ import {
   faRotateRight,
   faUser
 } from '@fortawesome/free-solid-svg-icons'
-import { computed, nextTick, ref } from 'vue'
+import { computed, nextTick, ref, watch } from 'vue'
 import { onHide, onShow } from '@dcloudio/uni-app'
 import {
   cancelUnpaidCourse,
@@ -524,6 +529,8 @@ const refunding = ref(false)
 const refundVisible = ref(false)
 const refundReason = ref('')
 const courseKeyword = ref('')
+const coursePageSize = 3
+const coursePage = ref(1)
 const mySchedulePageSize = 2
 const enrollmentPageSize = 3
 const mySchedulePage = ref(1)
@@ -563,6 +570,12 @@ const filteredCourses = computed(() => {
     ].filter(Boolean).join(' ').toLowerCase()
     return haystack.includes(keyword)
   })
+})
+const courseTotalPages = computed(() => Math.max(1, Math.ceil(filteredCourses.value.length / coursePageSize)))
+const safeCoursePage = computed(() => Math.min(Math.max(coursePage.value, 1), courseTotalPages.value))
+const pagedCourses = computed(() => {
+  const start = (safeCoursePage.value - 1) * coursePageSize
+  return filteredCourses.value.slice(start, start + coursePageSize)
 })
 
 const courseMap = computed(() => {
@@ -620,7 +633,7 @@ const getTargetLabel = (value) => {
 
 const resolveCourseCover = (value) => {
   const url = String(value || '').trim()
-  if (!url || url.includes('127.0.0.1:9000') || url.includes('localhost:9000')) return defaultCoverUrl
+  if (!url || url.includes('127.0.0.1:9000') || url.includes('localhost:9000') || url.includes('127.0.0.1:9010') || url.includes('localhost:9010')) return defaultCoverUrl
   return url
 }
 
@@ -628,6 +641,23 @@ const parseCourseId = (value) => {
   if (value === null || value === undefined || value === '') return null
   const parsed = Number(value)
   return Number.isFinite(parsed) ? parsed : null
+}
+
+const syncCoursePage = (courseId = selectedCourse.value?.id) => {
+  if (!filteredCourses.value.length) {
+    coursePage.value = 1
+    return
+  }
+  if (!courseId) {
+    coursePage.value = Math.min(coursePage.value, courseTotalPages.value)
+    return
+  }
+  const index = filteredCourses.value.findIndex((item) => Number(item.id) === Number(courseId))
+  if (index === -1) {
+    coursePage.value = Math.min(coursePage.value, courseTotalPages.value)
+    return
+  }
+  coursePage.value = Math.floor(index / coursePageSize) + 1
 }
 
 const selectPreferredCourse = async () => {
@@ -640,6 +670,7 @@ const selectPreferredCourse = async () => {
   const cached = parseCourseId(uni.getStorageSync(STORAGE_COURSE_ID))
   const preferred = (cached !== null && courses.value.find((item) => Number(item.id) === cached)) || courses.value[0]
   await selectCourse(preferred, false)
+  syncCoursePage(preferred.id)
 }
 
 const loadCourses = async () => {
@@ -649,7 +680,10 @@ const loadCourses = async () => {
     courses.value = normalizeList(payload)
     if (!selectedCourse.value || !courses.value.some((item) => Number(item.id) === Number(selectedCourse.value.id))) {
       await selectPreferredCourse()
+    } else {
+      syncCoursePage(selectedCourse.value.id)
     }
+    coursePage.value = Math.min(coursePage.value, courseTotalPages.value)
   } finally {
     loading.value = false
   }
@@ -823,9 +857,18 @@ const refundLast = async () => {
 
 const switchView = (mode) => {
   viewMode.value = mode
+  coursePage.value = 1
   mySchedulePage.value = 1
   enrollmentPage.value = 1
   uni.setStorageSync(STORAGE_COURSE_VIEW, mode)
+}
+
+const prevCoursePage = () => {
+  coursePage.value = Math.max(1, safeCoursePage.value - 1)
+}
+
+const nextCoursePage = () => {
+  coursePage.value = Math.min(courseTotalPages.value, safeCoursePage.value + 1)
 }
 
 const prevMySchedulePage = () => {
@@ -1003,6 +1046,10 @@ onShow(() => {
 
 onHide(() => {
   showTabBarSafely()
+})
+
+watch(courseKeyword, () => {
+  coursePage.value = 1
 })
 </script>
 
