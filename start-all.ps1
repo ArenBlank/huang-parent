@@ -199,18 +199,19 @@ mvn -pl web/web-admin,web/web-app -am -DskipTests compile
 $DB_URL = "jdbc:mysql://127.0.0.1:3307/fitness_platform?useUnicode=true&characterEncoding=utf-8&useSSL=false&allowPublicKeyRetrieval=true&serverTimezone=GMT%2b8"
 $REDIS_PORT = "6380"
 $MINIO_ENDPOINT = "http://127.0.0.1:9010"
+$MINIO_PUBLIC_ENDPOINT = "https://smartfitness.vip.cpolar.cn/minio"
 
 Write-Host "[3/4] Starting web-admin (8092)..." -ForegroundColor Cyan
 $adminProc = Start-Process powershell -ArgumentList "-NoExit", "-Command",
-  "`$env:DB_URL='$DB_URL'; `$env:REDIS_PORT='$REDIS_PORT'; `$env:MINIO_ENDPOINT='$MINIO_ENDPOINT'; `$env:ADMIN_PORT='8092'; Set-Location '$root'; mvn -f web/web-admin/pom.xml -DskipTests spring-boot:run" -PassThru
+  "`$env:DB_URL='$DB_URL'; `$env:REDIS_PORT='$REDIS_PORT'; `$env:MINIO_ENDPOINT='$MINIO_ENDPOINT'; `$env:MINIO_PUBLIC_ENDPOINT='$MINIO_PUBLIC_ENDPOINT'; `$env:ADMIN_PORT='8092'; Set-Location '$root'; mvn -f web/web-admin/pom.xml -DskipTests spring-boot:run" -PassThru
 
 Write-Host "[4/4] Starting web-app instance-1 (8093)..." -ForegroundColor Cyan
 $appProc1 = Start-Process powershell -ArgumentList "-NoExit", "-Command",
-  "`$env:DB_URL='$DB_URL'; `$env:REDIS_PORT='$REDIS_PORT'; `$env:MINIO_ENDPOINT='$MINIO_ENDPOINT'; `$env:APP_PORT='8093'; Set-Location '$root'; mvn -f web/web-app/pom.xml -DskipTests spring-boot:run" -PassThru
+  "`$env:DB_URL='$DB_URL'; `$env:REDIS_PORT='$REDIS_PORT'; `$env:MINIO_ENDPOINT='$MINIO_ENDPOINT'; `$env:MINIO_PUBLIC_ENDPOINT='$MINIO_PUBLIC_ENDPOINT'; `$env:APP_PORT='8093'; Set-Location '$root'; mvn -f web/web-app/pom.xml -DskipTests spring-boot:run" -PassThru
 
 Write-Host "[4/4] Starting web-app instance-2 (8094)..." -ForegroundColor Cyan
 $appProc2 = Start-Process powershell -ArgumentList "-NoExit", "-Command",
-  "`$env:DB_URL='$DB_URL'; `$env:REDIS_PORT='$REDIS_PORT'; `$env:MINIO_ENDPOINT='$MINIO_ENDPOINT'; `$env:APP_PORT='8094'; Set-Location '$root'; mvn -f web/web-app/pom.xml -DskipTests spring-boot:run" -PassThru
+  "`$env:DB_URL='$DB_URL'; `$env:REDIS_PORT='$REDIS_PORT'; `$env:MINIO_ENDPOINT='$MINIO_ENDPOINT'; `$env:MINIO_PUBLIC_ENDPOINT='$MINIO_PUBLIC_ENDPOINT'; `$env:APP_PORT='8094'; Set-Location '$root'; mvn -f web/web-app/pom.xml -DskipTests spring-boot:run" -PassThru
 
 $adminJavaPid = Wait-PortReady -Port 8092 -Label "web-admin"
 $appJavaPid1 = Wait-PortReady -Port 8093 -Label "web-app instance-1"

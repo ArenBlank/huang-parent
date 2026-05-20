@@ -202,7 +202,7 @@ import {
   faVolumeHigh
 } from '@fortawesome/free-solid-svg-icons'
 import { computed, reactive, ref } from 'vue'
-import { onShow } from '@dcloudio/uni-app'
+import { onLoad, onShow } from '@dcloudio/uni-app'
 import { listBanners, listNotices } from '../../api/modules/content'
 import { listMyCourseSchedules, listMyEnrollments } from '../../api/modules/course'
 import { listOrders } from '../../api/modules/order'
@@ -487,10 +487,16 @@ const loadHome = async () => {
       delete failedBannerImages[key]
     })
     bannerIndex.value = 0
-  } catch (_) {
-    // request layer has shown the toast; mock values keep the UI usable.
+  } catch (e) {
+    console.error('loadHome failed:', e)
   }
 }
+
+onLoad(() => {
+  if (ensureLogin()) {
+    loadHome()
+  }
+})
 
 onShow(() => {
   hideTabBarSafely()

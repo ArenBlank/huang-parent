@@ -14,8 +14,8 @@ mvn -pl common,model -am -DskipTests install
 Start-Process powershell -ArgumentList '-NoExit','-Command','mvn -f web/web-admin/pom.xml spring-boot:run'
 Start-Process powershell -ArgumentList '-NoExit','-Command','mvn -f web/web-app/pom.xml spring-boot:run'
 
-powershell -ExecutionPolicy Bypass -File .\stop-all.ps1
 powershell -ExecutionPolicy Bypass -File .\start-all.ps1
+powershell -ExecutionPolicy Bypass -File .\stop-all.ps1
 
 # 查看 / 关闭 admin/app（先整段执行一次，后面直接用 shw / khw）
 cd D:\DevelopmentLOOK\Idea\idea_project_workspace\huang-parent
