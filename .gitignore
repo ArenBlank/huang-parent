@@ -63,3 +63,5 @@ common/.run/
 frontend-preview.log
 frontend-app-preview.log
 *.log
+.claude/settings.local.json
+scripts/load-test/data/
