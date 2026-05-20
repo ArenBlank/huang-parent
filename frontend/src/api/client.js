@@ -128,7 +128,8 @@ const handleAdminBusinessCode = async (response) => {
         originalConfig.headers = originalConfig.headers || {}
         originalConfig.headers.Authorization = `Bearer ${nextAccessToken}`
         return adminClient.request(originalConfig)
-      } catch (_) {
+      } catch (e) {
+        console.error('Admin token refresh failed:', e)
         // fall through to logout
       }
     }

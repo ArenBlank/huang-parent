@@ -21,7 +21,8 @@ const parseStoredSession = () => {
       user: parsed?.user || null,
       roles: parsed?.roles || []
     }
-  } catch (_) {
+  } catch (e) {
+    console.error('Failed to parse stored admin session:', e)
     return {
       accessToken: raw,
       refreshToken: '',

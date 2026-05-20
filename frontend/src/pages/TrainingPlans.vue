@@ -250,7 +250,7 @@
               :disabled="uploadingCover"
             >
               <template v-if="planForm.coverUrl">
-                <el-image :src="coverPreviewUrl" fit="cover" class="cover-preview drawer-cover-preview">
+                <el-image :src="coverPreviewUrl" fit="contain" class="cover-preview drawer-cover-preview">
                   <template #error>
                     <img :src="defaultCoverUrl" style="width: 100%; height: 100%; object-fit: cover;" />
                   </template>
