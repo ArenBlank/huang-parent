@@ -82,8 +82,27 @@ public class PlanBizService {
     @Value("${minio.public-endpoint:}")
     private String minioPublicEndpoint;
 
+    private MinioClient publicMinioClient;
+
+    @Value("${minio.access-key:}")
+    private String minioAccessKey;
+
+    @Value("${minio.secret-key:}")
+    private String minioSecretKey;
+
     @Value("${minio.bucket-name:fitness-platform}")
     private String minioBucketName;
+
+    private MinioClient getPublicMinioClient() {
+        if (publicMinioClient == null && minioPublicEndpoint != null && !minioPublicEndpoint.isBlank()
+                && minioAccessKey != null && minioSecretKey != null) {
+            publicMinioClient = MinioClient.builder()
+                    .endpoint(minioPublicEndpoint)
+                    .credentials(minioAccessKey, minioSecretKey)
+                    .build();
+        }
+        return publicMinioClient;
+    }
 
     public PlanBizService(TrainingPlanMapper trainingPlanMapper,
                           TrainingPlanItemMapper trainingPlanItemMapper,
@@ -752,7 +771,8 @@ public class PlanBizService {
 
             if (minioClient != null) {
                 try {
-                    String signed = minioClient.getPresignedObjectUrl(
+                    MinioClient urlClient = getPublicMinioClient() != null ? getPublicMinioClient() : minioClient;
+                    return urlClient.getPresignedObjectUrl(
                             GetPresignedObjectUrlArgs.builder()
                                     .method(Method.GET)
                                     .bucket(minioBucketName)
@@ -760,11 +780,6 @@ public class PlanBizService {
                                     .expiry(2, TimeUnit.HOURS)
                                     .build()
                     );
-                    if (minioPublicEndpoint != null && !minioPublicEndpoint.isBlank()
-                            && minioInternalEndpoint != null && !minioInternalEndpoint.isBlank()) {
-                        return signed.replace(minioInternalEndpoint, minioPublicEndpoint);
-                    }
-                    return signed;
                 } catch (Exception ignored) {
                     // fallback to public path
                 }

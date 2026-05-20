@@ -53,6 +53,7 @@ public class ProfileController {
     private final AppAuthCacheService appAuthCacheService;
     private final MinioClient minioClient;
     private final MinioProperties minioProperties;
+    private MinioClient publicMinioClient;
 
     public ProfileController(UserCoreService userCoreService,
                              UserProfileCoreService userProfileCoreService,
@@ -64,6 +65,19 @@ public class ProfileController {
         this.appAuthCacheService = appAuthCacheService;
         this.minioClient = minioClientProvider.getIfAvailable();
         this.minioProperties = minioProperties;
+    }
+
+    private MinioClient getPublicMinioClient() {
+        if (publicMinioClient == null
+                && StringUtils.hasText(minioProperties.getPublicEndpoint())
+                && StringUtils.hasText(minioProperties.getAccessKey())
+                && StringUtils.hasText(minioProperties.getSecretKey())) {
+            publicMinioClient = MinioClient.builder()
+                    .endpoint(minioProperties.getPublicEndpoint())
+                    .credentials(minioProperties.getAccessKey(), minioProperties.getSecretKey())
+                    .build();
+        }
+        return publicMinioClient != null ? publicMinioClient : minioClient;
     }
 
     @Operation(summary = "Get profile info")
@@ -297,7 +311,8 @@ public class ProfileController {
             return avatar;
         }
         try {
-            String signed = minioClient.getPresignedObjectUrl(
+            MinioClient urlClient = getPublicMinioClient();
+            return urlClient.getPresignedObjectUrl(
                     GetPresignedObjectUrlArgs.builder()
                             .bucket(minioProperties.getBucketName())
                             .object(avatar)
@@ -305,11 +320,6 @@ public class ProfileController {
                             .expiry(30, TimeUnit.MINUTES)
                             .build()
             );
-            if (StringUtils.hasText(minioProperties.getPublicEndpoint())
-                    && StringUtils.hasText(minioProperties.getEndpoint())) {
-                return signed.replace(minioProperties.getEndpoint(), minioProperties.getPublicEndpoint());
-            }
-            return signed;
         } catch (Exception e) {
             log.warn("resolve avatar url failed, object={}", avatar, e);
             return avatar;
