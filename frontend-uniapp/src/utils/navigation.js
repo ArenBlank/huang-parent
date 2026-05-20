@@ -22,6 +22,9 @@ const currentPageUrl = () => {
 const isIgnorableTabBarError = (error) => String(error?.errMsg || '').includes('not TabBar page')
 
 const callTabBarApi = (method) => {
+  if (typeof uni[method] !== 'function') {
+    return
+  }
   const result = uni[method]({
     fail: (error) => {
       if (!isIgnorableTabBarError(error)) {
