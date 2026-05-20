@@ -971,7 +971,7 @@ button::after {
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 50;
+  z-index: 9999;
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   padding: 18rpx 22rpx calc(env(safe-area-inset-bottom) + 28rpx);

@@ -1485,14 +1485,14 @@ onShow(() => {
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 50;
+  z-index: 9999;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   min-height: 137rpx;
   padding: 16rpx 18rpx calc(env(safe-area-inset-bottom) + 23rpx);
   border-width: 5rpx 5rpx 5rpx;
   border-radius: 32rpx 32rpx 0 0;
-  background: rgba(255, 255, 255, 0.96);
+  background: rgba(255, 255, 255, 1);
 }
 
 .tab-item {

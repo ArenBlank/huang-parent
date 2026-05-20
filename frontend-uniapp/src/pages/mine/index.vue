@@ -953,7 +953,7 @@ button::after {
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 50;
+  z-index: 9999;
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
   min-height: 137rpx;

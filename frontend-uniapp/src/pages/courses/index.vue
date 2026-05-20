@@ -1949,14 +1949,14 @@ button::after {
   left: 0;
   right: 0;
   bottom: 0;
-  z-index: 50;
+  z-index: 9999;
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   padding: 18rpx 22rpx calc(env(safe-area-inset-bottom) + 26rpx);
   border: 3rpx solid rgba(139, 99, 255, 0.52);
   border-bottom: 0;
   border-radius: 42rpx 42rpx 0 0;
-  background: rgba(255, 255, 255, 0.95);
+  background: rgba(255, 255, 255, 1);
   box-shadow: 0 -10rpx 26rpx rgba(52, 32, 95, 0.09);
 }
 
