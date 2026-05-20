@@ -227,7 +227,7 @@ public class VideoContentBizService {
     }
 
     private String buildPreviewUrl(String objectPath) throws Exception {
-        return minioClient.getPresignedObjectUrl(
+        String signed = minioClient.getPresignedObjectUrl(
                 GetPresignedObjectUrlArgs.builder()
                         .method(Method.GET)
                         .bucket(minioProperties.getBucketName())
@@ -235,6 +235,11 @@ public class VideoContentBizService {
                         .expiry(2, TimeUnit.HOURS)
                         .build()
         );
+        if (StringUtils.hasText(minioProperties.getPublicEndpoint())
+                && StringUtils.hasText(minioProperties.getEndpoint())) {
+            return signed.replace(minioProperties.getEndpoint(), minioProperties.getPublicEndpoint());
+        }
+        return signed;
     }
 
     private Set<Long> findPlanIdsByVideoId(Long videoId) {

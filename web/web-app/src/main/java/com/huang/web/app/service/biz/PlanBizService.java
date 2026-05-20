@@ -76,6 +76,9 @@ public class PlanBizService {
     private final MultiLevelCacheSupport multiLevelCacheSupport;
     private final PersonalTrainerAi personalTrainerAi;
 
+    @Value("${minio.endpoint:}")
+    private String minioInternalEndpoint;
+
     @Value("${minio.public-endpoint:}")
     private String minioPublicEndpoint;
 
@@ -749,7 +752,7 @@ public class PlanBizService {
 
             if (minioClient != null) {
                 try {
-                    return minioClient.getPresignedObjectUrl(
+                    String signed = minioClient.getPresignedObjectUrl(
                             GetPresignedObjectUrlArgs.builder()
                                     .method(Method.GET)
                                     .bucket(minioBucketName)
@@ -757,6 +760,11 @@ public class PlanBizService {
                                     .expiry(2, TimeUnit.HOURS)
                                     .build()
                     );
+                    if (minioPublicEndpoint != null && !minioPublicEndpoint.isBlank()
+                            && minioInternalEndpoint != null && !minioInternalEndpoint.isBlank()) {
+                        return signed.replace(minioInternalEndpoint, minioPublicEndpoint);
+                    }
+                    return signed;
                 } catch (Exception ignored) {
                     // fallback to public path
                 }

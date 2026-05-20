@@ -297,7 +297,7 @@ public class ProfileController {
             return avatar;
         }
         try {
-            return minioClient.getPresignedObjectUrl(
+            String signed = minioClient.getPresignedObjectUrl(
                     GetPresignedObjectUrlArgs.builder()
                             .bucket(minioProperties.getBucketName())
                             .object(avatar)
@@ -305,6 +305,11 @@ public class ProfileController {
                             .expiry(30, TimeUnit.MINUTES)
                             .build()
             );
+            if (StringUtils.hasText(minioProperties.getPublicEndpoint())
+                    && StringUtils.hasText(minioProperties.getEndpoint())) {
+                return signed.replace(minioProperties.getEndpoint(), minioProperties.getPublicEndpoint());
+            }
+            return signed;
         } catch (Exception e) {
             log.warn("resolve avatar url failed, object={}", avatar, e);
             return avatar;
