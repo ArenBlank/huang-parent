@@ -570,7 +570,8 @@ const loadOverview = async (options = {}) => {
     itemPage.value = 1
     const targetId = preferredId || overview.value.currentPlanId
     await syncSelectedPlan(targetId, nextTab)
-  } catch (_) {
+  } catch (e) {
+    console.error('loadOverview failed:', e)
     selected.value = null
   } finally {
     syncingTab.value = false

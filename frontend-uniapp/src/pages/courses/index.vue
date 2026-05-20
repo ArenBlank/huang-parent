@@ -735,7 +735,11 @@ const loadMySchedules = async () => {
 }
 
 const refreshWorkspace = async () => {
-  await Promise.all([loadCourses(), loadEnrollments(), loadMySchedules()])
+  await Promise.all([
+    loadCourses().catch(e => console.error(e)),
+    loadEnrollments().catch(e => console.error(e)),
+    loadMySchedules().catch(e => console.error(e))
+  ])
 }
 
 const toRecentEnrollment = (item) => {

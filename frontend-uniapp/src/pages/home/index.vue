@@ -449,17 +449,16 @@ const openBanner = (banner) => {
 }
 
 const loadHome = async () => {
-  try {
-    await store.fetchProfile()
-    const [planOverview, enrollmentsPayload, schedulesPayload, weekly, orders, bannerPayload, noticePayload] = await Promise.all([
-      fetchPlanOverview(),
-      listMyEnrollments(),
-      listMyCourseSchedules(),
-      getWeeklyStat(),
-      listOrders({ limit: 50 }),
-      listBanners(),
-      listNotices({ limit: 5 })
+  const [planOverview, enrollmentsPayload, schedulesPayload, weekly, orders, bannerPayload, noticePayload] = await Promise.all([
+      fetchPlanOverview().catch(e => (console.error(e), null)),
+      listMyEnrollments().catch(e => (console.error(e), null)),
+      listMyCourseSchedules().catch(e => (console.error(e), null)),
+      getWeeklyStat().catch(e => (console.error(e), null)),
+      listOrders({ limit: 50 }).catch(e => (console.error(e), null)),
+      listBanners().catch(e => (console.error(e), null)),
+      listNotices({ limit: 5 }).catch(e => (console.error(e), null))
     ])
+    store.fetchProfile().catch(e => console.error('fetchProfile failed:', e))
 
     const myPlans = Array.isArray(planOverview?.data?.myPlans) ? planOverview.data.myPlans : []
     const enrollmentList = normalizeList(enrollmentsPayload)
@@ -487,9 +486,6 @@ const loadHome = async () => {
       delete failedBannerImages[key]
     })
     bannerIndex.value = 0
-  } catch (e) {
-    console.error('loadHome failed:', e)
-  }
 }
 
 onLoad(() => {
