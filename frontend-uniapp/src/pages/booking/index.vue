@@ -931,7 +931,7 @@ onHide(() => {
 <style scoped lang="scss">
 .booking-page {
   min-height: 100vh;
-  padding: calc(var(--status-bar-height) + 28rpx) 28rpx 48rpx;
+  padding: calc(var(--status-bar-height) + 28rpx) 28rpx 206rpx;
   overflow-x: hidden;
   background:
     radial-gradient(circle at 0% 0%, rgba(139, 99, 255, 0.2), transparent 30%),

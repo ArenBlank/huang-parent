@@ -493,6 +493,10 @@ const loadHome = async () => {
 }
 
 onLoad(() => {
+  const justLoggedIn = uni.getStorageSync('just_logged_in')
+  if (justLoggedIn) {
+    uni.removeStorageSync('just_logged_in')
+  }
   if (ensureLogin()) {
     loadHome()
   }

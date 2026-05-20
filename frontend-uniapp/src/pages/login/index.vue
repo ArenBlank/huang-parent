@@ -264,7 +264,13 @@ const handleCaptchaSuccess = async (captchaVerification) => {
         captchaVerification: form.captchaVerification
       })
     }
-    uni.switchTab({ url: '/pages/home/index' })
+    uni.setStorageSync('just_logged_in', '1')
+    // #ifdef H5
+    window.location.replace('/#/pages/home/index')
+    // #endif
+    // #ifndef H5
+    uni.reLaunch({ url: '/pages/home/index' })
+    // #endif
   } catch (err) {
     uni.showToast({
       title: err?.message || `${mode.value === 'login' ? '登录' : '注册'}失败`,
