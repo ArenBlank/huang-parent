@@ -461,6 +461,7 @@ import {
 } from '../../api/modules/course'
 import { ensureLogin } from '../../utils/authGuard'
 import { hideTabBarSafely, showTabBarSafely } from '../../utils/navigation'
+import { toPublicUrl } from '../../utils/mediaUrl'
 
 const STORAGE_COURSE_ID = 'fp_last_course_id'
 const STORAGE_COURSE_VIEW = 'fp_course_workspace_view'
@@ -631,11 +632,7 @@ const getTargetLabel = (value) => {
   return targetMap[key] || value || '-'
 }
 
-const resolveCourseCover = (value) => {
-  const url = String(value || '').trim()
-  if (!url || url.includes('127.0.0.1:9000') || url.includes('localhost:9000') || url.includes('127.0.0.1:9010') || url.includes('localhost:9010')) return defaultCoverUrl
-  return url
-}
+const resolveCourseCover = (value) => toPublicUrl(value) || defaultCoverUrl
 
 const parseCourseId = (value) => {
   if (value === null || value === undefined || value === '') return null

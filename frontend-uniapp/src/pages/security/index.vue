@@ -39,6 +39,7 @@ import SlPrimaryButton from '../../components/SlPrimaryButton.vue'
 import SlTopBar from '../../components/SlTopBar.vue'
 import { updatePassword } from '../../api/modules/profile'
 import { ensureLogin } from '../../utils/authGuard'
+import { toPublicUrl } from '../../utils/mediaUrl'
 import { useAppAuthStore } from '../../stores/auth'
 
 const faIcon = (definition, color = '#8b63ff') => {
@@ -71,12 +72,7 @@ const accountMeta = computed(() => {
   const email = profile.value?.email ? `邮箱 ${profile.value.email}` : ''
   return phone || email || '登录资料未完善'
 })
-const avatarSrc = computed(() => {
-  const raw = String(profile.value?.avatar || profile.value?.avatarUrl || '').trim()
-  if (!raw) return ''
-  if (/^https?:\/\//.test(raw)) return raw
-  return appBase ? `${appBase}${raw.startsWith('/') ? raw : `/${raw}`}` : raw
-})
+const avatarSrc = computed(() => toPublicUrl(profile.value?.avatar || profile.value?.avatarUrl))
 const avatarFallback = computed(() => String(displayName.value || 'U').slice(0, 1).toUpperCase())
 
 const submit = async () => {

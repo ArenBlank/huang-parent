@@ -372,6 +372,7 @@ import {
   reviewBooking
 } from '../../api/modules/booking'
 import { ensureLogin } from '../../utils/authGuard'
+import { toPublicUrl } from '../../utils/mediaUrl'
 import { hideTabBarSafely, showTabBarSafely } from '../../utils/navigation'
 
 const STORAGE_BOOKING = 'fp_last_booking'
@@ -549,7 +550,7 @@ const coachInitial = (id) => coachDisplayName(id).slice(0, 1)
 
 const resolveCoachPhoto = (row) => {
   const coach = coachOptionMap.value.get(Number(row?.coachId))
-  return coach?.avatar || row?.coachAvatar || row?.avatar || row?.photoUrl || row?.imageUrl || ''
+  return toPublicUrl(coach?.avatar || row?.coachAvatar || row?.avatar || row?.photoUrl || row?.imageUrl)
 }
 
 const coachRating = (row) => {

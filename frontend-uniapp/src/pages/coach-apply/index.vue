@@ -277,6 +277,7 @@ import { storeToRefs } from 'pinia'
 import { applyCoach, getMyCoachApplication } from '../../api/modules/coach'
 import { useAppAuthStore } from '../../stores/auth'
 import { ensureLogin } from '../../utils/authGuard'
+import { toPublicUrl } from '../../utils/mediaUrl'
 import { goBack as backToPrevious } from '../../utils/navigation'
 
 const faIcon = (definition, color = '#24104f') => {
@@ -388,10 +389,7 @@ const displayPrice = computed(() => formatAmount(form.price))
 const submitLabel = computed(() => (applyInfo.value ? '更新申请资料' : '提交申请'))
 
 const profileAvatar = computed(() => {
-  const raw = String(user.value?.avatar || user.value?.avatarUrl || '').trim()
-  if (!raw) return ''
-  if (/^https?:\/\//.test(raw)) return raw
-  return appBase ? `${appBase}${raw.startsWith('/') ? raw : `/${raw}`}` : raw
+  return toPublicUrl(user.value?.avatar || user.value?.avatarUrl)
 })
 
 const setExpertiseTags = (tags) => {

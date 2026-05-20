@@ -211,6 +211,7 @@ import { getWeeklyStat } from '../../api/modules/record'
 import { useAppAuthStore } from '../../stores/auth'
 import { ensureLogin } from '../../utils/authGuard'
 import { hideTabBarSafely, showTabBarSafely } from '../../utils/navigation'
+import { toPublicUrl } from '../../utils/mediaUrl'
 
 const store = useAppAuthStore()
 
@@ -268,12 +269,7 @@ const ageLabel = computed(() => {
   if (Number.isFinite(age) && age > 0) return `${age}岁`
   return '年龄未填'
 })
-const avatarSrc = computed(() => {
-  const raw = String(store.user?.avatar || store.user?.avatarUrl || '').trim()
-  if (!raw) return ''
-  if (/^https?:\/\//.test(raw)) return raw
-  return appBase ? `${appBase}${raw.startsWith('/') ? raw : `/${raw}`}` : raw
-})
+const avatarSrc = computed(() => toPublicUrl(store.user?.avatar || store.user?.avatarUrl))
 const avatarFallback = computed(() => {
   const name = displayName.value || ''
   return name ? name.slice(0, 1).toUpperCase() : 'U'
@@ -395,12 +391,7 @@ const toastLater = () => {
   uni.showToast({ title: '功能完善中', icon: 'none' })
 }
 
-const resolveAssetUrl = (value) => {
-  const raw = String(value || '').trim()
-  if (!raw) return ''
-  if (/^https?:\/\//.test(raw)) return raw
-  return appBase ? `${appBase}${raw.startsWith('/') ? raw : `/${raw}`}` : raw
-}
+const resolveAssetUrl = (value) => toPublicUrl(value)
 
 const onBannerChange = ({ detail }) => {
   bannerIndex.value = Number(detail?.current || 0)

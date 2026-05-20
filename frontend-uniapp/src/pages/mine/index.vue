@@ -164,6 +164,7 @@ import { onHide, onShow } from '@dcloudio/uni-app'
 import { getMyCoachApplication } from '../../api/modules/coach'
 import { getProfile } from '../../api/modules/profile'
 import { ensureLogin } from '../../utils/authGuard'
+import { toPublicUrl } from '../../utils/mediaUrl'
 import { hideTabBarSafely, showTabBarSafely } from '../../utils/navigation'
 import { useAppAuthStore } from '../../stores/auth'
 
@@ -222,12 +223,7 @@ const vipLabel = computed(() => {
   const level = Number(currentProfile.value?.vipLevel || 0)
   return level > 0 ? `LV${level}` : ''
 })
-const avatarSrc = computed(() => {
-  const raw = String(currentProfile.value?.avatar || currentProfile.value?.avatarUrl || '').trim()
-  if (!raw) return ''
-  if (/^https?:\/\//.test(raw)) return raw
-  return appBase ? `${appBase}${raw.startsWith('/') ? raw : `/${raw}`}` : raw
-})
+const avatarSrc = computed(() => toPublicUrl(currentProfile.value?.avatar || currentProfile.value?.avatarUrl))
 const avatarFallback = computed(() => {
   const name = displayName.value || ''
   return name ? name.slice(0, 1).toUpperCase() : 'U'

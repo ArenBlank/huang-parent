@@ -134,6 +134,7 @@ import SlPage from '../../components/SlPage.vue'
 import SlPrimaryButton from '../../components/SlPrimaryButton.vue'
 import { getProfile, updateProfile, uploadAvatar } from '../../api/modules/profile'
 import { ensureLogin } from '../../utils/authGuard'
+import { toPublicUrl } from '../../utils/mediaUrl'
 import { goBack as backToPrevious } from '../../utils/navigation'
 import { useAppAuthStore } from '../../stores/auth'
 
@@ -198,13 +199,7 @@ const genderOptions = [
   { label: '保密', value: 0 }
 ]
 
-const resolveAssetUrl = (value) => {
-  const raw = String(value || '').trim()
-  if (!raw) return ''
-  if (/^https?:\/\//.test(raw)) return raw
-  if (appBase) return `${appBase}${raw.startsWith('/') ? raw : `/${raw}`}`
-  return raw.startsWith('/') ? raw : `/${raw}`
-}
+const resolveAssetUrl = (value) => toPublicUrl(value)
 
 const avatarSrc = computed(() => resolveAssetUrl(profile.value?.avatar || store.user?.avatar || store.user?.avatarUrl))
 const avatarFallback = computed(() => {
