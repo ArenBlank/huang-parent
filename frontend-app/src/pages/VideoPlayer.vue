@@ -287,8 +287,12 @@ onBeforeUnmount(() => {
   width: 100%;
   height: 100%;
   object-fit: contain;
-  outline: none;
   background: #000;
+}
+
+.player-container :deep(video):focus-visible {
+  outline: 2px solid var(--eco-primary);
+  outline-offset: -4px;
 }
 
 .player-side {

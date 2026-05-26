@@ -101,6 +101,8 @@
             class="bio-textarea"
             maxlength="500"
             placeholder="介绍你的训练背景、服务风格和擅长方向"
+            cursor-spacing="100"
+            :adjust-position="false"
           />
           <text class="textarea-count">{{ form.bio.length }}/500</text>
         </view>
@@ -129,6 +131,7 @@
             placeholder="补充领域后点添加"
             confirm-type="done"
             @confirm="addManualExpertise"
+            cursor-spacing="100"
           />
           <button hover-class="none" @click="addManualExpertise">添加</button>
         </view>
@@ -141,7 +144,7 @@
             <button hover-class="none" @click="changeYears(-1)">
               <image :src="icons.minus" mode="aspectFit" />
             </button>
-            <input v-model.number="form.years" type="number" class="number-input" />
+            <input v-model.number="form.years" type="number" class="number-input" cursor-spacing="100" />
             <text>年</text>
             <button hover-class="none" @click="changeYears(1)">
               <image :src="icons.plus" mode="aspectFit" />
@@ -153,7 +156,7 @@
           <text class="field-label">课时价格</text>
           <view class="price-input">
             <text>¥</text>
-            <input v-model.number="form.price" type="digit" placeholder="199" />
+            <input v-model.number="form.price" type="digit" placeholder="199" cursor-spacing="100" />
             <text>/节</text>
           </view>
           <text class="field-tip">建议参考市场价设置合理价格</text>

@@ -1,13 +1,13 @@
 # k6 压测报告 — 双实例 + Nginx 代理
 
-> 2026-05-07 | k6 v1.7.1 | k6 → Nginx(:80) → web-app:8081 + web-app:8082
+> 2026-05-07 | k6 v1.7.1 | k6 → Nginx(:80) → web-app:8093 + web-app:8094
 
 ## 拓扑
 
 ```
 k6 → Nginx(:80, round-robin)
-         ├── web-app:8081 (HikariCP=12, Tomcat=200)
-         └── web-app:8082 (HikariCP=12, Tomcat=200)
+         ├── web-app:8093 (HikariCP=12, Tomcat=200)
+         └── web-app:8094 (HikariCP=12, Tomcat=200)
                 ├── Redis ← 限流/幂等/缓存
                 └── MySQL ← 条件更新 + 唯一索引
 ```

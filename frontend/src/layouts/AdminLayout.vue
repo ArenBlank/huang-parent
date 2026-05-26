@@ -347,7 +347,7 @@ const handleLogout = () => {
 
 .academy-hero {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(520px, 1.04fr);
+  grid-template-columns: minmax(360px, 1fr) minmax(520px, 1.04fr);
   align-items: start;
   gap: 16px;
   padding: 22px;
@@ -397,7 +397,7 @@ const handleLogout = () => {
 
 .hero-actions {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 12px;
   max-width: 760px;
   margin-top: 18px;
@@ -506,7 +506,7 @@ const handleLogout = () => {
 
 .hero-card-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
   gap: 12px;
 }
 
@@ -646,12 +646,12 @@ const handleLogout = () => {
   }
 
   .hero-actions {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(150px, 1fr));
     max-width: 560px;
   }
 
   .hero-card-grid {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(150px, 1fr));
   }
 
   .nav-group {

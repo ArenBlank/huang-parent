@@ -21,9 +21,9 @@
       <text class="sl-section-title">更新密码</text>
       <text class="sl-section-sub">请输入旧密码并设置新密码，保存后下次登录会使用新密码。</text>
       <view class="sl-form form-space">
-        <input class="sl-input" v-model="form.oldPassword" password placeholder="旧密码" />
-        <input class="sl-input" v-model="form.newPassword" password placeholder="新密码" />
-        <input class="sl-input" v-model="form.confirmPassword" password placeholder="确认新密码" />
+        <input class="sl-input" v-model="form.oldPassword" password placeholder="旧密码" cursor-spacing="100" />
+        <input class="sl-input" v-model="form.newPassword" password placeholder="新密码" cursor-spacing="100" />
+        <input class="sl-input" v-model="form.confirmPassword" password placeholder="确认新密码" cursor-spacing="100" />
       </view>
       <SlPrimaryButton text="更新密码" :loading="submitting" @click="submit" />
     </view>

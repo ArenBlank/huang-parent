@@ -358,7 +358,7 @@ onMounted(() => {
 <style scoped>
 .training-hero {
   display: grid;
-  grid-template-columns: minmax(0, 1.25fr) minmax(280px, 0.75fr);
+  grid-template-columns: minmax(360px, 1.25fr) minmax(280px, 0.75fr);
   gap: 12px;
   align-items: end;
 }
@@ -384,7 +384,7 @@ onMounted(() => {
 
 .training-grid {
   display: grid;
-  grid-template-columns: minmax(0, 1.15fr) minmax(300px, 0.85fr);
+  grid-template-columns: minmax(360px, 1.15fr) minmax(300px, 0.85fr);
   gap: 12px;
 }
 

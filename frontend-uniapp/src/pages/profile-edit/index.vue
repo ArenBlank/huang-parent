@@ -55,6 +55,7 @@
             :type="field.type || 'text'"
             :placeholder="field.placeholder"
             :maxlength="field.maxlength || -1"
+            cursor-spacing="100"
           />
         </view>
 
@@ -103,6 +104,8 @@
             class="field-textarea"
             maxlength="300"
             placeholder="例如：希望提升体能、改善体态，偏好循序渐进训练。"
+            cursor-spacing="100"
+            :adjust-position="false"
           ></textarea>
         </view>
       </view>

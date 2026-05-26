@@ -106,7 +106,7 @@ onMounted(() => {
 .login-shell {
   min-height: 100vh;
   display: grid;
-  grid-template-columns: minmax(0, 1.2fr) minmax(360px, 420px);
+  grid-template-columns: minmax(400px, 3fr) minmax(320px, 2fr);
   gap: 28px;
   align-items: stretch;
   padding: 28px;
@@ -143,7 +143,7 @@ onMounted(() => {
 
 .poster-grid {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 14px;
   margin-top: 32px;
 }

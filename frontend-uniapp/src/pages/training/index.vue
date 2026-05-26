@@ -110,7 +110,7 @@
             <text class="field-label">训练时长</text>
             <view class="input-pill">
               <image class="field-icon field-icon--left" :src="icons.clock" mode="aspectFit" />
-              <input v-model.number="form.durationMin" type="number" class="mini-input" placeholder="分钟" />
+              <input v-model.number="form.durationMin" type="number" class="mini-input" placeholder="分钟" cursor-spacing="100" />
               <text>分钟</text>
             </view>
           </view>
@@ -118,7 +118,7 @@
             <text class="field-label">消耗热量</text>
             <view class="input-pill">
               <image class="field-icon field-icon--left" :src="icons.fire" mode="aspectFit" />
-              <input v-model.number="form.calories" type="number" class="mini-input" placeholder="kcal" />
+              <input v-model.number="form.calories" type="number" class="mini-input" placeholder="kcal" cursor-spacing="100" />
               <text>kcal</text>
             </view>
           </view>
@@ -142,6 +142,8 @@
               class="feeling-textarea"
               maxlength="100"
               placeholder="记录一下你的训练感受吧..."
+              cursor-spacing="100"
+              :adjust-position="false"
             />
             <text class="textarea-count">{{ form.feeling.length }}/100</text>
           </view>
@@ -1607,6 +1609,7 @@ button::after {
   max-height: 76vh;
   padding: 16rpx 22rpx calc(26rpx + env(safe-area-inset-bottom));
   overflow: auto;
+  -webkit-overflow-scrolling: touch;
   border-radius: 34rpx 34rpx 26rpx 26rpx;
   background: #fffdf8;
   box-shadow: 0 -22rpx 60rpx rgba(36, 16, 79, 0.2);

@@ -320,6 +320,8 @@
           maxlength="300"
           :disabled="aiSubmitting"
           placeholder="例如：我是新手，想在家用哑铃减脂，每周练 3 天。"
+          cursor-spacing="100"
+          :adjust-position="false"
         />
         <text class="textarea-count">{{ aiPrompt.length }}/300</text>
         <view v-if="aiSubmitting" class="ai-running">
@@ -2015,7 +2017,7 @@ button::after {
 
 .ai-dialog {
   width: 100%;
-  padding: 28rpx;
+  padding: 28rpx 28rpx calc(28rpx + env(safe-area-inset-bottom));
   border-radius: 30rpx;
   background: #fffdf8;
   box-shadow: 0 -20rpx 60rpx rgba(36, 16, 79, 0.18);

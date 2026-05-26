@@ -116,7 +116,7 @@ jobs:
       - name: Wait services up
         run: |
           for i in {1..150}; do
-            if curl -fsS http://127.0.0.1:8080/v3/api-docs >/dev/null && curl -fsS http://127.0.0.1:8081/v3/api-docs >/dev/null; then
+            if curl -fsS http://127.0.0.1:8092/v3/api-docs >/dev/null && curl -fsS http://127.0.0.1:8093/v3/api-docs >/dev/null; then
               echo "apps are up"
               exit 0
             fi
@@ -230,8 +230,8 @@ jobs:
       - name: Start admin and dual app instances
         run: |
           nohup mvn -B -ntp -f web/web-admin/pom.xml -DskipTests spring-boot:run -Dspring-boot.run.arguments="--spring.data.redis.password= --fitness.auth.captcha.enabled=false" > admin.log 2>&1 &
-          nohup mvn -B -ntp -f web/web-app/pom.xml -DskipTests spring-boot:run -Dspring-boot.run.arguments="--server.port=8081 --spring.data.redis.password= --fitness.auth.captcha.enabled=false" > app-8081.log 2>&1 &
-          nohup mvn -B -ntp -f web/web-app/pom.xml -DskipTests spring-boot:run -Dspring-boot.run.arguments="--server.port=8082 --spring.data.redis.password= --fitness.auth.captcha.enabled=false" > app-8082.log 2>&1 &
+          nohup mvn -B -ntp -f web/web-app/pom.xml -DskipTests spring-boot:run -Dspring-boot.run.arguments="--server.port=8093 --spring.data.redis.password= --fitness.auth.captcha.enabled=false" > app-8093.log 2>&1 &
+          nohup mvn -B -ntp -f web/web-app/pom.xml -DskipTests spring-boot:run -Dspring-boot.run.arguments="--server.port=8094 --spring.data.redis.password= --fitness.auth.captcha.enabled=false" > app-8094.log 2>&1 &
 
       - name: Start nginx upstream
         run: |
@@ -242,9 +242,9 @@ jobs:
       - name: Wait services up
         run: |
           for i in {1..180}; do
-            if curl -fsS http://127.0.0.1:8080/v3/api-docs >/dev/null \
-              && curl -fsS http://127.0.0.1:8081/v3/api-docs >/dev/null \
-              && curl -fsS http://127.0.0.1:8082/v3/api-docs >/dev/null \
+            if curl -fsS http://127.0.0.1:8092/v3/api-docs >/dev/null \
+              && curl -fsS http://127.0.0.1:8093/v3/api-docs >/dev/null \
+              && curl -fsS http://127.0.0.1:8094/v3/api-docs >/dev/null \
               && curl -fsS http://127.0.0.1/app/banner/list -H "Host: app.localhost" >/dev/null; then
               echo "dual instance stack is up"
               exit 0
@@ -252,8 +252,8 @@ jobs:
             if (( i % 20 == 0 )); then
               echo "still waiting... ${i}"
               tail -n 30 admin.log || true
-              tail -n 30 app-8081.log || true
-              tail -n 30 app-8082.log || true
+              tail -n 30 app-8093.log || true
+              tail -n 30 app-8094.log || true
               docker logs ci-nginx --tail 30 || true
             fi
             sleep 2
@@ -317,8 +317,8 @@ jobs:
           name: dual-instance-smoke-logs
           path: |
             admin.log
-            app-8081.log
-            app-8082.log
+            app-8093.log
+            app-8094.log
             nginx.log
 
       - name: Cleanup stack

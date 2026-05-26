@@ -89,7 +89,7 @@ jobs:
       - name: Wait services up
         run: |
           for i in {1..150}; do
-            if curl -fsS http://127.0.0.1:8080/v3/api-docs >/dev/null && curl -fsS http://127.0.0.1:8081/v3/api-docs >/dev/null; then
+            if curl -fsS http://127.0.0.1:8092/v3/api-docs >/dev/null && curl -fsS http://127.0.0.1:8093/v3/api-docs >/dev/null; then
               echo "apps are up"
               exit 0
             fi

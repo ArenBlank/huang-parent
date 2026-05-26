@@ -6,7 +6,7 @@
   --eco-panel: #fffdf8;
   --eco-panel-soft: #fff7ef;
   --eco-text: #2a2356;
-  --eco-text-soft: #6f6894;
+  --eco-text-soft: #585380;
   --eco-primary: #5b53ff;
   --eco-primary-strong: #443ad9;
   --eco-secondary: #7e8cff;
@@ -298,7 +298,7 @@ button,
 
 .split-grid {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
   gap: 12px;
 }
 

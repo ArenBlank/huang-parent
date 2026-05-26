@@ -199,7 +199,7 @@ powershell -ExecutionPolicy Bypass -File tests/check-dual-app-routing.ps1
 
 预期：
 
-- `X-App-Instance` 同时命中 `web-app:8081` 和 `web-app:8082`
+- `X-App-Instance` 同时命中 `web-app:8093` 和 `web-app:8094`
 - JWT 请求经过 Nginx 转发后仍能正常鉴权
 
 ### 9.2 并发验证

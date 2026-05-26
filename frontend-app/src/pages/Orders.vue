@@ -626,7 +626,7 @@ loadOrders()
 
 .orders-workspace {
   display: grid;
-  grid-template-columns: minmax(0, 1.05fr) minmax(400px, 0.95fr);
+  grid-template-columns: minmax(380px, 1.05fr) minmax(400px, 0.95fr);
   gap: 16px;
   align-items: start;
 }
@@ -676,7 +676,7 @@ loadOrders()
 .orders-selected-banner strong {
   display: block;
   font-size: 20px;
-  line-height: 1.2;
+  line-height: 1.35;
 }
 
 .orders-selected-banner p {
@@ -841,7 +841,7 @@ loadOrders()
 .order-no {
   margin: 6px 0 0;
   font-size: 20px;
-  line-height: 1.25;
+  line-height: 1.4;
   font-weight: 800;
   word-break: break-all;
   overflow-wrap: anywhere;
@@ -885,7 +885,7 @@ loadOrders()
 .finance-grid {
   margin-top: 12px;
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 8px;
 }
 
@@ -923,7 +923,7 @@ loadOrders()
 
 @media (max-width: 1180px) {
   .orders-workspace {
-    grid-template-columns: minmax(0, 1fr) 420px;
+    grid-template-columns: minmax(380px, 1fr) 420px;
   }
 }
 

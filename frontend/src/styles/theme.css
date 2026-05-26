@@ -270,7 +270,7 @@ button,
 
 .split-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1.5fr) minmax(300px, 0.9fr);
+  grid-template-columns: minmax(320px, 1.5fr) minmax(300px, 0.9fr);
   gap: 18px;
 }
 

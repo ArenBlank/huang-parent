@@ -25,7 +25,7 @@
               :width="340"
               content="当前进度条展示的是计划活跃度估算，不是视频观看进度。规则：未订阅时=18+动作数×6（无动作时为10），最高92%；已订阅时=38+动作数×8（无动作时为35），最高100%。例如已订阅且 5 个动作时为 78%，已订阅且 14 个动作时会封顶显示 100%。观看视频目前不会回写这个值。"
             >
-              <span class="progress-help" aria-label="进度说明">
+              <span class="progress-help" aria-label="进度说明" tabindex="0" role="button">
                 <el-icon><WarningFilled /></el-icon>
               </span>
             </el-tooltip>
@@ -614,7 +614,7 @@ onMounted(() => {
 <style scoped>
 .plan-hero {
   display: grid;
-  grid-template-columns: minmax(0, 1.25fr) minmax(280px, 0.75fr);
+  grid-template-columns: minmax(360px, 1.25fr) minmax(280px, 0.75fr);
   gap: 14px;
   align-items: end;
 }
@@ -656,6 +656,11 @@ onMounted(() => {
   background: rgba(255, 255, 255, 0.26);
 }
 
+.progress-help:focus-visible {
+  outline: 2px solid rgba(255, 248, 188, 0.9);
+  outline-offset: 2px;
+}
+
 .progress-note {
   margin: 8px 0 0;
   color: rgba(244, 255, 239, 0.9);
@@ -677,7 +682,7 @@ onMounted(() => {
 
 .plan-grid {
   display: grid;
-  grid-template-columns: minmax(320px, 0.95fr) minmax(0, 1.05fr);
+  grid-template-columns: minmax(320px, 0.95fr) minmax(300px, 1.05fr);
   gap: 16px;
 }
 

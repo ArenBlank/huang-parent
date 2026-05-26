@@ -288,6 +288,8 @@
           class="review-textarea"
           maxlength="500"
           placeholder="说说教练安排、沟通和训练感受"
+          cursor-spacing="100"
+          :adjust-position="false"
         />
         <button class="selected-submit full" :disabled="reviewing || !reviewForm.bookingId" @click="submitReview">
           {{ reviewing ? '提交中...' : '提交评价' }}
@@ -1859,7 +1861,7 @@ onHide(() => {
 
 .filter-sheet {
   width: 100%;
-  padding: 30rpx;
+  padding: 30rpx 30rpx calc(30rpx + env(safe-area-inset-bottom));
   border-radius: 36rpx 36rpx 0 0;
   background: #fffaf4;
 }

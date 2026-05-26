@@ -1432,6 +1432,11 @@ loadMyBookings()
   transform: translateY(-1px);
 }
 
+.coach-picker-trigger:focus-visible {
+  outline: 2px solid var(--eco-primary);
+  outline-offset: 2px;
+}
+
 .booking-filter-action :deep(.el-form-item__label) {
   color: transparent;
 }
@@ -1499,6 +1504,11 @@ loadMyBookings()
   transform: translateY(-2px);
 }
 
+.coach-picker-card:focus-visible {
+  outline: 2px solid var(--eco-primary);
+  outline-offset: 2px;
+}
+
 .coach-picker-card__top,
 .coach-picker-card__footer {
   display: flex;
@@ -1542,6 +1552,11 @@ loadMyBookings()
   transform: translateY(-1px);
   background: #fffaf0;
   box-shadow: 0 9px 0 rgba(23, 17, 38, 0.1), 0 16px 30px rgba(52, 45, 105, 0.12);
+}
+
+.coach-card:focus-visible {
+  outline: 2px solid var(--eco-primary);
+  outline-offset: 2px;
 }
 
 .coach-card__photo {
@@ -1675,8 +1690,12 @@ loadMyBookings()
   transition: transform 0.16s ease, box-shadow 0.16s ease, border-color 0.16s ease, background 0.16s ease;
 }
 
+.schedule-card:focus-visible {
+  outline: 2px solid var(--eco-primary);
+  outline-offset: 2px;
+}
+
 .schedule-card:hover {
-  transform: translateY(-2px);
   border-color: #171126;
   background: linear-gradient(180deg, #fff4d7 0%, #ffffff 100%);
   box-shadow: 0 9px 0 rgba(23, 17, 38, 0.11), 0 16px 30px rgba(52, 45, 105, 0.12);

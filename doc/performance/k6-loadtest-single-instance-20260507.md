@@ -1,11 +1,11 @@
 # k6 压测报告 — 单实例直连
 
-> 2026-05-07 | k6 v1.7.1 | k6 → web-app:8081（单实例, HikariCP=12）
+> 2026-05-07 | k6 v1.7.1 | k6 → web-app:8093（单实例, HikariCP=12）
 
 ## 拓扑
 
 ```
-k6 → web-app:8081 → Redis + MySQL
+k6 → web-app:8093 → Redis + MySQL
 ```
 三层治理：`@RateLimit`(5次/30s) → `@IdempotentSubmit`(5s TTL) → DB 条件更新 + 唯一索引
 

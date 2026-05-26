@@ -134,7 +134,7 @@ onMounted(async () => {
 
 .app-hero {
   display: grid;
-  grid-template-columns: minmax(0, 1.3fr) minmax(300px, 0.7fr);
+  grid-template-columns: minmax(360px, 1.3fr) minmax(300px, 0.7fr);
   gap: 16px;
   padding: 24px;
   border-radius: 34px;
@@ -238,6 +238,11 @@ onMounted(async () => {
 
 .nav-pill:hover {
   transform: translateY(-2px);
+}
+
+.nav-pill:focus-visible {
+  outline: 2px solid var(--eco-primary);
+  outline-offset: 2px;
 }
 
 .nav-pill.active {

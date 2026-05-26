@@ -77,27 +77,27 @@
       <view class="form-stack">
         <view class="input-shell">
           <image class="field-icon" :src="icons.user" mode="aspectFit" />
-          <input class="field-input" v-model.trim="form.account" :placeholder="mode === 'login' ? '请输入用户名 / 手机号' : '请设置用户名'" placeholder-class="field-placeholder" />
+          <input class="field-input" v-model.trim="form.account" :placeholder="mode === 'login' ? '请输入用户名 / 手机号' : '请设置用户名'" placeholder-class="field-placeholder" cursor-spacing="100" />
         </view>
 
         <view v-if="mode === 'register'" class="input-shell">
           <image class="field-icon" :src="icons.signature" mode="aspectFit" />
-          <input class="field-input" v-model.trim="form.nickname" placeholder="请输入昵称" placeholder-class="field-placeholder" />
+          <input class="field-input" v-model.trim="form.nickname" placeholder="请输入昵称" placeholder-class="field-placeholder" cursor-spacing="100" />
         </view>
 
         <view v-if="mode === 'register'" class="input-shell">
           <image class="field-icon" :src="icons.phone" mode="aspectFit" />
-          <input class="field-input" v-model.trim="form.phone" placeholder="请输入手机号" placeholder-class="field-placeholder" />
+          <input class="field-input" v-model.trim="form.phone" placeholder="请输入手机号" placeholder-class="field-placeholder" cursor-spacing="100" />
         </view>
 
         <view v-if="mode === 'register'" class="input-shell">
           <image class="field-icon" :src="icons.envelope" mode="aspectFit" />
-          <input class="field-input" v-model.trim="form.email" placeholder="请输入邮箱（可选）" placeholder-class="field-placeholder" />
+          <input class="field-input" v-model.trim="form.email" placeholder="请输入邮箱（可选）" placeholder-class="field-placeholder" cursor-spacing="100" />
         </view>
 
         <view class="input-shell">
           <image class="field-icon" :src="icons.lock" mode="aspectFit" />
-          <input class="field-input" v-model="form.password" :password="!passwordVisible" placeholder="请输入密码" placeholder-class="field-placeholder" />
+          <input class="field-input" v-model="form.password" :password="!passwordVisible" placeholder="请输入密码" placeholder-class="field-placeholder" cursor-spacing="100" />
           <view class="password-eye" @click="passwordVisible = !passwordVisible">
             <image class="eye-icon" :src="passwordVisible ? icons.eye : icons.eyeSlash" mode="aspectFit" />
           </view>
@@ -105,7 +105,7 @@
 
         <view v-if="mode === 'register'" class="input-shell">
           <image class="field-icon" :src="icons.lock" mode="aspectFit" />
-          <input class="field-input" v-model="form.confirmPassword" password placeholder="请再次输入密码" placeholder-class="field-placeholder" />
+          <input class="field-input" v-model="form.confirmPassword" password placeholder="请再次输入密码" placeholder-class="field-placeholder" cursor-spacing="100" />
         </view>
       </view>
 

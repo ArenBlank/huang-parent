@@ -202,7 +202,7 @@
 
         <view class="search-box">
           <image class="search-icon" :src="icons.search" mode="aspectFit" />
-          <input v-model.trim="courseKeyword" class="search-input" placeholder="搜索课程名 / 简介 / 难度" />
+          <input v-model.trim="courseKeyword" class="search-input" placeholder="搜索课程名 / 简介 / 难度" cursor-spacing="100" />
           <button v-if="courseKeyword" class="clear-button" @click="courseKeyword = ''">清空</button>
         </view>
 
@@ -285,6 +285,8 @@
               class="refund-textarea"
               maxlength="200"
               placeholder="请输入退款原因，最多 200 字"
+              cursor-spacing="100"
+              :adjust-position="false"
             />
             <view class="action-row">
               <button class="small-ghost" @click="closeRefund">取消</button>
@@ -1999,7 +2001,7 @@ button::after {
 
 .checkin-dialog {
   width: 100%;
-  padding: 28rpx;
+  padding: 28rpx 28rpx calc(28rpx + env(safe-area-inset-bottom));
   border-radius: 34rpx;
   background: #fffaf4;
   box-shadow: 0 -18rpx 48rpx rgba(36, 16, 79, 0.18);

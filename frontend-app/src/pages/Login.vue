@@ -187,7 +187,7 @@ const handleCaptchaSuccess = async (captchaVerification) => {
 .login-stage {
   width: min(1220px, 100%);
   display: grid;
-  grid-template-columns: minmax(0, 1.16fr) minmax(340px, 0.84fr);
+  grid-template-columns: minmax(380px, 1.16fr) minmax(340px, 0.84fr);
   gap: 16px;
 }
 
@@ -249,6 +249,21 @@ const handleCaptchaSuccess = async (captchaVerification) => {
   font-weight: 900;
   padding: 10px 14px;
   cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.mode-switch button:hover {
+  color: var(--eco-text);
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.mode-switch button:focus-visible {
+  outline: 2px solid var(--eco-primary);
+  outline-offset: -2px;
+}
+
+.mode-switch button:active {
+  background: rgba(255, 255, 255, 0.5);
 }
 
 .mode-switch button.active {

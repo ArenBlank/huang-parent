@@ -21,6 +21,7 @@
           class="search-input"
           placeholder="搜索订单号 / 课程 / 教练 / 订单备注"
           confirm-type="search"
+          cursor-spacing="100"
         />
       </view>
       <button class="filter-button" @click="openFilterSheet">

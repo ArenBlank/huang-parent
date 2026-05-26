@@ -1145,11 +1145,11 @@ loadLastEnrollment()
 }
 
 .workspace-shell--discover {
-  grid-template-columns: minmax(0, 1.18fr) minmax(360px, 0.82fr);
+  grid-template-columns: minmax(380px, 1.18fr) minmax(360px, 0.82fr);
 }
 
 .workspace-shell--mine {
-  grid-template-columns: minmax(0, 0.76fr) minmax(760px, 1.24fr);
+  grid-template-columns: minmax(300px, 0.76fr) minmax(760px, 1.24fr);
 }
 
 .catalog-panel,
@@ -1180,6 +1180,20 @@ loadLastEnrollment()
   cursor: pointer;
   transition: color 0.2s ease, border-color 0.2s ease;
   border-bottom: 3px solid transparent;
+}
+
+.course-mode-tab:hover {
+  color: var(--eco-text);
+}
+
+.course-mode-tab:focus-visible {
+  outline: 2px solid var(--eco-primary);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+.course-mode-tab:active {
+  color: var(--eco-primary-strong);
 }
 
 .course-mode-tab--active {
@@ -1352,7 +1366,7 @@ loadLastEnrollment()
 .course-body strong {
   display: block;
   font-size: 17px;
-  line-height: 1.25;
+  line-height: 1.5;
 }
 
 .course-body p {
@@ -1569,7 +1583,7 @@ loadLastEnrollment()
 
 .schedule-item__meta {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
   gap: 8px;
   color: var(--eco-text-soft);
   font-size: 12px;
@@ -1617,7 +1631,7 @@ loadLastEnrollment()
 }
 
 .detail-list--grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 8px 14px;
 }
 
@@ -1690,7 +1704,7 @@ loadLastEnrollment()
 
 .itinerary-card__meta {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
   gap: 8px 12px;
   color: var(--eco-text-soft);
   font-size: 13px;
@@ -1763,11 +1777,11 @@ loadLastEnrollment()
 
 @media (max-width: 1180px) {
   .workspace-shell--discover {
-    grid-template-columns: minmax(0, 1fr) 380px;
+    grid-template-columns: minmax(340px, 1fr) 380px;
   }
 
   .workspace-shell--mine {
-    grid-template-columns: minmax(0, 0.8fr) minmax(560px, 1.2fr);
+    grid-template-columns: minmax(300px, 0.8fr) minmax(560px, 1.2fr);
   }
 }
 
