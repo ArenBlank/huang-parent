@@ -106,18 +106,20 @@ onMounted(() => {
 .login-shell {
   min-height: 100vh;
   max-width: 1280px;
+  max-height: 900px;
   margin: 0 auto;
   display: grid;
   grid-template-columns: minmax(400px, 3fr) minmax(320px, 2fr);
   gap: 28px;
-  align-items: stretch;
+  align-items: center;
   padding: 28px;
 }
 
 .login-poster {
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: center;
+  gap: 24px;
   padding: 40px;
   border-radius: 32px;
   color: #ffffff;
