@@ -105,6 +105,8 @@ onMounted(() => {
 <style scoped>
 .login-shell {
   min-height: 100vh;
+  max-width: 1280px;
+  margin: 0 auto;
   display: grid;
   grid-template-columns: minmax(400px, 3fr) minmax(320px, 2fr);
   gap: 28px;

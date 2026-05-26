@@ -265,6 +265,8 @@ const handleLogout = () => {
 <style scoped>
 .academy-shell {
   min-height: 100vh;
+  max-width: 1440px;
+  margin: 0 auto;
   padding: 18px 0 34px;
 }
 
